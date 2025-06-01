@@ -23,67 +23,189 @@
         /* Header */
         .header {
             position: fixed;
-            top: 0;
-            width: 100%;
+            top: 1.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 3rem);
+            max-width: 1200px;
             padding: 1rem 2rem;
-            background: rgba(10, 10, 10, 0.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 24px;
             z-index: 1000;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.12),
+                0 2px 8px rgba(0, 0, 0, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+
+        .header.hidden {
+            transform: translateX(-50%) translateY(-120%);
+            opacity: 0;
+        }
+
+        .header.visible {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .header:hover {
+            background: rgba(255, 255, 255, 0.12);
+            transform: translateX(-50%) translateY(-1px);
+            box-shadow: 
+                0 12px 40px rgba(0, 0, 0, 0.15),
+                0 4px 12px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .header.hidden:hover {
+            transform: translateX(-50%) translateY(-120%);
         }
 
         .nav {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            max-width: 1200px;
-            margin: 0 auto;
+            margin: 0;
         }
 
         .logo {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.75rem;
             font-size: 1.5rem;
             font-weight: 700;
             color: #ffffff;
             text-decoration: none;
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover {
+            transform: scale(1.02);
         }
 
         .logo img {
-            width: 40px;
-            height: 40px;
+            width: 38px;
+            height: 38px;
+        }
+
+        .nav-menu {
+            display: flex;
+            align-items: center;
+            gap: 2.5rem;
         }
 
         .nav-links {
             display: flex;
             gap: 2rem;
             list-style: none;
+            margin: 0;
+            padding: 0;
         }
 
         .nav-links a {
-            color: #b0b0b0;
+            color: rgba(255, 255, 255, 0.9);
             text-decoration: none;
-            transition: color 0.3s ease;
+            font-weight: 500;
+            font-size: 0.95rem;
+            letter-spacing: -0.01em;
+            transition: all 0.3s ease;
+            position: relative;
+            padding: 0.5rem 0;
         }
 
         .nav-links a:hover {
-            color: #6366f1;
+            color: #ffffff;
         }
 
-        .cta-button {
-            background: linear-gradient(45deg, #6366f1, #8b5cf6);
-            color: #fff;
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+            border-radius: 1px;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .contact-button {
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
             padding: 0.75rem 1.5rem;
-            border-radius: 50px;
+            border-radius: 16px;
             text-decoration: none;
             font-weight: 600;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            font-size: 0.9rem;
+            letter-spacing: -0.01em;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            backdrop-filter: blur(12px);
         }
 
-        .cta-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+        .contact-button:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-1px);
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .header {
+                top: 1rem;
+                width: calc(100% - 2rem);
+                padding: 0.8rem 1.5rem;
+            }
+            
+            .nav-menu {
+                gap: 1.5rem;
+            }
+            
+            .nav-links {
+                gap: 1.5rem;
+            }
+            
+            .nav-links a {
+                font-size: 0.85rem;
+            }
+            
+            .contact-button {
+                padding: 0.6rem 1.2rem;
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                padding: 0.8rem 1.2rem;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .nav-menu {
+                gap: 0;
+            }
+            
+            .logo {
+                font-size: 1.3rem;
+            }
+            
+            .logo img {
+                width: 32px;
+                height: 32px;
+            }
         }
 
         /* Hero Section */
@@ -288,6 +410,167 @@
             -webkit-text-fill-color: transparent;
         }
 
+        /* Sculptor Platform Section */
+        .sculptor-platform {
+            padding: 6rem 2rem;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .platform-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        .platform-text h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #ffffff, #6366f1);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .platform-subtitle {
+            font-size: 1.1rem;
+            color: #8b5cf6;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .platform-text p {
+            color: #b0b0b0;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            line-height: 1.7;
+        }
+
+        .platform-features {
+            display: grid;
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .feature-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(99, 102, 241, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .feature-icon-small {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(45deg, #6366f1, #8b5cf6);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .feature-item h4 {
+            color: #ffffff;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-item p {
+            color: #b0b0b0;
+            font-size: 0.95rem;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .platform-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .platform-image {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .platform-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+
+        .platform-image:hover img {
+            transform: scale(1.02);
+        }
+
+        .image-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+            padding: 1.5rem;
+            color: #ffffff;
+        }
+
+        .image-overlay p {
+            margin: 0;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        /* Responsive design for platform section */
+        @media (max-width: 768px) {
+            .platform-content {
+                grid-template-columns: 1fr;
+                gap: 3rem;
+            }
+            
+            .platform-text {
+                order: 2;
+            }
+            
+            .platform-image {
+                order: 1;
+            }
+            
+            .platform-text h2 {
+                font-size: 2rem;
+            }
+            
+            .platform-features {
+                gap: 1rem;
+            }
+            
+            .feature-item {
+                padding: 1rem;
+            }
+        }
+
         /* Footer */
         .footer {
             background: rgba(0, 0, 0, 0.8);
@@ -326,31 +609,6 @@
             padding-top: 2rem;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             color: #666;
-        }
-
-        /* Mobile Responsiveness */
-        @media (max-width: 768px) {
-            .nav-links {
-                display: none;
-            }
-
-            .hero h1 {
-                font-size: 3rem;
-            }
-
-            .hero-buttons {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .about-content {
-                grid-template-columns: 1fr;
-                text-align: center;
-            }
-
-            .features-grid {
-                grid-template-columns: 1fr;
-            }
         }
 
         /* Animations */
@@ -397,13 +655,16 @@
                 <img src="logo.svg" alt="Sculptor AI">
                 Sculptor AI
             </a>
-            <ul class="nav-links">
-                <li><a href="#features">Features</a></li>
-                <li><a href="#about">About Ursa</a></li>
-                <li><a href="#contact">Contact</a></li>
-                <li><a href="#docs">Documentation</a></li>
-            </ul>
-            <a href="#" class="cta-button">Get Started</a>
+            <div class="nav-menu">
+                <ul class="nav-links">
+                    <li><a href="#platform">Platform</a></li>
+                    <li><a href="#about">Models</a></li>
+                    <li><a href="#docs">Resources</a></li>
+                    <li><a href="#pricing">Pricing</a></li>
+                    <li><a href="#company">About</a></li>
+                </ul>
+            </div>
+            <a href="#contact" class="contact-button">Contact</a>
         </nav>
     </header>
 
@@ -414,7 +675,7 @@
             <h1>Meet <span class="ursa-name">Ursa</span></h1>
             <p>The next-generation AI model that understands, creates, and transforms. Built by Sculptor AI to push the boundaries of artificial intelligence.</p>
             <div class="hero-buttons">
-                <a href="#" class="btn-primary">Try Ursa Now</a>
+                <a href="https://ai.explodingcb.com/" class="btn-primary" target="_blank" rel="noopener noreferrer">Try Ursa Now</a>
                 <a href="#" class="btn-secondary">View Documentation</a>
             </div>
         </div>
@@ -446,13 +707,13 @@
             </div>
             <div class="feature-card">
                 <div class="feature-icon">🌐</div>
-                <h3>Multi-Modal</h3>
-                <p>Process and understand text, images, code, and more. Ursa adapts to your specific use case and requirements.</p>
+                <h3>FOSS</h3>
+                <p>Ursa is free and open source, and can be used by anyone.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">🔧</div>
                 <h3>Easy Integration</h3>
-                <p>Simple APIs and comprehensive SDKs make it easy to integrate Ursa into your existing applications and workflows.</p>
+                <p>Using widely known formats, Ursa plugs right into your exisiting systems.</p>
             </div>
         </div>
     </section>
@@ -474,6 +735,59 @@
         </div>
     </section>
 
+    <!-- Sculptor Platform Section -->
+    <section class="sculptor-platform" id="platform">
+        <div class="platform-content">
+            <div class="platform-text">
+                <h2>Meet Sculptor Platform</h2>
+                <p class="platform-subtitle">The OpenSource AI Platform Powering Innovation</p>
+                <p>Sculptor Platform is our flagship open-source AI platform designed to democratize artificial intelligence. Built with flexibility and extensibility at its core, Sculptor empowers developers and organizations to harness the full potential of AI technology.</p>
+                
+                <div class="platform-features">
+                    <div class="feature-item">
+                        <div class="feature-icon-small">🏠</div>
+                        <div>
+                            <h4>Local Model Support</h4>
+                            <p>Run AI models locally with complete privacy and control over your data using Ollama</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon-small">🔗</div>
+                        <div>
+                            <h4>OpenRouter Integration</h4>
+                            <p>Seamlessly connect to multiple AI providers through unified API access</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon-small">🎬</div>
+                        <div>
+                            <h4>Media Studio</h4>
+                            <p>Advanced tools for AI-powered image, video, and audio processing</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon-small">⚡</div>
+                        <div>
+                            <h4>Real-time Processing</h4>
+                            <p>Lightning-fast inference with optimized model serving capabilities</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="platform-buttons">
+                    <a href="https://ai.explodingcb.com/" class="btn-primary" target="_blank" rel="noopener noreferrer">Explore Platform</a>
+                    <a href="https://github.com/Sculptor-AI/aiportal" class="btn-secondary" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+                </div>
+            </div>
+            <div class="platform-image">
+                <img src="sculptor.png" alt="Sculptor Platform Interface" />
+                <div class="image-overlay">
+                    <p>Sculptor Platform</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Footer -->
     <footer class="footer" id="contact">
         <div class="footer-content">
@@ -484,31 +798,58 @@
             <div class="footer-section">
                 <h3>Product</h3>
                 <a href="#">Ursa Model</a>
-                <a href="#">API Documentation</a>
-                <a href="#">Pricing</a>
-                <a href="#">Enterprise</a>
+                <a href="#">Sculptor Platform</a>
             </div>
             <div class="footer-section">
                 <h3>Company</h3>
                 <a href="#">About Us</a>
-                <a href="#">Careers</a>
                 <a href="#">Research</a>
                 <a href="#">News</a>
             </div>
             <div class="footer-section">
                 <h3>Support</h3>
                 <a href="#">Documentation</a>
-                <a href="#">Community</a>
                 <a href="#">Contact</a>
-                <a href="#">Status</a>
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; 2024 Sculptor AI. All rights reserved. | Privacy Policy | Terms of Service</p>
+            <p>&copy; 2025 Sculptor AI. All rights reserved.</p>
         </div>
     </footer>
 
     <script>
+        // Header scroll behavior
+        let scrollThreshold = 80; // Distance from top before header hides
+        const header = document.querySelector('.header');
+        
+        function handleScroll() {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            
+            if (scrollTop <= scrollThreshold) {
+                // At or near the top - show header
+                header.classList.remove('hidden');
+                header.classList.add('visible');
+            } else {
+                // Scrolled down - hide header
+                header.classList.add('hidden');
+                header.classList.remove('visible');
+            }
+        }
+
+        // Throttle scroll events for better performance
+        let scrollTimeout;
+        window.addEventListener('scroll', () => {
+            if (!scrollTimeout) {
+                scrollTimeout = setTimeout(() => {
+                    handleScroll();
+                    scrollTimeout = null;
+                }, 10);
+            }
+        });
+
+        // Initialize header as visible
+        header.classList.add('visible');
+
         // Add smooth scrolling for navigation links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {

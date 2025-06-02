@@ -1,0 +1,202 @@
+/* css/about-specific.css */
+
+/* Hero section styles specific to about.html */
+.about-page .hero {
+    min-height: 60vh;
+    padding: 8rem 2rem 4rem;
+}
+
+.about-page .hero h1 {
+    font-size: clamp(2.5rem, 6vw, 4rem);
+}
+
+.about-page .hero p {
+    margin-bottom: 2rem;
+}
+
+/* Main Content styling for about.html */
+.main-content {
+    padding: 4rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.content-section {
+    margin-bottom: 4rem;
+}
+
+/* Section Title specific for about.html contexts */
+/* Loaded after style.css, this overrides font-size and margin */
+.about-page .section-title {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+}
+
+/* By default, .section-title from style.css is centered.
+   For about.html, titles within .content-text (typically in a grid) should be left-aligned. */
+.about-page .content-text .section-title {
+    text-align: left;
+}
+/* Titles directly under .content-section but not in .content-text (like 'Our Values') will remain centered via style.css */
+
+
+.ursa-title {
+    font-family: 'Georgia', 'Times New Roman', 'Playfair Display', serif;
+    font-style: italic;
+    font-weight: 400;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline;
+}
+
+.content-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: start;
+    margin-bottom: 3rem; /* Consistent bottom margin for grids */
+}
+
+.content-grid:last-of-type {
+    margin-bottom: 0; /* Remove margin if it's the last grid in a section */
+}
+
+.content-text {
+    font-size: 1.1rem;
+    color: #b0b0b0;
+    line-height: 1.7;
+}
+
+.content-text p {
+    margin-bottom: 1.5rem;
+}
+
+.highlight-box {
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: 20px;
+    padding: 2.5rem;
+    text-align: center;
+    height: 100%; /* Make boxes in a grid take full height of the row */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.highlight-box h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #ffffff;
+}
+
+.highlight-box p {
+    color: #b0b0b0;
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.values-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-top: 3rem;
+}
+
+.value-card {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2rem;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.value-card:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+.value-card h4 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #ffffff;
+}
+
+.value-card p {
+    color: #b0b0b0;
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.about-page .content-section .btn-primary {
+    margin-top: 2rem;
+    display: inline-block;
+}
+
+/* Mobile responsiveness for about.html specific content */
+@media (max-width: 768px) {
+    .about-page .hero {
+        padding: 6rem 1.5rem 3rem; /* Adjusted padding for mobile */
+    }
+
+    .main-content {
+        padding: 3rem 1.5rem;
+    }
+
+    .content-grid {
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+    }
+    
+    .highlight-box {
+        padding: 2rem;
+    }
+    
+    .about-page .content-text {
+        text-align: center; 
+    }
+    
+    .about-page .content-text .section-title {
+         text-align: center; /* Ensure centered on mobile when stacked */
+    }
+
+    .about-page .section-title {
+        font-size: 2rem;
+    }
+
+    .values-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .value-card {
+        padding: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .about-page .hero h1 {
+        font-size: clamp(2rem, 5vw, 2.8rem);
+    }
+    .about-page .hero p {
+        font-size: 1.05rem;
+    }
+    .about-page .section-title {
+        font-size: 1.8rem;
+    }
+    .highlight-box h3 {
+        font-size: 1.3rem;
+    }
+    .value-card h4 {
+        font-size: 1.15rem;
+    }
+    .main-content {
+        padding: 2.5rem 1rem;
+    }
+} 

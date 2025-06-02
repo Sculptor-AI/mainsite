@@ -223,4 +223,44 @@ window.addEventListener('scroll', () => {
 
     // Remove parallax effect - stars should stay in place
     // The twinkling animation is handled by CSS
+})();
+
+// Scroll down arrow functionality
+(function() {
+    const scrollArrow = document.getElementById('scrollArrow');
+    if (!scrollArrow) return;
+
+    let hasScrolled = false;
+    const scrollThreshold = 100; // Hide after scrolling 100px down
+
+    function handleArrowScroll() {
+        if (hasScrolled) return; // Once hidden, don't show again
+
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        
+        if (scrollTop > scrollThreshold) {
+            hasScrolled = true;
+            scrollArrow.classList.add('hidden');
+        }
+    }
+
+    // Listen for scroll events
+    window.addEventListener('scroll', handleArrowScroll);
+
+    // Optional: Make the arrow clickable to scroll down
+    scrollArrow.addEventListener('click', function() {
+        const featuresSection = document.querySelector('.features');
+        if (featuresSection) {
+            featuresSection.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        } else {
+            // Fallback: scroll down by viewport height
+            window.scrollBy({
+                top: window.innerHeight,
+                behavior: 'smooth'
+            });
+        }
+    });
 })(); 

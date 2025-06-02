@@ -30,9 +30,11 @@ window.addEventListener('scroll', () => {
 // Initialize header as visible
 if (header) {
     header.classList.add('visible');
+    header.classList.add('transparent'); // Make header transparent by default
 }
 
 // Navigation bar toggle functionality
+/*
 (function() {
     const navToggle = document.getElementById('navToggle');
     const header = document.querySelector('.header');
@@ -85,6 +87,7 @@ if (header) {
     // Initialize the icon based on current state
     updateToggleIcon();
 })();
+*/
 
 // Add smooth scrolling for navigation links
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -240,13 +243,23 @@ window.addEventListener('scroll', () => {
         const starIndex = Math.min(Math.floor(scrollProgress * numStars), numStars - 1);
         const starLocalProgress = (scrollProgress * numStars) % 1;
 
-        if (starIndex !== currentStar && starIndex < numStars) {
-            currentStar = starIndex;
-            starGroups.forEach((star, i) => star.classList.toggle('active', i === currentStar));
-            starInfos.forEach((info, i) => info.classList.toggle('active', i === currentStar));
+        // Ensure starIndex is valid before proceeding
+        if (starIndex >= 0 && starIndex < numStars) {
+            if (starIndex !== currentStar) {
+                currentStar = starIndex; // Update currentStar only if it actually changes
+            }
+            // Always update active classes based on the current valid starIndex
+            starGroups.forEach((star, i) => star.classList.toggle('active', i === starIndex));
+            starInfos.forEach((info, i) => info.classList.toggle('active', i === starIndex));
+        } else {
+            // If starIndex is somehow out of bounds (e.g., numStars is 0 after check, or bad calculation)
+            // Deactivate all stars and infos as a fallback.
+            starGroups.forEach(star => star.classList.remove('active'));
+            starInfos.forEach(info => info.classList.remove('active'));
+            currentStar = -1; // Indicate no star is active
         }
 
-        if (currentStar < numStars && starGroups[currentStar]) {
+        if (currentStar >= 0 && currentStar < numStars && starGroups[currentStar]) {
             const targetStarElement = starGroups[currentStar];
             const starPos = getStarPosition(targetStarElement);
             

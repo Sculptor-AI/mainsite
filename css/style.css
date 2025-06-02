@@ -21,16 +21,13 @@
             width: calc(100% - 3rem);
             max-width: 1200px;
             padding: 1rem 2rem;
-            background: rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(24px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: transparent;
+            backdrop-filter: none;
+            border: none;
             border-radius: 24px;
             z-index: 1000;
             transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            box-shadow: 
-                0 8px 32px rgba(0, 0, 0, 0.12),
-                0 2px 8px rgba(0, 0, 0, 0.08),
-                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            box-shadow: none;
         }
 
         .header.hidden {
@@ -44,12 +41,9 @@
         }
 
         .header:hover {
-            background: rgba(255, 255, 255, 0.12);
-            transform: translateX(-50%) translateY(-1px);
-            box-shadow: 
-                0 12px 40px rgba(0, 0, 0, 0.15),
-                0 4px 12px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            background: transparent;
+            transform: translateX(-50%) translateY(0);
+            box-shadow: none;
         }
 
         .header.hidden:hover {
@@ -58,16 +52,16 @@
 
         /* Transparent header styles */
         .header.transparent {
-            background: transparent;
-            backdrop-filter: none;
-            border: none;
-            box-shadow: none;
+            background: transparent !important;
+            backdrop-filter: none !important;
+            border: none !important;
+            box-shadow: none !important;
         }
 
         .header.transparent:hover {
-            background: transparent;
-            transform: translateX(-50%) translateY(0);
-            box-shadow: none;
+            background: transparent !important;
+            transform: translateX(-50%) translateY(0) !important;
+            box-shadow: none !important;
         }
 
         .nav {
@@ -476,7 +470,7 @@
 
         /* Scroll indicator */
         .constellation-container::after {
-            content: "Scroll to explore";
+            content: "Scroll / Click to explore";
             position: absolute;
             bottom: 30px;
             left: 50%;
@@ -559,12 +553,13 @@
         }
 
         /* Position star info panels */
-        .star-info[data-star="1"] { top: 280px; left: 200px; }
-        .star-info[data-star="2"] { top: 170px; left: 300px; }
-        .star-info[data-star="3"] { top: 130px; right: 50px; }
-        .star-info[data-star="4"] { bottom: 280px; left: 150px; }
-        .star-info[data-star="5"] { bottom: 350px; right: 50px; }
-        .star-info[data-star="6"] { bottom: 180px; left: 350px; }
+        .star-info[data-star="1"] { top: 300px; left: 50px; } /* Dubhe */
+        .star-info[data-star="2"] { top: 500px; left: 100px; } /* Merak */
+        .star-info[data-star="3"] { top: 570px; left: 250px; } /* Phecda */
+        .star-info[data-star="4"] { top: 350px; left: 600px; } /* Megrez */
+        .star-info[data-star="5"] { top: 300px; right: 250px; } /* Alioth */
+        .star-info[data-star="6"] { top: 230px; right: 100px; } /* Mizar */
+        .star-info[data-star="7"] { top: 150px; right: 100px; }   /* Alkaid - Further Adjusted */
 
         /* Zoom states for constellation */
         .constellation-container.zoomed {
@@ -595,7 +590,8 @@
             .star-info[data-star="3"],
             .star-info[data-star="4"],
             .star-info[data-star="5"],
-            .star-info[data-star="6"] {
+            .star-info[data-star="6"],
+            .star-info[data-star="7"] {
                 left: 50%;
                 transform: translateX(-50%);
                 top: auto;
@@ -706,7 +702,7 @@
             -webkit-text-fill-color: transparent;
         }
 
-        /* Sculptor Platform Section */
+        /* Constillation Section */
         .sculptor-platform {
             padding: 6rem 2rem;
             background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);

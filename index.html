@@ -43,13 +43,13 @@
                     <li><a href="#platform">Platform</a></li>
                     <li><a href="#about">Models</a></li>
                     <li><a href="#docs">Resources</a></li>
-                    <li><a href="#company">About</a></li>
+                    <li><a href="about.html">About</a></li>
                 </ul>
             </div>
             <div class="nav-controls">
-                <button class="nav-toggle-btn" id="navToggle" title="Toggle navigation style">
+                <!-- <button class="nav-toggle-btn" id="navToggle" title="Toggle navigation style">
                     <span class="toggle-icon">🎨</span>
-                </button>
+                </button> -->
                 <a href="https://huggingface.co/Sculptor-AI" class="contact-button" target="_blank" rel="noopener noreferrer">Download</a>
             </div>
         </nav>
@@ -78,62 +78,65 @@
                 
                 <!-- Constellation lines -->
                 <g class="constellation-lines">
-                    <line x1="150" y1="320" x2="265" y2="260" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
-                    <line x1="265" y1="260" x2="380" y2="270" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
-                    <line x1="380" y1="270" x2="480" y2="330" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
-                    <line x1="480" y1="330" x2="480" y2="480" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
-                    <line x1="480" y1="480" x2="560" y2="540" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
-                    <line x1="560" y1="540" x2="660" y2="580" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
-                    <line x1="660" y1="580" x2="800" y2="560" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
-                    <line x1="480" y1="330" x2="640" y2="210" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
-                    <line x1="640" y1="210" x2="820" y2="170" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
-                    <line x1="820" y1="170" x2="870" y2="80" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
-                    <line x1="820" y1="170" x2="890" y2="380" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
-                    <line x1="890" y1="380" x2="920" y2="430" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
+                    <!-- Lines forming the Big Dipper -->
+                    <line x1="950" y1="200" x2="800" y2="280" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/> <!-- Alkaid to Mizar -->
+                    <line x1="800" y1="280" x2="650" y2="350" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/> <!-- Mizar to Alioth -->
+                    <line x1="650" y1="350" x2="500" y2="400" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/> <!-- Alioth to Megrez -->
+                    <line x1="500" y1="400" x2="450" y2="550" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/> <!-- Megrez to Phecda -->
+                    <line x1="500" y1="400" x2="250" y2="350" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/> <!-- Megrez to Dubhe -->
+                    <line x1="250" y1="350" x2="300" y2="480" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/> <!-- Dubhe to Merak -->
+                    <line x1="450" y1="550" x2="300" y2="480" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/> <!-- Phecda to Merak -->
                 </g>
                 
                 <!-- Constellation stars -->
                 <g class="constellation-stars">
-                    <!-- Star 1 - Advanced Reasoning -->
+                    <!-- Star 1 - Dubhe -->
                     <g class="star-group" data-star="1">
-                        <circle cx="150" cy="320" r="12" fill="#8b5cf6" class="star-core"/>
-                        <circle cx="150" cy="320" r="20" fill="#8b5cf6" opacity="0.3" class="star-glow"/>
-                        <circle cx="150" cy="320" r="30" fill="transparent" class="star-hitbox" cursor="pointer"/>
+                        <circle cx="250" cy="350" r="12" fill="#8b5cf6" class="star-core"/>
+                        <circle cx="250" cy="350" r="20" fill="#8b5cf6" opacity="0.3" class="star-glow"/>
+                        <circle cx="250" cy="350" r="30" fill="transparent" class="star-hitbox" cursor="pointer"/>
                     </g>
                     
-                    <!-- Star 2 - Lightning Fast -->
+                    <!-- Star 2 - Merak -->
                     <g class="star-group" data-star="2">
-                        <circle cx="640" cy="210" r="12" fill="#8b5cf6" class="star-core"/>
-                        <circle cx="640" cy="210" r="20" fill="#8b5cf6" opacity="0.3" class="star-glow"/>
-                        <circle cx="640" cy="210" r="30" fill="transparent" class="star-hitbox" cursor="pointer"/>
+                        <circle cx="300" cy="480" r="12" fill="#8b5cf6" class="star-core"/>
+                        <circle cx="300" cy="480" r="20" fill="#8b5cf6" opacity="0.3" class="star-glow"/>
+                        <circle cx="300" cy="480" r="30" fill="transparent" class="star-hitbox" cursor="pointer"/>
                     </g>
                     
-                    <!-- Star 3 - Precision Accuracy -->
+                    <!-- Star 3 - Phecda -->
                     <g class="star-group" data-star="3">
-                        <circle cx="820" cy="170" r="14" fill="#8b5cf6" class="star-core"/>
-                        <circle cx="820" cy="170" r="22" fill="#8b5cf6" opacity="0.3" class="star-glow"/>
-                        <circle cx="820" cy="170" r="30" fill="transparent" class="star-hitbox" cursor="pointer"/>
+                        <circle cx="450" cy="550" r="14" fill="#8b5cf6" class="star-core"/>
+                        <circle cx="450" cy="550" r="22" fill="#8b5cf6" opacity="0.3" class="star-glow"/>
+                        <circle cx="450" cy="550" r="30" fill="transparent" class="star-hitbox" cursor="pointer"/>
                     </g>
                     
-                    <!-- Star 4 - Enterprise Security -->
+                    <!-- Star 4 - Megrez (New Star) -->
                     <g class="star-group" data-star="4">
-                        <circle cx="480" cy="480" r="12" fill="#8b5cf6" class="star-core"/>
-                        <circle cx="480" cy="480" r="20" fill="#8b5cf6" opacity="0.3" class="star-glow"/>
-                        <circle cx="480" cy="480" r="30" fill="transparent" class="star-hitbox" cursor="pointer"/>
+                        <circle cx="500" cy="400" r="10" fill="#8b5cf6" class="star-core"/> <!-- Slightly smaller as it's fainter -->
+                        <circle cx="500" cy="400" r="18" fill="#8b5cf6" opacity="0.3" class="star-glow"/>
+                        <circle cx="500" cy="400" r="30" fill="transparent" class="star-hitbox" cursor="pointer"/>
                     </g>
                     
-                    <!-- Star 5 - FOSS -->
+                    <!-- Star 5 - Alioth -->
                     <g class="star-group" data-star="5">
-                        <circle cx="890" cy="380" r="13" fill="#8b5cf6" class="star-core"/>
-                        <circle cx="890" cy="380" r="21" fill="#8b5cf6" opacity="0.3" class="star-glow"/>
-                        <circle cx="890" cy="380" r="30" fill="transparent" class="star-hitbox" cursor="pointer"/>
+                        <circle cx="650" cy="350" r="13" fill="#8b5cf6" class="star-core"/>
+                        <circle cx="650" cy="350" r="21" fill="#8b5cf6" opacity="0.3" class="star-glow"/>
+                        <circle cx="650" cy="350" r="30" fill="transparent" class="star-hitbox" cursor="pointer"/>
                     </g>
                     
-                    <!-- Star 6 - Easy Integration -->
+                    <!-- Star 6 - Mizar -->
                     <g class="star-group" data-star="6">
-                        <circle cx="660" cy="580" r="11" fill="#8b5cf6" class="star-core"/>
-                        <circle cx="660" cy="580" r="19" fill="#8b5cf6" opacity="0.3" class="star-glow"/>
-                        <circle cx="660" cy="580" r="30" fill="transparent" class="star-hitbox" cursor="pointer"/>
+                        <circle cx="800" cy="280" r="11" fill="#8b5cf6" class="star-core"/>
+                        <circle cx="800" cy="280" r="19" fill="#8b5cf6" opacity="0.3" class="star-glow"/>
+                        <circle cx="800" cy="280" r="30" fill="transparent" class="star-hitbox" cursor="pointer"/>
+                    </g>
+
+                    <!-- Star 7 - Alkaid -->
+                    <g class="star-group" data-star="7">
+                        <circle cx="950" cy="200" r="12" fill="#8b5cf6" class="star-core"/>
+                        <circle cx="950" cy="200" r="20" fill="#8b5cf6" opacity="0.3" class="star-glow"/>
+                        <circle cx="950" cy="200" r="30" fill="transparent" class="star-hitbox" cursor="pointer"/>
                     </g>
                 </g>
             </svg>
@@ -170,6 +173,11 @@
                     <h3>Easy Integration</h3>
                     <p>Using widely known formats, Ursa plugs right into your existing systems.</p>
                 </div>
+                <div class="star-info" data-star="7">
+                    <div class="star-icon">💡</div>
+                    <h3>Future Capabilities</h3>
+                    <p>Discover even more groundbreaking features as Ursa continues to evolve. Placeholder for future awesomeness.</p>
+                </div>
             </div>
         </div>
     </section>
@@ -191,13 +199,13 @@
         </div>
     </section>
 
-    <!-- Sculptor Platform Section -->
+    <!-- Constillation Section -->
     <section class="sculptor-platform" id="platform">
         <div class="platform-content">
             <div class="platform-text">
-                <h2>Meet Sculptor Platform</h2>
+                <h2>Meet Constillation</h2>
                 <p class="platform-subtitle">The OpenSource AI Platform Powering Innovation</p>
-                <p>Sculptor Platform is our flagship open-source AI platform designed to democratize artificial intelligence. Built with flexibility and extensibility at its core, Sculptor empowers developers and organizations to harness the full potential of AI technology.</p>
+                <p>Constillation is our flagship open-source AI platform designed to democratize artificial intelligence. Built with flexibility and extensibility at its core, Sculptor empowers developers and organizations to harness the full potential of AI technology.</p>
                 
                 <div class="platform-features">
                     <div class="feature-item">
@@ -236,9 +244,9 @@
                 </div>
             </div>
             <div class="platform-image">
-                <img src="sculptor.png" alt="Sculptor Platform Interface" />
+                <img src="sculptor.png" alt="Constillation Interface" />
                 <div class="image-overlay">
-                    <p>Sculptor Platform</p>
+                    <p>Constillation</p>
                 </div>
             </div>
         </div>
@@ -265,7 +273,7 @@
             <div class="footer-section">
                 <h3>Product</h3>
                 <a href="#">Ursa Model</a>
-                <a href="#">Sculptor Platform</a>
+                <a href="#">Constillation</a>
             </div>
             <div class="footer-section">
                 <h3>Company</h3>

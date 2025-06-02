@@ -32,6 +32,60 @@ if (header) {
     header.classList.add('visible');
 }
 
+// Navigation bar toggle functionality
+(function() {
+    const navToggle = document.getElementById('navToggle');
+    const header = document.querySelector('.header');
+    
+    if (!navToggle || !header) return;
+    
+    let isTransparent = false;
+    
+    // Load saved preference from localStorage
+    const savedPreference = localStorage.getItem('navBarStyle');
+    if (savedPreference === 'transparent') {
+        isTransparent = true;
+        header.classList.add('transparent');
+        updateToggleIcon();
+    }
+    
+    function updateToggleIcon() {
+        const toggleIcon = navToggle.querySelector('.toggle-icon');
+        if (isTransparent) {
+            toggleIcon.textContent = '🏠'; // House icon for solid/normal mode
+            navToggle.title = 'Switch to normal navigation';
+        } else {
+            toggleIcon.textContent = '🎨'; // Art palette icon for transparent mode
+            navToggle.title = 'Switch to transparent navigation';
+        }
+    }
+    
+    function toggleNavStyle() {
+        isTransparent = !isTransparent;
+        
+        if (isTransparent) {
+            header.classList.add('transparent');
+            localStorage.setItem('navBarStyle', 'transparent');
+        } else {
+            header.classList.remove('transparent');
+            localStorage.setItem('navBarStyle', 'normal');
+        }
+        
+        updateToggleIcon();
+        
+        // Add a small animation feedback
+        navToggle.style.transform = 'scale(0.9)';
+        setTimeout(() => {
+            navToggle.style.transform = '';
+        }, 150);
+    }
+    
+    navToggle.addEventListener('click', toggleNavStyle);
+    
+    // Initialize the icon based on current state
+    updateToggleIcon();
+})();
+
 // Add smooth scrolling for navigation links
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {

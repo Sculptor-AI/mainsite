@@ -56,11 +56,62 @@
             transform: translateX(-50%) translateY(-120%);
         }
 
+        /* Transparent header styles */
+        .header.transparent {
+            background: transparent;
+            backdrop-filter: none;
+            border: none;
+            box-shadow: none;
+        }
+
+        .header.transparent:hover {
+            background: transparent;
+            transform: translateX(-50%) translateY(0);
+            box-shadow: none;
+        }
+
         .nav {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin: 0;
+        }
+
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .nav-toggle-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 0.5rem;
+            color: #ffffff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(12px);
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .toggle-icon {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-toggle-btn:hover .toggle-icon {
+            transform: rotate(15deg);
         }
 
         .logo {
@@ -188,6 +239,25 @@
             
             .nav-menu {
                 gap: 0;
+            }
+            
+            .nav-controls {
+                gap: 0.5rem;
+            }
+            
+            .nav-toggle-btn {
+                width: 36px;
+                height: 36px;
+                padding: 0.4rem;
+            }
+            
+            .toggle-icon {
+                font-size: 1rem;
+            }
+            
+            .contact-button {
+                padding: 0.5rem 1rem;
+                font-size: 0.8rem;
             }
             
             .logo {

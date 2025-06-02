@@ -150,52 +150,65 @@ window.addEventListener('scroll', () => {
     const starGroups = document.querySelectorAll('.star-group');
     const starInfos = document.querySelectorAll('.star-info');
     
+    if (!svg || !backgroundStars || starGroups.length === 0) {
+        console.warn("Constellation SVG elements not found, animation will not run.");
+        return;
+    }
+    
     // Generate random background stars
-    const numBackgroundStars = 200; // Increased number for better coverage
+    const numBackgroundStars = 200;
     for (let i = 0; i < numBackgroundStars; i++) {
         const star = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        // Distribute stars across a larger area to ensure visibility when zoomed
-        star.setAttribute('cx', Math.random() * 2400 - 600); // -600 to 1800
-        star.setAttribute('cy', Math.random() * 1600 - 400); // -400 to 1200
+        star.setAttribute('cx', Math.random() * 2400 - 600); 
+        star.setAttribute('cy', Math.random() * 1600 - 400); 
         star.setAttribute('r', Math.random() * 1.5 + 0.3);
         star.classList.add('background-star');
-        // Add random opacity for natural variation
-        star.style.opacity = Math.random() * 0.6 + 0.2; // 0.2 to 0.8
+        star.style.opacity = Math.random() * 0.6 + 0.2; 
         backgroundStars.appendChild(star);
     }
 
-    // Scroll-based zoom animation
     let currentStar = 0;
-    let isZooming = false;
-    let scrollProgress = 0;
     let featuresTop = 0;
     let sectionHeight = 0;
 
+    // Animation state variables for lerping
+    let targetScale = 1.0;
+    let currentScale = 1.0;
+    let targetPanXVector = 0; // Represents (centerX - starPos.x)
+    let currentPanXVector = 0;
+    let targetPanYVector = 0; // Represents (centerY - starPos.y)
+    let currentPanYVector = 0;
+
     function updateDimensions() {
         const featuresSection = document.querySelector('.features');
-        featuresTop = featuresSection.offsetTop;
-        sectionHeight = window.innerHeight * 7; // 6 stars + extra space
-        // Don't set the section height here - let CSS handle it
+        if (featuresSection) {
+            featuresTop = featuresSection.offsetTop;
+            sectionHeight = featuresSection.offsetHeight;
+        }
     }
 
     function getStarPosition(starElement) {
-        const starGroup = starElement.querySelector('.star-core');
-        const cx = parseFloat(starGroup.getAttribute('cx'));
-        const cy = parseFloat(starGroup.getAttribute('cy'));
+        const starCore = starElement.querySelector('.star-core');
+        if (!starCore) return { x: 0, y: 0 }; // Fallback
+        const cx = parseFloat(starCore.getAttribute('cx'));
+        const cy = parseFloat(starCore.getAttribute('cy'));
         return { x: cx, y: cy };
     }
 
-    function updateConstellation() {
+    function updateConstellationTargets() { // Renamed to clarify it sets targets
         const scrollY = window.pageYOffset;
         const featuresSection = document.querySelector('.features');
+        
+        if (!featuresSection || !svg.viewBox || !svg.viewBox.baseVal) return; // Guard against missing elements/viewBox
+
         const sectionTop = featuresSection.offsetTop;
         const sectionBottom = sectionTop + featuresSection.offsetHeight;
-        const relativeScroll = scrollY - sectionTop + window.innerHeight;
-        
-        // Check if we're in the features section
-        if (scrollY + window.innerHeight < sectionTop || scrollY > sectionBottom) {
-            // Reset to initial state when outside section
-            svg.style.transform = 'translate(-50%, -50%) scale(1)';
+
+        if (scrollY + window.innerHeight < sectionTop + 100 || scrollY > sectionBottom - 100) {
+            targetScale = 1.0;
+            targetPanXVector = 0;
+            targetPanYVector = 0;
+            
             starGroups.forEach(star => star.classList.remove('active'));
             starInfos.forEach(info => info.classList.remove('active'));
             constellationContainer.classList.remove('zoomed');
@@ -203,69 +216,130 @@ window.addEventListener('scroll', () => {
             return;
         }
 
-        // Add zoomed class when scrolling begins
-        if (relativeScroll > 100) {
+        const relativeScroll = scrollY - sectionTop + window.innerHeight;
+        
+        if (relativeScroll > window.innerHeight * 0.2) {
             constellationContainer.classList.add('zoomed');
+        } else {
+            constellationContainer.classList.remove('zoomed');
         }
 
-        // Calculate progress through the section (0 to 1)
         const totalScrollDistance = sectionHeight - window.innerHeight;
+        if (totalScrollDistance <= 0) {
+            targetScale = 1.0;
+            targetPanXVector = 0;
+            targetPanYVector = 0;
+            return;
+        }
+
         const scrollProgress = Math.max(0, Math.min(1, (relativeScroll - window.innerHeight) / totalScrollDistance));
         
-        // Calculate which star should be active
-        const starIndex = Math.floor(scrollProgress * 6);
-        const starLocalProgress = (scrollProgress * 6) % 1;
+        const numStars = starGroups.length;
+        if (numStars === 0) return;
 
-        if (starIndex !== currentStar && starIndex < 6) {
+        const starIndex = Math.min(Math.floor(scrollProgress * numStars), numStars - 1);
+        const starLocalProgress = (scrollProgress * numStars) % 1;
+
+        if (starIndex !== currentStar && starIndex < numStars) {
             currentStar = starIndex;
-            
-            // Update active star
-            starGroups.forEach((star, i) => {
-                star.classList.toggle('active', i === currentStar);
-            });
-            
-            starInfos.forEach((info, i) => {
-                info.classList.toggle('active', i === currentStar);
-            });
+            starGroups.forEach((star, i) => star.classList.toggle('active', i === currentStar));
+            starInfos.forEach((info, i) => info.classList.toggle('active', i === currentStar));
         }
 
-        // Zoom and pan to current star
-        if (currentStar < 6 && starIndex < 6) {
-            const targetStar = starGroups[currentStar];
-            const starPos = getStarPosition(targetStar);
+        if (currentStar < numStars && starGroups[currentStar]) {
+            const targetStarElement = starGroups[currentStar];
+            const starPos = getStarPosition(targetStarElement);
             
-            // Apply smooth easing to the transform
-            const easeProgress = easeInOutCubic(starLocalProgress);
-            const easedZoom = 1 + (easeProgress * 2);
-            
-            // Calculate pan to center the star
-            const centerX = 600; // SVG viewBox center (1200/2)
-            const centerY = 400;
-            const easedPanX = (centerX - starPos.x) * (easedZoom - 1);
-            const easedPanY = (centerY - starPos.y) * (easedZoom - 1);
-            
-            svg.style.transform = `translate(-50%, -50%) translate(${easedPanX}px, ${easedPanY}px) scale(${easedZoom})`;
+            const svgWidth = svg.viewBox.baseVal.width;
+            const svgHeight = svg.viewBox.baseVal.height;
+            const centerX = svgWidth / 2;
+            const centerY = svgHeight / 2;
+
+            const baseZoom = 1.1; 
+            const additionalZoom = 0.4; 
+            const peakZoomProgress = 0.5;
+            let progressForAdditionalZoom = 0;
+            if (starLocalProgress < peakZoomProgress) {
+                progressForAdditionalZoom = starLocalProgress / peakZoomProgress;
+            } else {
+                progressForAdditionalZoom = (1 - starLocalProgress) / (1 - peakZoomProgress);
+            }
+            const easedAdditionalZoomProgress = easeInOutCubic(progressForAdditionalZoom);
+            const easedZoom = baseZoom + (easedAdditionalZoomProgress * additionalZoom);
+
+            targetScale = easedZoom;
+            targetPanXVector = centerX - starPos.x;
+            targetPanYVector = centerY - starPos.y;
+        } else {
+            // Fallback if currentStar is out of bounds or targetStarElement is null
+            targetScale = 1.0;
+            targetPanXVector = 0;
+            targetPanYVector = 0;
         }
     }
+    
+    function animationLoop() {
+        const smoothingFactor = 0.05; // Reduced for more smoothness
 
-    // Easing function for smoother animation
+        // Lerp current values towards target values
+        currentScale += (targetScale - currentScale) * smoothingFactor;
+        currentPanXVector += (targetPanXVector - currentPanXVector) * smoothingFactor;
+        currentPanYVector += (targetPanYVector - currentPanYVector) * smoothingFactor;
+
+        // Calculate the final pan values for the transform string
+        const finalDisplayPanX = currentPanXVector * currentScale;
+        const finalDisplayPanY = currentPanYVector * currentScale;
+
+        // Check if we are "close enough" to the target idle state
+        const isTargetIdle = Math.abs(targetScale - 1.0) < 0.001 &&
+                           Math.abs(targetPanXVector) < 0.001 &&
+                           Math.abs(targetPanYVector) < 0.001;
+
+        const isCurrentEffectivelyIdle = Math.abs(currentScale - 1.0) < 0.001 &&
+                                     Math.abs(currentPanXVector) < 0.001 &&
+                                     Math.abs(currentPanYVector) < 0.001;
+
+        if (isTargetIdle && isCurrentEffectivelyIdle) {
+            // If at the target idle state and current is also effectively idle,
+            // ensure transform is precisely set to the clean idle state.
+            // Only update if not already in the exact clean state to avoid redundant style changes.
+            if (svg.style.transform !== 'translate(-50%, -50%) scale(1) translate(0px, 0px)') {
+                svg.style.transform = `translate(-50%, -50%) scale(1) translate(0px, 0px)`;
+            }
+            // No need to explicitly snap currentScale, currentPanXVector, currentPanYVector here;
+            // the lerping will naturally bring them extremely close to the target values.
+        } else {
+            // Otherwise, always update the transform with the lerped values
+            svg.style.transform = `translate(-50%, -50%) scale(${currentScale}) translate(${finalDisplayPanX}px, ${finalDisplayPanY}px)`;
+        }
+
+        requestAnimationFrame(animationLoop);
+    }
+
     function easeInOutCubic(t) {
         return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     }
 
-    // Initialize on load
     updateDimensions();
     window.addEventListener('resize', updateDimensions);
-    window.addEventListener('scroll', updateConstellation);
+    window.addEventListener('scroll', updateConstellationTargets); // Changed to call target updater
     
-    // Optional: Click to jump to star
+    animationLoop(); // Start the animation loop
+    
     starGroups.forEach((star, index) => {
         star.style.cursor = 'pointer';
         star.addEventListener('click', () => {
             const featuresSection = document.querySelector('.features');
+            if (!featuresSection) return; // Guard clause
+
             const sectionTop = featuresSection.offsetTop;
             const totalScrollDistance = sectionHeight - window.innerHeight;
-            const targetProgress = (index + 0.5) / 6; // Center on the star
+            if (totalScrollDistance <=0) return; // Avoid division by zero
+
+            const numStars = starGroups.length;
+            if (numStars === 0) return; // No stars
+
+            const targetProgress = (index + 0.5) / numStars; // Center on the star
             const targetScroll = sectionTop + (targetProgress * totalScrollDistance);
             
             window.scrollTo({

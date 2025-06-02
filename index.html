@@ -66,36 +66,105 @@
     <!-- Features Section -->
     <section class="features" id="features">
         <h2 class="section-title">Powerful Capabilities</h2>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon">🧠</div>
-                <h3>Advanced Reasoning</h3>
-                <p>Ursa demonstrates exceptional reasoning capabilities across complex problem domains, from scientific research to creative writing.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">⚡</div>
-                <h3>Lightning Fast</h3>
-                <p>Optimized for speed without compromising quality. Generate responses in milliseconds with our cutting-edge architecture.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🎯</div>
-                <h3>Precision Accuracy</h3>
-                <p>Built with state-of-the-art training methodologies to deliver highly accurate and contextually relevant responses.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🔒</div>
-                <h3>Enterprise Security</h3>
-                <p>Industry-leading security measures protect your data and ensure compliance with the highest privacy standards.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🌐</div>
-                <h3>FOSS</h3>
-                <p>Ursa is free and open source, and can be used by anyone.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🔧</div>
-                <h3>Easy Integration</h3>
-                <p>Using widely known formats, Ursa plugs right into your exisiting systems.</p>
+        <div class="constellation-container">
+            <svg class="ursa-major-svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+                <!-- Background stars -->
+                <g class="background-stars"></g>
+                
+                <!-- Constellation lines -->
+                <g class="constellation-lines">
+                    <line x1="150" y1="320" x2="265" y2="260" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
+                    <line x1="265" y1="260" x2="380" y2="270" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
+                    <line x1="380" y1="270" x2="480" y2="330" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
+                    <line x1="480" y1="330" x2="480" y2="480" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
+                    <line x1="480" y1="480" x2="560" y2="540" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
+                    <line x1="560" y1="540" x2="660" y2="580" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
+                    <line x1="660" y1="580" x2="800" y2="560" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
+                    <line x1="480" y1="330" x2="640" y2="210" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
+                    <line x1="640" y1="210" x2="820" y2="170" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
+                    <line x1="820" y1="170" x2="870" y2="80" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
+                    <line x1="820" y1="170" x2="890" y2="380" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
+                    <line x1="890" y1="380" x2="920" y2="430" stroke="#8b5cf6" stroke-width="2" opacity="0.6"/>
+                </g>
+                
+                <!-- Constellation stars -->
+                <g class="constellation-stars">
+                    <!-- Star 1 - Advanced Reasoning -->
+                    <g class="star-group" data-star="1">
+                        <circle cx="150" cy="320" r="12" fill="#8b5cf6" class="star-core"/>
+                        <circle cx="150" cy="320" r="20" fill="#8b5cf6" opacity="0.3" class="star-glow"/>
+                        <circle cx="150" cy="320" r="30" fill="transparent" class="star-hitbox" cursor="pointer"/>
+                    </g>
+                    
+                    <!-- Star 2 - Lightning Fast -->
+                    <g class="star-group" data-star="2">
+                        <circle cx="640" cy="210" r="12" fill="#8b5cf6" class="star-core"/>
+                        <circle cx="640" cy="210" r="20" fill="#8b5cf6" opacity="0.3" class="star-glow"/>
+                        <circle cx="640" cy="210" r="30" fill="transparent" class="star-hitbox" cursor="pointer"/>
+                    </g>
+                    
+                    <!-- Star 3 - Precision Accuracy -->
+                    <g class="star-group" data-star="3">
+                        <circle cx="820" cy="170" r="14" fill="#8b5cf6" class="star-core"/>
+                        <circle cx="820" cy="170" r="22" fill="#8b5cf6" opacity="0.3" class="star-glow"/>
+                        <circle cx="820" cy="170" r="30" fill="transparent" class="star-hitbox" cursor="pointer"/>
+                    </g>
+                    
+                    <!-- Star 4 - Enterprise Security -->
+                    <g class="star-group" data-star="4">
+                        <circle cx="480" cy="480" r="12" fill="#8b5cf6" class="star-core"/>
+                        <circle cx="480" cy="480" r="20" fill="#8b5cf6" opacity="0.3" class="star-glow"/>
+                        <circle cx="480" cy="480" r="30" fill="transparent" class="star-hitbox" cursor="pointer"/>
+                    </g>
+                    
+                    <!-- Star 5 - FOSS -->
+                    <g class="star-group" data-star="5">
+                        <circle cx="890" cy="380" r="13" fill="#8b5cf6" class="star-core"/>
+                        <circle cx="890" cy="380" r="21" fill="#8b5cf6" opacity="0.3" class="star-glow"/>
+                        <circle cx="890" cy="380" r="30" fill="transparent" class="star-hitbox" cursor="pointer"/>
+                    </g>
+                    
+                    <!-- Star 6 - Easy Integration -->
+                    <g class="star-group" data-star="6">
+                        <circle cx="660" cy="580" r="11" fill="#8b5cf6" class="star-core"/>
+                        <circle cx="660" cy="580" r="19" fill="#8b5cf6" opacity="0.3" class="star-glow"/>
+                        <circle cx="660" cy="580" r="30" fill="transparent" class="star-hitbox" cursor="pointer"/>
+                    </g>
+                </g>
+            </svg>
+            
+            <!-- Feature information panels -->
+            <div class="star-info-container">
+                <div class="star-info" data-star="1">
+                    <div class="star-icon">🧠</div>
+                    <h3>Advanced Reasoning</h3>
+                    <p>Ursa demonstrates exceptional reasoning capabilities across complex problem domains, from scientific research to creative writing.</p>
+                </div>
+                <div class="star-info" data-star="2">
+                    <div class="star-icon">⚡</div>
+                    <h3>Lightning Fast</h3>
+                    <p>Optimized for speed without compromising quality. Generate responses in milliseconds with our cutting-edge architecture.</p>
+                </div>
+                <div class="star-info" data-star="3">
+                    <div class="star-icon">🎯</div>
+                    <h3>Precision Accuracy</h3>
+                    <p>Built with state-of-the-art training methodologies to deliver highly accurate and contextually relevant responses.</p>
+                </div>
+                <div class="star-info" data-star="4">
+                    <div class="star-icon">🔒</div>
+                    <h3>Enterprise Security</h3>
+                    <p>Industry-leading security measures protect your data and ensure compliance with the highest privacy standards.</p>
+                </div>
+                <div class="star-info" data-star="5">
+                    <div class="star-icon">🌐</div>
+                    <h3>FOSS</h3>
+                    <p>Ursa is free and open source, and can be used by anyone.</p>
+                </div>
+                <div class="star-info" data-star="6">
+                    <div class="star-icon">🔧</div>
+                    <h3>Easy Integration</h3>
+                    <p>Using widely known formats, Ursa plugs right into your existing systems.</p>
+                </div>
             </div>
         </div>
     </section>

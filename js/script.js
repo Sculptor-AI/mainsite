@@ -84,4 +84,143 @@ window.addEventListener('scroll', () => {
     if (heroBackground) {
         heroBackground.style.transform = `translateY(${scrolled * 0.5}px)`;
     }
-}); 
+});
+
+// Ursa Major Constellation Animation
+(function() {
+    const constellationContainer = document.querySelector('.constellation-container');
+    if (!constellationContainer) return;
+
+    const svg = document.querySelector('.ursa-major-svg');
+    const backgroundStars = document.querySelector('.background-stars');
+    const starGroups = document.querySelectorAll('.star-group');
+    const starInfos = document.querySelectorAll('.star-info');
+    
+    // Generate random background stars
+    const numBackgroundStars = 200; // Increased number for better coverage
+    for (let i = 0; i < numBackgroundStars; i++) {
+        const star = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        // Distribute stars across a larger area to ensure visibility when zoomed
+        star.setAttribute('cx', Math.random() * 2400 - 600); // -600 to 1800
+        star.setAttribute('cy', Math.random() * 1600 - 400); // -400 to 1200
+        star.setAttribute('r', Math.random() * 1.5 + 0.3);
+        star.classList.add('background-star');
+        // Add random opacity for natural variation
+        star.style.opacity = Math.random() * 0.6 + 0.2; // 0.2 to 0.8
+        backgroundStars.appendChild(star);
+    }
+
+    // Scroll-based zoom animation
+    let currentStar = 0;
+    let isZooming = false;
+    let scrollProgress = 0;
+    let featuresTop = 0;
+    let sectionHeight = 0;
+
+    function updateDimensions() {
+        const featuresSection = document.querySelector('.features');
+        featuresTop = featuresSection.offsetTop;
+        sectionHeight = window.innerHeight * 7; // 6 stars + extra space
+        // Don't set the section height here - let CSS handle it
+    }
+
+    function getStarPosition(starElement) {
+        const starGroup = starElement.querySelector('.star-core');
+        const cx = parseFloat(starGroup.getAttribute('cx'));
+        const cy = parseFloat(starGroup.getAttribute('cy'));
+        return { x: cx, y: cy };
+    }
+
+    function updateConstellation() {
+        const scrollY = window.pageYOffset;
+        const featuresSection = document.querySelector('.features');
+        const sectionTop = featuresSection.offsetTop;
+        const sectionBottom = sectionTop + featuresSection.offsetHeight;
+        const relativeScroll = scrollY - sectionTop + window.innerHeight;
+        
+        // Check if we're in the features section
+        if (scrollY + window.innerHeight < sectionTop || scrollY > sectionBottom) {
+            // Reset to initial state when outside section
+            svg.style.transform = 'translate(-50%, -50%) scale(1)';
+            starGroups.forEach(star => star.classList.remove('active'));
+            starInfos.forEach(info => info.classList.remove('active'));
+            constellationContainer.classList.remove('zoomed');
+            currentStar = 0;
+            return;
+        }
+
+        // Add zoomed class when scrolling begins
+        if (relativeScroll > 100) {
+            constellationContainer.classList.add('zoomed');
+        }
+
+        // Calculate progress through the section (0 to 1)
+        const totalScrollDistance = sectionHeight - window.innerHeight;
+        const scrollProgress = Math.max(0, Math.min(1, (relativeScroll - window.innerHeight) / totalScrollDistance));
+        
+        // Calculate which star should be active
+        const starIndex = Math.floor(scrollProgress * 6);
+        const starLocalProgress = (scrollProgress * 6) % 1;
+
+        if (starIndex !== currentStar && starIndex < 6) {
+            currentStar = starIndex;
+            
+            // Update active star
+            starGroups.forEach((star, i) => {
+                star.classList.toggle('active', i === currentStar);
+            });
+            
+            starInfos.forEach((info, i) => {
+                info.classList.toggle('active', i === currentStar);
+            });
+        }
+
+        // Zoom and pan to current star
+        if (currentStar < 6 && starIndex < 6) {
+            const targetStar = starGroups[currentStar];
+            const starPos = getStarPosition(targetStar);
+            
+            // Apply smooth easing to the transform
+            const easeProgress = easeInOutCubic(starLocalProgress);
+            const easedZoom = 1 + (easeProgress * 2);
+            
+            // Calculate pan to center the star
+            const centerX = 600; // SVG viewBox center (1200/2)
+            const centerY = 400;
+            const easedPanX = (centerX - starPos.x) * (easedZoom - 1);
+            const easedPanY = (centerY - starPos.y) * (easedZoom - 1);
+            
+            svg.style.transform = `translate(-50%, -50%) translate(${easedPanX}px, ${easedPanY}px) scale(${easedZoom})`;
+        }
+    }
+
+    // Easing function for smoother animation
+    function easeInOutCubic(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    // Initialize on load
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    window.addEventListener('scroll', updateConstellation);
+    
+    // Optional: Click to jump to star
+    starGroups.forEach((star, index) => {
+        star.style.cursor = 'pointer';
+        star.addEventListener('click', () => {
+            const featuresSection = document.querySelector('.features');
+            const sectionTop = featuresSection.offsetTop;
+            const totalScrollDistance = sectionHeight - window.innerHeight;
+            const targetProgress = (index + 0.5) / 6; // Center on the star
+            const targetScroll = sectionTop + (targetProgress * totalScrollDistance);
+            
+            window.scrollTo({
+                top: targetScroll,
+                behavior: 'smooth'
+            });
+        });
+    });
+
+    // Remove parallax effect - stars should stay in place
+    // The twinkling animation is handled by CSS
+})(); 

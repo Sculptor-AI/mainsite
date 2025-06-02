@@ -293,9 +293,12 @@
 
         /* Features Section */
         .features {
-            padding: 6rem 2rem;
-            max-width: 1200px;
-            margin: 0 auto;
+            padding: 0;
+            padding-top: 6rem;
+            max-width: 100%;
+            margin: 0;
+            min-height: 500vh; /* Create scrollable area for constellation animation */
+            position: relative;
         }
 
         .section-title {
@@ -303,12 +306,240 @@
             font-size: 3rem;
             font-weight: 700;
             margin-bottom: 3rem;
+            padding: 0 2rem;
             background: linear-gradient(135deg, #ffffff, #6366f1);
             background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
+        /* Constellation Visualization */
+        .constellation-container {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            background: radial-gradient(ellipse at center, rgba(99, 102, 241, 0.05) 0%, transparent 70%);
+            z-index: 1;
+        }
+
+        .ursa-major-svg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            height: 100%;
+            max-width: none;
+            transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: visible;
+        }
+
+        /* Background stars */
+        .background-star {
+            fill: #ffffff;
+            opacity: 0.6;
+        }
+
+        /* Constellation stars */
+        .star-group {
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .star-group:hover .star-core {
+            r: 16;
+            filter: drop-shadow(0 0 8px #8b5cf6) drop-shadow(0 0 15px #6366f1);
+        }
+
+        .star-group:hover .star-glow {
+            r: 30;
+            opacity: 0.5;
+        }
+
+        .star-hitbox {
+            cursor: pointer;
+        }
+
+        .star-core {
+            filter: drop-shadow(0 0 3px #8b5cf6);
+            transition: all 0.5s ease;
+        }
+
+        .star-glow {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { 
+                r: 20;
+                opacity: 0.3;
+            }
+            50% { 
+                r: 25;
+                opacity: 0.5;
+            }
+        }
+
+        .star-group.active .star-core {
+            r: 20;
+            filter: drop-shadow(0 0 10px #8b5cf6) drop-shadow(0 0 20px #6366f1);
+        }
+
+        .star-group.active .star-glow {
+            r: 40;
+            opacity: 0.6;
+        }
+
+        /* Constellation lines */
+        .constellation-lines line {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: draw-line 2s ease-out forwards;
+        }
+
+        @keyframes draw-line {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        /* Scroll indicator */
+        .constellation-container::after {
+            content: "Scroll to explore";
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            animation: scroll-hint 2s ease-in-out infinite;
+        }
+
+        @keyframes scroll-hint {
+            0%, 100% { 
+                opacity: 0.6;
+                transform: translateX(-50%) translateY(0);
+            }
+            50% { 
+                opacity: 1;
+                transform: translateX(-50%) translateY(5px);
+            }
+        }
+
+        /* Hide scroll indicator when zoomed */
+        .constellation-container.zoomed::after {
+            opacity: 0;
+        }
+
+        /* Star information panels */
+        .star-info-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .star-info {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 350px;
+            opacity: 0;
+            transform: scale(0.8) translateY(20px);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .star-info.active {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+
+        .star-info .star-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(45deg, #6366f1, #8b5cf6);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .star-info h3 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 0.8rem;
+            color: #ffffff;
+        }
+
+        .star-info p {
+            color: #b0b0b0;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        /* Position star info panels */
+        .star-info[data-star="1"] { top: 280px; left: 200px; }
+        .star-info[data-star="2"] { top: 170px; left: 300px; }
+        .star-info[data-star="3"] { top: 130px; right: 50px; }
+        .star-info[data-star="4"] { bottom: 280px; left: 150px; }
+        .star-info[data-star="5"] { bottom: 350px; right: 50px; }
+        .star-info[data-star="6"] { bottom: 180px; left: 350px; }
+
+        /* Zoom states for constellation */
+        .constellation-container.zoomed {
+            cursor: move;
+        }
+
+        .constellation-container.zoomed .ursa-major-svg {
+            transform-origin: center;
+        }
+
+        /* Mobile responsiveness for constellation */
+        @media (max-width: 768px) {
+            .features {
+                min-height: 400vh; /* Reduce height on mobile */
+            }
+
+            .constellation-container {
+                height: 100vh; /* Maintain full viewport height */
+            }
+
+            .star-info {
+                max-width: 280px;
+                padding: 1.5rem;
+            }
+
+            .star-info[data-star="1"],
+            .star-info[data-star="2"],
+            .star-info[data-star="3"],
+            .star-info[data-star="4"],
+            .star-info[data-star="5"],
+            .star-info[data-star="6"] {
+                left: 50%;
+                transform: translateX(-50%);
+                top: auto;
+                bottom: 50px;
+                right: auto;
+            }
+
+            .star-info.active {
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        /* Old Features Grid - Remove/Comment out */
+        /*
         .features-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -353,6 +584,7 @@
             color: #b0b0b0;
             line-height: 1.6;
         }
+        */
 
         /* About Section */
         .about {
@@ -731,4 +963,9 @@
                 padding: 1rem 2rem;
                 font-size: 1rem;
             }
+        }
+
+        /* Ensure background stars group is visible */
+        .background-stars {
+            pointer-events: none;
         } 

@@ -1,6 +1,16 @@
 // Header scroll behavior
-let scrollThreshold = 80; // Distance from top before header hides
+let scrollThreshold = 80; // Default value, will be updated dynamically
 const header = document.querySelector('.header');
+const heroContent = document.querySelector('.hero-content');
+
+function updateScrollThreshold() {
+    if (header && heroContent) {
+        const headerHeight = header.offsetHeight;
+        const heroContentTop = heroContent.offsetTop;
+        // Hide header just before it would overlap with the hero content, with a 20px buffer
+        scrollThreshold = heroContentTop - headerHeight - 20;
+    }
+}
 
 function handleScroll() {
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
@@ -27,10 +37,14 @@ window.addEventListener('scroll', () => {
     }
 });
 
-// Initialize header as visible
+// Initialize header and set dynamic scroll threshold
 if (header) {
     header.classList.add('visible');
     header.classList.add('transparent'); // Make header transparent by default
+    // Initial calculation
+    updateScrollThreshold();
+    // Recalculate on resize
+    window.addEventListener('resize', updateScrollThreshold);
 }
 
 // Navigation bar toggle functionality
@@ -98,6 +112,11 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         if (targetId.startsWith('#')) {
             const targetElement = document.querySelector(targetId);
             if (targetElement) {
+                // Set flag to indicate programmatic scrolling is happening
+                if (window.constellationScrollHandler) {
+                    window.constellationScrollHandler.setProgrammaticScrolling(true);
+                }
+                
                 targetElement.scrollIntoView({
                     behavior: 'smooth',
                     block: 'start'
@@ -158,6 +177,10 @@ window.addEventListener('scroll', () => {
         return;
     }
     
+    // Track programmatic scrolling to skip animation during smooth scrolls
+    let isProgrammaticScrolling = false;
+    let programmaticScrollTimeout = null;
+    
     // Generate random background stars
     const numBackgroundStars = 200;
     for (let i = 0; i < numBackgroundStars; i++) {
@@ -182,6 +205,42 @@ window.addEventListener('scroll', () => {
     let targetPanYVector = 0; // Represents (centerY - starPos.y)
     let currentPanYVector = 0;
 
+    // Create global handler for other parts of the code to control constellation animation
+    window.constellationScrollHandler = {
+        setProgrammaticScrolling: function(isScrolling) {
+            isProgrammaticScrolling = isScrolling;
+            
+            // Clear any existing timeout
+            if (programmaticScrollTimeout) {
+                clearTimeout(programmaticScrollTimeout);
+            }
+            
+            // If starting programmatic scroll, set a timeout to automatically end it
+            // This acts as a safety net in case smooth scrolling doesn't trigger scroll end detection
+            if (isScrolling) {
+                // Immediately snap to neutral state when programmatic scrolling starts
+                targetScale = 1.0;
+                targetPanXVector = 0;
+                targetPanYVector = 0;
+                // Skip lerping - set current values directly
+                currentScale = 1.0;
+                currentPanXVector = 0;
+                currentPanYVector = 0;
+                // Immediately update the transform to neutral state
+                svg.style.transform = 'translate(-50%, -50%) scale(1) translate(0px, 0px)';
+                // Remove all active states
+                starGroups.forEach(star => star.classList.remove('active'));
+                starInfos.forEach(info => info.classList.remove('active'));
+                constellationContainer.classList.remove('zoomed');
+                currentStar = 0;
+                
+                programmaticScrollTimeout = setTimeout(() => {
+                    isProgrammaticScrolling = false;
+                }, 1000); // Reduced to 1 second timeout as safety net
+            }
+        }
+    };
+
     function updateDimensions() {
         const featuresSection = document.querySelector('.features');
         if (featuresSection) {
@@ -199,6 +258,20 @@ window.addEventListener('scroll', () => {
     }
 
     function updateConstellationTargets() { // Renamed to clarify it sets targets
+        // During programmatic scrolling, completely skip constellation updates
+        // and keep it in neutral state to avoid any flickering
+        if (isProgrammaticScrolling) {
+            targetScale = 1.0;
+            targetPanXVector = 0;
+            targetPanYVector = 0;
+            
+            starGroups.forEach(star => star.classList.remove('active'));
+            starInfos.forEach(info => info.classList.remove('active'));
+            constellationContainer.classList.remove('zoomed');
+            currentStar = 0;
+            return;
+        }
+        
         const scrollY = window.pageYOffset;
         const featuresSection = document.querySelector('.features');
         
@@ -292,7 +365,7 @@ window.addEventListener('scroll', () => {
     }
     
     function animationLoop() {
-        const smoothingFactor = 0.05; // Reduced for more smoothness
+        const smoothingFactor = 0.05; // Consistent smoothing factor
 
         // Lerp current values towards target values
         currentScale += (targetScale - currentScale) * smoothingFactor;
@@ -333,9 +406,32 @@ window.addEventListener('scroll', () => {
         return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     }
 
+    // Add scroll end detection to clear programmatic scrolling flag
+    let scrollEndTimer = null;
+    function handleScrollEnd() {
+        // Clear existing timer
+        if (scrollEndTimer) {
+            clearTimeout(scrollEndTimer);
+        }
+        
+        // Set timer to detect when scrolling has stopped - much shorter delay
+        scrollEndTimer = setTimeout(() => {
+            if (isProgrammaticScrolling) {
+                isProgrammaticScrolling = false;
+                if (programmaticScrollTimeout) {
+                    clearTimeout(programmaticScrollTimeout);
+                    programmaticScrollTimeout = null;
+                }
+            }
+        }, 50); // Reduced to 50ms for quicker response
+    }
+
     updateDimensions();
     window.addEventListener('resize', updateDimensions);
-    window.addEventListener('scroll', updateConstellationTargets); // Changed to call target updater
+    window.addEventListener('scroll', () => {
+        updateConstellationTargets();
+        handleScrollEnd(); // Detect when scrolling ends
+    });
     
     animationLoop(); // Start the animation loop
     
@@ -354,6 +450,11 @@ window.addEventListener('scroll', () => {
 
             const targetProgress = (index + 0.5) / numStars; // Center on the star
             const targetScroll = sectionTop + (targetProgress * totalScrollDistance);
+            
+            // Set flag to indicate programmatic scrolling is happening
+            if (window.constellationScrollHandler) {
+                window.constellationScrollHandler.setProgrammaticScrolling(true);
+            }
             
             window.scrollTo({
                 top: targetScroll,
@@ -390,6 +491,11 @@ window.addEventListener('scroll', () => {
 
     // Optional: Make the arrow clickable to scroll down
     scrollArrow.addEventListener('click', function() {
+        // Set flag to indicate programmatic scrolling is happening
+        if (window.constellationScrollHandler) {
+            window.constellationScrollHandler.setProgrammaticScrolling(true);
+        }
+        
         const featuresSection = document.querySelector('.features');
         if (featuresSection) {
             featuresSection.scrollIntoView({

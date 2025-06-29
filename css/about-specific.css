@@ -78,7 +78,7 @@
     border: 1px solid rgba(99, 102, 241, 0.2);
     border-radius: 20px;
     padding: 2.5rem;
-    text-align: center;
+    text-align: left;
     height: 100%; /* Make boxes in a grid take full height of the row */
     display: flex;
     flex-direction: column;
@@ -90,6 +90,7 @@
     font-weight: 600;
     margin-bottom: 1rem;
     color: #ffffff;
+    text-align: left;
 }
 
 .highlight-box p {
@@ -97,6 +98,7 @@
     margin: 0;
     font-size: 1rem;
     line-height: 1.6;
+    text-align: left;
 }
 
 /* Pentagon Values Section */

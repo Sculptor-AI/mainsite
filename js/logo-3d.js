@@ -8,6 +8,9 @@
     const VIEW_DISTANCE = 55.0;
     const ROTATION_SPEED = 0.005; // Restored rotation
     const EXTRUSION_DEPTH = 5.0;
+    const ORB_RADIUS = 32.0;
+    const MORPH_DURATION = 1.2; // seconds to morph logo -> orb
+    const BURST_DISTANCE = 14.0;
 
     // Voxel density
     const Z_STEP = 0.2; // High resolution depth
@@ -54,6 +57,41 @@
             '*': 0.7, '#': 0.8, '%': 0.9, '@': 1.0
         };
         return weights[c] || 0.6; // Default weight
+    }
+
+    function easeInOutCubic(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    function generateOrbTargets(count) {
+        const targets = [];
+        const golden = Math.PI * (3 - Math.sqrt(5));
+        const denom = Math.max(1, count - 1);
+
+        for (let i = 0; i < count; i++) {
+            const y = 1 - (i / denom) * 2;
+            const radius = Math.sqrt(Math.max(0, 1 - y * y));
+            const theta = golden * i;
+            const radiusJitter = ORB_RADIUS * (0.9 + Math.random() * 0.15);
+
+            targets.push({
+                x: Math.cos(theta) * radius * radiusJitter,
+                y: y * radiusJitter,
+                z: Math.sin(theta) * radius * radiusJitter
+            });
+        }
+
+        return targets;
+    }
+
+    function buildSortedIndices(length, extractor) {
+        return Array.from({ length }, (_, i) => {
+            const { x, y, z } = extractor(i);
+            return { i, y, angle: Math.atan2(z, x) };
+        }).sort((a, b) => {
+            if (a.y === b.y) return a.angle - b.angle;
+            return a.y - b.y;
+        }).map(n => n.i);
     }
 
     // --- Initialization ---
@@ -103,7 +141,10 @@
                             y: baseY + (Math.random() - 0.5) * XY_JITTER,
                             z: z,
                             isFace: isFace,
-                            weight: weight // Store texture brightness
+                            weight: weight, // Store texture brightness
+                            orbX: 0,
+                            orbY: 0,
+                            orbZ: 0
                         });
                     }
                 }
@@ -112,6 +153,21 @@
     }
 
     initLogo();
+
+    // Generate orb layout
+    const orbTargets = generateOrbTargets(particles.length);
+
+    // Map particles to orb targets by sorted latitude + angle to minimize teleport paths
+    const particleOrder = buildSortedIndices(particles.length, i => particles[i]);
+    const orbOrder = buildSortedIndices(orbTargets.length, i => orbTargets[i]);
+
+    for (let k = 0; k < particles.length; k++) {
+        const p = particles[particleOrder[k]];
+        const t = orbTargets[orbOrder[k]];
+        p.orbX = t.x;
+        p.orbY = t.y;
+        p.orbZ = t.z;
+    }
 
     // --- Rendering ---
     const screenElement = document.getElementById('solid-logo-canvas');
@@ -128,8 +184,27 @@
     document.body.removeChild(measureElement);
 
     let angle = 0;
+    let morphTarget = 0; // 0 = logo, 1 = orb
+    let morphProgress = 0;
+    let lastTimestamp = performance.now();
+    let morphDirection = 0; // 1 = moving to orb, -1 = returning
 
-    function render() {
+    function render(timestamp) {
+        const now = typeof timestamp === 'number' ? timestamp : performance.now();
+        const dt = Math.min(0.05, Math.max(0, (now - lastTimestamp) / 1000)); // seconds
+        lastTimestamp = now;
+
+        const morphStep = dt / MORPH_DURATION;
+        if (morphTarget > morphProgress) {
+            morphProgress = Math.min(morphTarget, morphProgress + morphStep);
+            morphDirection = 1;
+        } else if (morphTarget < morphProgress) {
+            morphProgress = Math.max(morphTarget, morphProgress - morphStep);
+            morphDirection = -1;
+        }
+
+        const easedMorph = easeInOutCubic(morphProgress);
+
         // Adapted to use container width to fit in the column
         const container = screenElement.parentElement;
         const width = Math.max(1, Math.floor(container.clientWidth / charWidth));
@@ -154,10 +229,15 @@
         for (let i = 0; i < particles.length; i++) {
             let p = particles[i];
 
+            // Morph between logo voxels and spherical orb
+            const interpX = p.x + (p.orbX - p.x) * easedMorph;
+            const interpY = p.y + (p.orbY - p.y) * easedMorph;
+            const interpZ = p.z + (p.orbZ - p.z) * easedMorph;
+
             // Rotate Y
-            let x = p.x * cosT - p.z * sinT;
-            let z = p.x * sinT + p.z * cosT;
-            let y = p.y;
+            let x = interpX * cosT - interpZ * sinT;
+            let z = interpX * sinT + interpZ * cosT;
+            let y = interpY;
 
             // Camera Projection
             let zDist = VIEW_DISTANCE + z;
@@ -180,15 +260,37 @@
                         // 1. Calculate Normal Vector
                         let nx = 0, ny = 0, nz = 0;
 
-                        if (p.isFace) {
-                            // Face normal follows rotation
-                            nx = sinT * (p.z > 0 ? 1 : -1);
-                            nz = cosT * (p.z > 0 ? 1 : -1);
+                        if (easedMorph < 0.25) {
+                            // Preserve the logo's flat/sided lighting early in the morph
+                            if (p.isFace) {
+                                nx = sinT * (p.z > 0 ? 1 : -1);
+                                nz = cosT * (p.z > 0 ? 1 : -1);
+                            } else {
+                                nx = cosT;
+                                nz = -sinT;
+                            }
                         } else {
-                            // Side normal (approximated as Cylinder normal)
-                            nx = cosT;
-                            nz = -sinT;
+                            // Orb / blended: use position-based normal
+                            const len = Math.max(0.001, Math.hypot(interpX, interpY, interpZ));
+                            nx = interpX / len;
+                            ny = interpY / len;
+                            nz = interpZ / len;
+
+                            // Blend a little of the logo normal back in to keep edges readable mid-morph
+                            const logoInfluence = Math.max(0, 0.4 - easedMorph) / 0.4;
+                            if (logoInfluence > 0) {
+                                const logoNx = p.isFace ? sinT * (p.z > 0 ? 1 : -1) : cosT;
+                                const logoNy = 0;
+                                const logoNz = p.isFace ? cosT * (p.z > 0 ? 1 : -1) : -sinT;
+
+                                nx = nx * (1 - logoInfluence) + logoNx * logoInfluence;
+                                ny = ny * (1 - logoInfluence) + logoNy * logoInfluence;
+                                nz = nz * (1 - logoInfluence) + logoNz * logoInfluence;
+                            }
                         }
+
+                        let norm = Math.max(0.001, Math.hypot(nx, ny, nz));
+                        nx /= norm; ny /= norm; nz /= norm;
 
                         // 2. Diffuse Lighting (Dot Product)
                         let dot = (nx * lx + ny * ly + nz * lz);
@@ -197,16 +299,20 @@
 
                         // 3. Texture Mixing
                         let brightness = 0;
+                        const textureFade = p.isFace ? (1 - easedMorph) : 0;
 
                         if (p.isFace) {
                             // If it's the face, blend the 3D lighting with the original 2D Art weight
-                            // 40% Lighting + 60% Texture
-                            brightness = (diffuse * 0.4) + (p.weight * 0.8);
+                            // Fade the texture as we head into the orb
+                            brightness = (diffuse * 0.55) + (p.weight * 0.8 * textureFade);
                         } else {
                             // Sides are purely geometric. 
                             // Make sides slightly darker than faces to emphasize edges
                             brightness = diffuse * 0.7;
                         }
+
+                        // Subtle glow bump when fully orb'd
+                        brightness += diffuse * easedMorph * 0.12;
 
                         // 4. Depth Fog (make things in back darker)
                         // z ranges roughly -20 to 20. 
@@ -231,9 +337,27 @@
         }
         screenElement.innerText = frame;
 
-        angle += ROTATION_SPEED;
+        const spinBoost = easedMorph * 0.004;
+        angle += ROTATION_SPEED + spinBoost;
         requestAnimationFrame(render);
     }
+
+    // Morph control based on Past Projects visibility
+    function setOrbActive(shouldExplode) {
+        morphTarget = shouldExplode ? 1 : 0;
+    }
+
+    const pastProjects = document.getElementById('past-projects');
+    if (pastProjects) {
+        const orbObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => setOrbActive(entry.isIntersecting));
+        }, { threshold: 0.45 });
+        orbObserver.observe(pastProjects);
+    }
+
+    // Handy manual triggers for debugging
+    window.sculptorLogoToOrb = () => setOrbActive(true);
+    window.sculptorLogoToLogo = () => setOrbActive(false);
 
     requestAnimationFrame(render);
 })();

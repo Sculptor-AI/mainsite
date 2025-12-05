@@ -1,0 +1,475 @@
+/* css/about-specific.css */
+
+/* Hero section styles specific to about.html */
+.about-page .hero {
+    min-height: 60vh;
+    padding: 8rem 2rem 4rem;
+}
+
+.about-page .hero h1 {
+    font-size: clamp(2.5rem, 6vw, 4rem);
+}
+
+.about-page .hero p {
+    margin-bottom: 2rem;
+}
+
+/* Main Content styling for about.html */
+.main-content {
+    padding: 4rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.content-section {
+    margin-bottom: 4rem;
+}
+
+/* Section Title specific for about.html contexts */
+/* Loaded after style.css, this overrides font-size and margin */
+.about-page .section-title {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+}
+
+/* By default, .section-title from style.css is centered.
+   For about.html, titles within .content-text (typically in a grid) should be left-aligned. */
+.about-page .content-text .section-title {
+    text-align: left;
+}
+/* Titles directly under .content-section but not in .content-text (like 'Our Values') will remain centered via style.css */
+
+
+.ursa-title {
+    font-family: 'Georgia', 'Times New Roman', 'Playfair Display', serif;
+    font-style: italic;
+    font-weight: 400;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline;
+}
+
+.content-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: start;
+    margin-bottom: 3rem; /* Consistent bottom margin for grids */
+}
+
+.content-grid:last-of-type {
+    margin-bottom: 0; /* Remove margin if it's the last grid in a section */
+}
+
+.content-text {
+    font-size: 1.1rem;
+    color: #b0b0b0;
+    line-height: 1.7;
+}
+
+.content-text p {
+    margin-bottom: 1.5rem;
+}
+
+.highlight-box {
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: 20px;
+    padding: 2.5rem;
+    text-align: left;
+    height: 100%; /* Make boxes in a grid take full height of the row */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.highlight-box h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #ffffff;
+    text-align: left;
+}
+
+.highlight-box p {
+    color: #b0b0b0;
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.6;
+    text-align: left;
+}
+
+/* Pentagon Values Section */
+.values-pentagon-container {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+    margin: 4rem auto;
+    padding: 2rem;
+    min-height: 700px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pentagon-background {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 500px;
+    height: 500px;
+    z-index: 1;
+}
+
+.pentagon-lines {
+    width: 100%;
+    height: 100%;
+}
+
+.pentagon-outline {
+    animation: draw-pentagon 3s ease-out forwards;
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+}
+
+@keyframes draw-pentagon {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+.values-pentagon {
+    position: relative;
+    width: 500px;
+    height: 500px;
+    z-index: 2;
+}
+
+.value-node {
+    position: absolute;
+    width: 180px; /* Initial width for circle */
+    height: 180px; /* Initial height for circle */
+    top: 50%;
+    left: 50%;
+    transform-origin: center;
+    transform: translate(-50%, -50%) rotate(calc(var(--angle) * 1deg)) translateY(-200px) rotate(calc(var(--angle) * -1deg));
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), height 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: fadeInPentagon 0.8s ease-out forwards;
+    animation-delay: calc(var(--angle) * 0.01s);
+    opacity: 0;
+}
+
+@keyframes fadeInPentagon {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) rotate(calc(var(--angle) * 1deg)) translateY(-150px) rotate(calc(var(--angle) * -1deg)) scale(0.5);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) rotate(calc(var(--angle) * 1deg)) translateY(-200px) rotate(calc(var(--angle) * -1deg)) scale(1);
+    }
+}
+
+.value-content {
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%; /* Initial circular shape */
+    padding: 1rem; /* Adjusted padding for icon focus */
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.4s ease, border-radius 0.5s cubic-bezier(0.4, 0, 0.2, 1); /* Added border-radius to transition */
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+}
+
+.value-content::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(from 0deg, transparent, rgba(99, 102, 241, 0.1), transparent);
+    animation: rotate 8s linear infinite;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.value-node:hover .value-content::before {
+    opacity: 1;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.value-icon {
+    font-size: 3rem; /* Slightly larger icon */
+    margin-bottom: 0; /* Remove margin as it's the only content initially */
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    transition: opacity 0.3s ease, transform 0.3s ease, max-height 0.4s ease;
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    max-height: 4rem; /* Ensure it's visible */
+}
+
+.value-content h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0.5rem 0;
+    color: #ffffff;
+    transition: opacity 0.3s ease 0.1s, transform 0.3s ease 0.1s, max-height 0.4s ease 0.1s, visibility 0s ease 0.4s;
+    opacity: 0;
+    transform: translateY(10px);
+    max-height: 0;
+    visibility: hidden; /* Hidden initially */
+}
+
+.value-content p {
+    font-size: 0.75rem;
+    color: #b0b0b0;
+    margin: 0;
+    line-height: 1.4;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s ease 0.15s, transform 0.3s ease 0.15s, max-height 0.4s ease 0.15s, visibility 0s ease 0.4s;
+    text-align: center;
+    max-height: 0;
+    visibility: hidden; /* Hidden initially */
+}
+
+/* Hover Effects */
+.value-node:hover {
+    /* transform: translate(-50%, -50%) rotate(calc(var(--angle) * 1deg)) translateY(-210px) rotate(calc(var(--angle) * -1deg)) scale(1.1); */
+    width: 280px; /* Expanded width for text */
+    height: 230px; /* Expanded height for text */
+    transform: translate(-50%, -50%) rotate(calc(var(--angle) * 1deg)) translateY(-205px) rotate(calc(var(--angle) * -1deg)); /* Adjusted Y translation slightly for new size */
+    z-index: 10;
+}
+
+.value-node:hover .value-content {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.4);
+    box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
+    border-radius: 25px; /* Morph to curved box */
+    padding: 1.5rem; /* Restore padding for text content */
+}
+
+.value-node:hover .value-icon {
+    opacity: 0;
+    transform: scale(0.5) translateY(-20px);
+    max-height: 0;
+    transition-delay: 0s; /* Hide icon immediately on hover */
+}
+
+.value-node:hover .value-content h4 {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 3em; /* Allow space for title */
+    visibility: visible;
+    transition-delay: 0.1s; /* Delay appearance for smoother effect */
+}
+
+.value-node:hover .value-content p {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 10em; /* Allow space for description */
+    visibility: visible;
+    transition-delay: 0.15s; /* Delay appearance for smoother effect */
+}
+
+/* Specific value colors */
+.value-node[data-value="accessibility"]:hover .value-content {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: rgba(34, 197, 94, 0.4);
+    box-shadow: 0 10px 30px rgba(34, 197, 94, 0.2);
+}
+
+.value-node[data-value="transparency"]:hover .value-content {
+    background: rgba(251, 191, 36, 0.15);
+    border-color: rgba(251, 191, 36, 0.4);
+    box-shadow: 0 10px 30px rgba(251, 191, 36, 0.2);
+}
+
+.value-node[data-value="innovation"]:hover .value-content {
+    background: rgba(168, 85, 247, 0.15);
+    border-color: rgba(168, 85, 247, 0.4);
+    box-shadow: 0 10px 30px rgba(168, 85, 247, 0.2);
+}
+
+.value-node[data-value="collaboration"]:hover .value-content {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.4);
+    box-shadow: 0 10px 30px rgba(59, 130, 246, 0.2);
+}
+
+.value-node[data-value="education"]:hover .value-content {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.4);
+    box-shadow: 0 10px 30px rgba(239, 68, 68, 0.2);
+}
+
+/* Mobile Responsiveness for Pentagon */
+@media (max-width: 768px) {
+    .values-pentagon-container {
+        max-width: 100%;
+        min-height: 600px; /* Adjusted to ensure space */
+        padding: 1rem;
+        margin-top: 2rem; /* Added margin for title */
+    }
+    
+    .pentagon-background,
+    .values-pentagon {
+        width: 380px; /* Slightly smaller pentagon base */
+        height: 380px;
+    }
+    
+    .value-node {
+        width: 140px; /* Initial size for tablet */
+        height: 140px;
+        transform: translate(-50%, -50%) rotate(calc(var(--angle) * 1deg)) translateY(-150px) rotate(calc(var(--angle) * -1deg)); /* Adjusted Y for smaller pentagon */
+    }
+    
+    .value-node:hover {
+        width: 220px; /* Expanded size for tablet */
+        height: 190px;
+        transform: translate(-50%, -50%) rotate(calc(var(--angle) * 1deg)) translateY(-155px) rotate(calc(var(--angle) * -1deg));
+    }
+    
+    .value-content {
+        padding: 0.8rem; /* Initial padding for icon */
+    }
+     .value-node:hover .value-content {
+        padding: 1rem; /* Padding for text on tablet */
+    }
+    
+    .value-icon {
+        font-size: 2.5rem; /* Icon size for tablet */
+    }
+    
+    .value-content h4 {
+        font-size: 0.95rem;
+    }
+    
+    .value-content p {
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .values-pentagon-container {
+        min-height: 550px; /* Adjusted to ensure space */
+        margin-top: 1rem;
+    }
+    
+    .pentagon-background,
+    .values-pentagon {
+        width: 300px; /* Smaller for mobile */
+        height: 300px;
+    }
+    
+    .value-node {
+        width: 110px; /* Initial size for mobile */
+        height: 110px;
+        transform: translate(-50%, -50%) rotate(calc(var(--angle) * 1deg)) translateY(-120px) rotate(calc(var(--angle) * -1deg)); /* Adjusted Y for smaller pentagon */
+    }
+    
+    .value-node:hover {
+        width: 190px; /* Expanded size for mobile */
+        height: 170px;
+        transform: translate(-50%, -50%) rotate(calc(var(--angle) * 1deg)) translateY(-125px) rotate(calc(var(--angle) * -1deg));
+    }
+    
+    .value-content {
+        padding: 0.5rem; /* Initial padding for icon */
+    }
+
+    .value-node:hover .value-content {
+        padding: 0.8rem; /* Padding for text on mobile */
+        border-radius: 20px;
+    }
+    
+    .value-icon {
+        font-size: 2rem; /* Icon size for mobile */
+    }
+    
+    .value-content h4 {
+        font-size: 0.85rem;
+        margin: 0.2rem 0;
+    }
+    
+    .value-content p {
+        font-size: 0.65rem;
+        line-height: 1.3;
+    }
+}
+
+/* Mobile responsiveness for about.html specific content */
+@media (max-width: 768px) {
+    .about-page .hero {
+        padding: 6rem 1.5rem 3rem; /* Adjusted padding for mobile */
+    }
+
+    .main-content {
+        padding: 3rem 1.5rem;
+    }
+
+    .content-grid {
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+    }
+    
+    .highlight-box {
+        padding: 2rem;
+    }
+    
+    .about-page .content-text {
+        text-align: center; 
+    }
+    
+    .about-page .content-text .section-title {
+         text-align: center; /* Ensure centered on mobile when stacked */
+    }
+
+    .about-page .section-title {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .about-page .hero h1 {
+        font-size: clamp(2rem, 5vw, 2.8rem);
+    }
+    .about-page .hero p {
+        font-size: 1.05rem;
+    }
+    .about-page .section-title {
+        font-size: 1.8rem;
+    }
+    .highlight-box h3 {
+        font-size: 1.3rem;
+    }
+    .main-content {
+        padding: 2.5rem 1rem;
+    }
+}
+
+.about-page .content-section .btn-primary {
+    margin-top: 2rem;
+    display: inline-block;
+} 

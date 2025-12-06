@@ -167,7 +167,7 @@
         const targets = [];
         const golden = Math.PI * (3 - Math.sqrt(5));
         const denom = Math.max(1, count - 1);
-        const DWARF_RADIUS = 28.0; // Slightly smaller than orb
+        const DWARF_RADIUS = 21.0; // Reduced to 75% size
 
         for (let i = 0; i < count; i++) {
             const y = 1 - (i / denom) * 2;

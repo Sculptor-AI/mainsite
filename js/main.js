@@ -4,8 +4,10 @@
  */
 
 // --- Configuration ---
+const isMobilePortrait = window.innerWidth < 768 && window.innerHeight > window.innerWidth;
+
 const SPHERE_RADIUS = 25.0;
-const NUM_POINTS = 32000;
+const NUM_POINTS = isMobilePortrait ? 12000 : 32000; // Reduced particles for mobile performance
 
 // --- Zoom Configuration ---
 const VIEW_DISTANCE_START = 110.0;
@@ -182,8 +184,8 @@ function generateLogoTargets() {
 const textData = generateTextTargets();
 const logoData = generateLogoTargets();
 
-// Check for mobile portrait
-const isMobilePortrait = window.innerWidth < 768 && window.innerHeight > window.innerWidth;
+// isMobilePortrait is now defined at the top for config
+
 
 const GAP = 25.0;
 let totalWidth;

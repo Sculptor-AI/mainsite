@@ -7,8 +7,8 @@
     // --- Configuration ---
     const VIEW_DISTANCE = 55.0;
     const ROTATION_SPEED = 0.005; // Restored rotation
-    const EXTRUSION_DEPTH = 5.0;
-    const ORB_RADIUS = 32.0;
+    const EXTRUSION_DEPTH = 3.75; // Reduced 25%
+    const ORB_RADIUS = 24.0;      // Reduced 25%
     const MORPH_DURATION = 1.2; // seconds to morph logo -> orb
     const BURST_DISTANCE = 14.0;
 
@@ -69,8 +69,8 @@
                           \`.\`
 `;
 
-    const GRID_X = 1.8;
-    const GRID_Y = 3.5;
+    const GRID_X = 1.35; // Reduced 25%
+    const GRID_Y = 2.6;  // Reduced ~25%
 
     const particles = [];
 
@@ -453,8 +453,9 @@
         const container = screenElement.parentElement;
 
         // Fixed resolution for consistent "video-like" scaling
-        const width = 64;
-        const height = 64;
+        // Expanded to 128x128 as requested to fix clipping
+        const width = 128;
+        const height = 128;
 
         const size = width * height;
         const aspectCorrection = (charHeight / charWidth);
@@ -485,7 +486,7 @@
         let zbuffer = new Float32Array(size).fill(-9999.0);
         let colorBuffer = useColor ? new Array(size) : null; // Store {r,g,b}
 
-        const K1 = Math.min(width, height) * 0.5;
+        const K1 = 40.0;
         const cosT = Math.cos(angle);
         const sinT = Math.sin(angle);
 
@@ -651,7 +652,7 @@
     const pastProjects = document.getElementById('past-projects');
     const sunfish = document.getElementById('project-sunfish');
     const brownDwarf = document.getElementById('brown-dwarf');
-    const sourceCode = document.getElementById('source-code');
+    const sourceCode = document.getElementById('connect');
 
     let isPastProjectsVisible = false;
     let isSunfishVisible = false;

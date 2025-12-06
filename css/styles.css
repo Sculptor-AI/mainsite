@@ -140,7 +140,7 @@ body {
     flex-direction: column;
     gap: 40vh;
     /* Large gap for scrolling effect */
-    padding-top: 20vh;
+    padding-top: 35vh;
     padding-bottom: 5vh;
     max-width: none;
     /* Let it scale */
@@ -223,7 +223,7 @@ body {
 
 .modern-link {
     display: inline-block;
-    color: #27c93f;
+    color: #e57373;
     text-decoration: none;
     font-weight: 500;
     border-bottom: 1px solid transparent;
@@ -231,5 +231,5 @@ body {
 }
 
 .modern-link:hover {
-    border-bottom-color: #27c93f;
+    border-bottom-color: #e57373;
 }

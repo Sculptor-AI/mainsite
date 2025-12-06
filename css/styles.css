@@ -94,8 +94,8 @@ body {
     align-items: center;
     perspective: 1000px;
     position: sticky;
-    top: 0;
-    height: 100vh;
+    top: 10vh;
+    height: 80vh;
 }
 
 .spinning-ascii {

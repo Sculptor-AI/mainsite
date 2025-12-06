@@ -398,8 +398,21 @@
 
     // State: 0 = Logo, 1 = Orb, 2 = Fish, 3 = Dwarf, 4 = Logo2 (Return)
     let targetState = 0;
-    let currentState = 0; // Float
+    let sourceState = 0;  // The state we're morphing FROM
+    let morphProgress = 1.0; // 0 = at source, 1 = at target
     let lastTimestamp = performance.now();
+
+    // Helper to get position for a particle at a given state
+    function getStatePosition(p, state) {
+        switch (state) {
+            case 0: return { x: p.logoX, y: p.logoY, z: p.logoZ };
+            case 1: return { x: p.orbX, y: p.orbY, z: p.orbZ };
+            case 2: return { x: p.fishX, y: p.fishY, z: p.fishZ };
+            case 3: return { x: p.dwarfX, y: p.dwarfY, z: p.dwarfZ };
+            case 4: return { x: p.logo2X, y: p.logo2Y, z: p.logo2Z };
+            default: return { x: p.logoX, y: p.logoY, z: p.logoZ };
+        }
+    }
 
     function render(timestamp) {
         const now = typeof timestamp === 'number' ? timestamp : performance.now();
@@ -407,47 +420,48 @@
         lastTimestamp = now;
         time += dt;
 
-        // Morph State Logic
+        // Morph State Logic - Direct transitions
         const morphSpeed = dt / MORPH_DURATION;
 
-        // Logic for smooth transitions.
-        // To skip intermediate states when going from Dwarf (3) -> Logo (0),
-        // we effectively "rewire" the blend weights or change the state logic.
-        // If we are at state 3 and target is 0, we don't want to go 3->2->1->0.
-        // We want to slide directly 3->0. 
-        // However, our lerp logic assumes linear sequence.
-        // Let's modify the blend weight calculation directly based on SourceCode visibility override.
-
-        // If jumping from 3->0 or 2->0 for source code, we handle it by treating 0 as "next step" from current max state.
-        // BUT simpler: Just have a separate "returnToLogo" blend factor.
-
-        if (Math.abs(targetState - currentState) < morphSpeed) {
-            currentState = targetState;
-        } else if (currentState < targetState) {
-            currentState += morphSpeed;
-        } else {
-            currentState -= morphSpeed;
+        // When target changes, start a new morph from current blended position
+        // morphProgress goes from 0 to 1 as we transition to targetState
+        if (morphProgress < 1.0) {
+            morphProgress += morphSpeed;
+            if (morphProgress > 1.0) morphProgress = 1.0;
         }
 
-        // Calculate weights for 5-way blend
-        // 0: Logo, 1: Orb, 2: Fish, 3: Dwarf, 4: Logo2 (return)
+        // Get eased progress
+        let easedProgress = easeInOutCubic(morphProgress);
+
+        // Calculate weights based on direct source->target blend
         let wLogo = 0, wOrb = 0, wFish = 0, wDwarf = 0, wLogo2 = 0;
 
-        if (currentState <= 1) {
-            wOrb = easeInOutCubic(currentState);
-            wLogo = 1 - wOrb;
-        } else if (currentState <= 2) {
-            wFish = easeInOutCubic(currentState - 1);
-            wOrb = 1 - wFish;
-        } else if (currentState <= 3) {
-            wDwarf = easeInOutCubic(currentState - 2);
-            wFish = 1 - wDwarf;
-        } else if (currentState <= 4) {
-            wLogo2 = easeInOutCubic(currentState - 3);
-            wDwarf = 1 - wLogo2;
-        } else {
-            wLogo2 = 1;
+        // Source weights (what we're coming FROM)
+        let srcWeights = { logo: 0, orb: 0, fish: 0, dwarf: 0, logo2: 0 };
+        switch (sourceState) {
+            case 0: srcWeights.logo = 1; break;
+            case 1: srcWeights.orb = 1; break;
+            case 2: srcWeights.fish = 1; break;
+            case 3: srcWeights.dwarf = 1; break;
+            case 4: srcWeights.logo2 = 1; break;
         }
+
+        // Target weights (what we're going TO)
+        let tgtWeights = { logo: 0, orb: 0, fish: 0, dwarf: 0, logo2: 0 };
+        switch (targetState) {
+            case 0: tgtWeights.logo = 1; break;
+            case 1: tgtWeights.orb = 1; break;
+            case 2: tgtWeights.fish = 1; break;
+            case 3: tgtWeights.dwarf = 1; break;
+            case 4: tgtWeights.logo2 = 1; break;
+        }
+
+        // Blend between source and target
+        wLogo = lerp(srcWeights.logo, tgtWeights.logo, easedProgress);
+        wOrb = lerp(srcWeights.orb, tgtWeights.orb, easedProgress);
+        wFish = lerp(srcWeights.fish, tgtWeights.fish, easedProgress);
+        wDwarf = lerp(srcWeights.dwarf, tgtWeights.dwarf, easedProgress);
+        wLogo2 = lerp(srcWeights.logo2, tgtWeights.logo2, easedProgress);
 
         // Render setup
         const container = screenElement.parentElement;
@@ -660,18 +674,26 @@
     let isSourceCodeVisible = false;
 
     function updateState() {
-        // Priority: Bottom up?
+        // Priority: Bottom up
+        let newTarget = 0;
 
         if (isSourceCodeVisible) {
-            targetState = 4; // Logo (State 4, after Dwarf)
+            newTarget = 4; // Logo (State 4, after Dwarf)
         } else if (isBrownDwarfVisible) {
-            targetState = 3; // Dwarf
+            newTarget = 3; // Dwarf
         } else if (isSunfishVisible) {
-            targetState = 2; // Fish
+            newTarget = 2; // Fish
         } else if (isPastProjectsVisible) {
-            targetState = 1; // Orb
+            newTarget = 1; // Orb
         } else {
-            targetState = 0; // Logo
+            newTarget = 0; // Logo
+        }
+
+        // If target changed, start a new morph
+        if (newTarget !== targetState) {
+            sourceState = targetState; // Current target becomes new source
+            targetState = newTarget;
+            morphProgress = 0.0; // Reset morph progress
         }
     }
 

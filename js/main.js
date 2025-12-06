@@ -18,9 +18,10 @@ const SHADE_CHARS = " ·-:;=+*#%@";
 const CAM_YAW_SPEED = 0.01;
 
 // --- Timings (in frames) ---
-const TIME_BLOB_END = 180;
-const TIME_EXPLODE_END = 360;
-const TIME_GATHER_DURATION = 320;
+// Speed up on mobile to let particles settle faster
+const TIME_BLOB_END = isMobilePortrait ? 100 : 180;
+const TIME_EXPLODE_END = isMobilePortrait ? 200 : 360;
+const TIME_GATHER_DURATION = isMobilePortrait ? 180 : 320;
 const TIME_TEXT_START = TIME_EXPLODE_END;
 
 let stateTimer = 0;

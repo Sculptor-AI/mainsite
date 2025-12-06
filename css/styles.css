@@ -98,9 +98,13 @@ body {
     justify-content: center;
     align-items: center;
     perspective: 1000px;
+    position: -webkit-sticky;
     position: sticky;
     top: 10vh;
     height: 80vh;
+    text-rendering: optimizeSpeed;
+    will-change: transform;
+    /* Hint for compositing */
 }
 
 .spinning-ascii {

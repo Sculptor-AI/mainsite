@@ -430,8 +430,30 @@
         return w;
     }
 
+    // PRE-ALLOCATE BUFFERS
+    const width = 128;
+    const height = 128;
+    const size = width * height;
+
+    // Reuse these arrays every frame to prevent GC spikes (common issue in Safari)
+    const textBuffer = new Array(size).fill(' ');
+    const zbuffer = new Float32Array(size).fill(-9999.0);
+    const colorBuffer = new Array(size).fill(null); // Objects {r,g,b}
+
+    // Fill color buffer with default objects to avoid allocation during render if possible
+    for (let i = 0; i < size; i++) colorBuffer[i] = { r: 0, g: 0, b: 0 };
+
     function render(timestamp) {
         const now = typeof timestamp === 'number' ? timestamp : performance.now();
+
+        // Mobile/Hidden Optimization:
+        // If the element is hidden (display: none), skip all calculations
+        if (screenElement.offsetParent === null) {
+            lastTimestamp = now;
+            requestAnimationFrame(render);
+            return;
+        }
+
         const dt = Math.min(0.05, Math.max(0, (now - lastTimestamp) / 1000)); // seconds
         lastTimestamp = now;
         time += dt;
@@ -465,40 +487,18 @@
 
         // Render setup
         const container = screenElement.parentElement;
-
-        // Fixed resolution for consistent "video-like" scaling
-        // Expanded to 128x128 as requested to fix clipping
-        const width = 128;
-        const height = 128;
-
-        const size = width * height;
         const aspectCorrection = (charHeight / charWidth);
 
-        // Prepare output buffers. Note: We need color now!
-        // Since we are writing to a <pre>, we can't change color per char easily without <span>s which is slow.
-        // HOWEVER, the prompt implies "color transition".
-        // ASCII art engines usually use spans for color. 
-        // BUT, this existing engine uses innerText = frame (monochrome).
-        // Refactoring to full color span output is heavy.
-        // Check if `good_dwarf.html` used canvas? YES, it used <canvas>.
-        // The current site uses <pre>.
-        // To support color for the dwarf, we'd need to switch to spans or a canvas overlay.
-        // Given the constraints and "don't affect regular spinning logo", sticking to monochrome <pre> 
-        // means no color, just brightness. 
-        // BUT user said "color transition". 
-        // Let's assume we need to output spans OR use CSS gradients on the text itself?
-        // CSS `background-clip: text` is used on the headers. 
-        // Maybe we can just color the whole block? No, dwarf is multi-colored.
+        // RESET BUFFERS
+        // Float32Array doesn't need to be recreated, just filled
+        zbuffer.fill(-9999.0);
+        // textBuffer needs to be reset to space
+        for (let i = 0; i < size; i++) textBuffer[i] = ' ';
+        // colorBuffer contents don't strictly need reset if we overwrite, but let's be safe if logic depends on it
+        // actually we only read colorBuffer if we wrote it.
 
-        // Optimization: Only use spans if we are in Dwarf mode (wDwarf > 0).
-        // Otherwise use innerText for performance.
         const useColor = (wDwarf > 0.01);
-
-        // If using color, we build an HTML string. Else plain text.
-        let htmlBuffer = "";
-        let textBuffer = new Array(size).fill(' ');
-        let zbuffer = new Float32Array(size).fill(-9999.0);
-        let colorBuffer = useColor ? new Array(size) : null; // Store {r,g,b}
+        let htmlBuffer = ""; // String building is still needed for useColor = true case
 
         const K1 = 40.0;
         const cosT = Math.cos(angle);

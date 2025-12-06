@@ -664,11 +664,13 @@
 
     // Scroll Trigger Logic
     const pastProjects = document.getElementById('past-projects');
+    const futureProjects = document.getElementById('future-projects');
     const sunfish = document.getElementById('project-sunfish');
     const brownDwarf = document.getElementById('brown-dwarf');
     const sourceCode = document.getElementById('connect');
 
     let isPastProjectsVisible = false;
+    let isFutureProjectsVisible = false;
     let isSunfishVisible = false;
     let isBrownDwarfVisible = false;
     let isSourceCodeVisible = false;
@@ -685,6 +687,8 @@
             newTarget = 3; // Dwarf
         } else if (isSunfishVisible) {
             newTarget = 2; // Fish
+        } else if (isFutureProjectsVisible) {
+            newTarget = 0; // Logo (brief return between Orb and Fish)
         } else if (isPastProjectsVisible) {
             newTarget = 1; // Orb
         }
@@ -704,6 +708,7 @@
     const obsOptions = { threshold: 0.1, rootMargin: '-40% 0px -40% 0px' };
 
     if (pastProjects) new IntersectionObserver((e) => { e.forEach(x => { isPastProjectsVisible = x.isIntersecting; updateState(); }) }, obsOptions).observe(pastProjects);
+    if (futureProjects) new IntersectionObserver((e) => { e.forEach(x => { isFutureProjectsVisible = x.isIntersecting; updateState(); }) }, obsOptions).observe(futureProjects);
     if (sunfish) new IntersectionObserver((e) => { e.forEach(x => { isSunfishVisible = x.isIntersecting; updateState(); }) }, obsOptions).observe(sunfish);
 
     if (brownDwarf) {

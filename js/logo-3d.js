@@ -75,10 +75,10 @@
     const particles = [];
 
     // Colors for Brown Dwarf (State 3)
-    const COLOR_COLD = { r: 60,  g: 20,  b: 70 };   
-    const COLOR_MID  = { r: 220, g: 60,  b: 100 };  
-    const COLOR_HOT  = { r: 255, g: 210, b: 140 };  
-    
+    const COLOR_COLD = { r: 60, g: 20, b: 70 };
+    const COLOR_MID = { r: 220, g: 60, b: 100 };
+    const COLOR_HOT = { r: 255, g: 210, b: 140 };
+
     // Default color (Logo/Orb/Fish are white/grey)
     const COLOR_DEFAULT = { r: 224, g: 224, b: 224 };
 
@@ -88,7 +88,7 @@
             '.': 0.3, ',': 0.3, "'": 0.3, '`': 0.3,
             ':': 0.4, '-': 0.4, '_': 0.5,
             '=': 0.5, '+': 0.6,
-            '(': 0.7, ')': 0.7, 
+            '(': 0.7, ')': 0.7,
             '*': 0.7, '#': 0.8, '%': 0.9, '@': 1.0
         };
         return weights[c] || 0.6; // Default weight
@@ -111,11 +111,11 @@
     }
 
     function getHeatColor(val) {
-        if(val < 0) val = 0; 
-        if(val > 1) val = 1;
+        if (val < 0) val = 0;
+        if (val > 1) val = 1;
 
         if (val < 0.5) {
-            let t = val * 2.0; 
+            let t = val * 2.0;
             return lerpColor(COLOR_COLD, COLOR_MID, t);
         } else {
             let t = (val - 0.5) * 2.0;
@@ -126,17 +126,17 @@
     function getGasTexture(x, y, z, time) {
         // Latitude Bands
         let wavyY = y + Math.sin(x * 3.0 + time * 0.5) * 0.1;
-        let band = Math.sin(wavyY * 12.0); 
+        let band = Math.sin(wavyY * 12.0);
 
         // Turbulence
         let turb = Math.sin(x * 6.0 + time) * Math.cos(z * 6.0 + time) * Math.sin(y * 8.0);
-        
+
         // Spots
         let spot = Math.sin(x * 3.5 - time * 0.2) * Math.cos(y * 3.5);
 
         // Mix
         let noiseVal = band * 0.6 + turb * 0.3 + spot * 0.2;
-        
+
         return (noiseVal + 1.2) / 2.4;
     }
 
@@ -155,7 +155,7 @@
                 x: Math.cos(theta) * radius * radiusJitter,
                 y: y * radiusJitter,
                 z: Math.sin(theta) * radius * radiusJitter,
-                char: ' ' 
+                char: ' '
             });
         }
         return targets;
@@ -174,7 +174,7 @@
             const radius = Math.sqrt(Math.max(0, 1 - y * y));
             const theta = golden * i;
             // Less jitter for a smoother gas giant surface
-            const r = DWARF_RADIUS; 
+            const r = DWARF_RADIUS;
 
             targets.push({
                 x: Math.cos(theta) * r * radius,
@@ -188,19 +188,19 @@
     function generateFishTargets() {
         const targets = [];
         const lines = FISH_ART.split('\n');
-        
+
         // Center Calculation
         let minC = 9999, maxC = 0;
         let minR = 9999, maxR = 0;
-        
-        for(let r=0; r<lines.length; r++) {
+
+        for (let r = 0; r < lines.length; r++) {
             let line = lines[r];
-            for(let c=0; c<line.length; c++) {
-                if(line[c] !== ' ' && line[c] !== undefined && line[c] !== '\n') {
-                    if(c < minC) minC = c;
-                    if(c > maxC) maxC = c;
-                    if(r < minR) minR = r;
-                    if(r > maxR) maxR = r;
+            for (let c = 0; c < line.length; c++) {
+                if (line[c] !== ' ' && line[c] !== undefined && line[c] !== '\n') {
+                    if (c < minC) minC = c;
+                    if (c > maxC) maxC = c;
+                    if (r < minR) minR = r;
+                    if (r > maxR) maxR = r;
                 }
             }
         }
@@ -214,7 +214,7 @@
             for (let c = 0; c < line.length; c++) {
                 let char = line[c];
                 if (char && char !== ' ' && char !== '\n') {
-                    
+
                     const baseX = (c - centerX) * GRID_X;
                     const baseY = -(r - centerY) * GRID_Y;
                     const weight = getCharWeight(char);
@@ -224,7 +224,7 @@
                     const FISH_SCALE = 0.5;
 
                     for (let z = -FISH_EXTRUSION; z <= FISH_EXTRUSION; z += Z_STEP) {
-                        
+
                         let isFace = (z > FISH_EXTRUSION - 1.0 || z < -FISH_EXTRUSION + 1.0);
 
                         targets.push({
@@ -232,7 +232,7 @@
                             y: (baseY + (Math.random() - 0.5) * XY_JITTER) * FISH_SCALE,
                             z: z * FISH_SCALE,
                             isFace: isFace,
-                            weight: weight 
+                            weight: weight
                         });
                     }
                 }
@@ -286,7 +286,7 @@
                             x: baseX + (Math.random() - 0.5) * XY_JITTER,
                             y: baseY + (Math.random() - 0.5) * XY_JITTER,
                             z: z,
-                            
+
                             // State 0: Logo
                             logoX: baseX + (Math.random() - 0.5) * XY_JITTER,
                             logoY: baseY + (Math.random() - 0.5) * XY_JITTER,
@@ -313,7 +313,7 @@
 
     // Generate Orb Layout
     const orbTargets = generateOrbTargets(particles.length);
-    
+
     // Apply Code Text Wrapping
     const cleanText = CODE_TEXT.replace(/\s+/g, ' ');
     const textOrder = orbTargets.map((t, i) => i).sort((a, b) => {
@@ -322,10 +322,10 @@
         const rows = 25;
         const rowA = Math.floor((1 - ta.y / ORB_RADIUS) / 2 * rows);
         const rowB = Math.floor((1 - tb.y / ORB_RADIUS) / 2 * rows);
-        if (rowA !== rowB) return rowA - rowB; 
+        if (rowA !== rowB) return rowA - rowB;
         const angA = Math.atan2(ta.z, ta.x);
         const angB = Math.atan2(tb.z, tb.x);
-        return angB - angA; 
+        return angB - angA;
     });
     textOrder.forEach((targetIndex, i) => {
         orbTargets[targetIndex].char = cleanText[i % cleanText.length];
@@ -338,25 +338,25 @@
     const dwarfTargets = generateDwarfTargets(particles.length);
 
     // Map particles
-    const particleOrder = buildSortedIndices(particles.length, i => ({x: particles[i].logoX, y: particles[i].logoY, z: particles[i].logoZ}));
+    const particleOrder = buildSortedIndices(particles.length, i => ({ x: particles[i].logoX, y: particles[i].logoY, z: particles[i].logoZ }));
     const orbOrder = buildSortedIndices(orbTargets.length, i => orbTargets[i]);
     const fishOrder = buildSortedIndices(fishTargets.length, i => fishTargets[i]);
     const dwarfOrder = buildSortedIndices(dwarfTargets.length, i => dwarfTargets[i]);
 
     for (let k = 0; k < particles.length; k++) {
         const p = particles[particleOrder[k]];
-        
+
         // Orb
         const tOrb = orbTargets[orbOrder[k]];
         p.orbX = tOrb.x; p.orbY = tOrb.y; p.orbZ = tOrb.z; p.orbChar = tOrb.char;
 
         // Fish
         if (k < fishTargets.length) {
-             const tFish = fishTargets[fishOrder[k]];
-             p.fishX = tFish.x; p.fishY = tFish.y; p.fishZ = tFish.z;
-             p.fishIsFace = tFish.isFace; p.fishWeight = tFish.weight;
+            const tFish = fishTargets[fishOrder[k]];
+            p.fishX = tFish.x; p.fishY = tFish.y; p.fishZ = tFish.z;
+            p.fishIsFace = tFish.isFace; p.fishWeight = tFish.weight;
         } else {
-            p.fishX = 0; p.fishY = 0; p.fishZ = 0; p.fishWeight = 0; p.fishIsFace = false; 
+            p.fishX = 0; p.fishY = 0; p.fishZ = 0; p.fishWeight = 0; p.fishIsFace = false;
         }
 
         // Dwarf
@@ -373,21 +373,31 @@
     const screenElement = document.getElementById('solid-logo-canvas');
 
     // Measure Char size
-    const measureElement = document.createElement('span');
-    measureElement.style.fontFamily = getComputedStyle(screenElement).fontFamily;
-    measureElement.style.fontSize = getComputedStyle(screenElement).fontSize;
-    measureElement.innerHTML = "X";
-    document.body.appendChild(measureElement);
-    let rect = measureElement.getBoundingClientRect();
-    const charWidth = rect.width || 6;
-    const charHeight = (rect.height * 0.9) || 10;
-    document.body.removeChild(measureElement);
+    // Measure Char size dynamically
+    let charWidth = 6;
+    let charHeight = 10;
+
+    function updateLogoMetrics() {
+        const measureElement = document.createElement('span');
+        const style = getComputedStyle(screenElement);
+        measureElement.style.fontFamily = style.fontFamily;
+        measureElement.style.fontSize = style.fontSize;
+        measureElement.innerHTML = "X";
+        document.body.appendChild(measureElement);
+        let rect = measureElement.getBoundingClientRect();
+        charWidth = rect.width || 6;
+        charHeight = (rect.height * 0.9) || 10;
+        document.body.removeChild(measureElement);
+    }
+
+    updateLogoMetrics();
+    window.addEventListener('resize', updateLogoMetrics);
 
     let angle = 0;
     let time = 0;
-    
+
     // State: 0 = Logo, 1 = Orb, 2 = Fish, 3 = Dwarf, 4 = Logo2 (Return)
-    let targetState = 0; 
+    let targetState = 0;
     let currentState = 0; // Float
     let lastTimestamp = performance.now();
 
@@ -399,7 +409,7 @@
 
         // Morph State Logic
         const morphSpeed = dt / MORPH_DURATION;
-        
+
         // Logic for smooth transitions.
         // To skip intermediate states when going from Dwarf (3) -> Logo (0),
         // we effectively "rewire" the blend weights or change the state logic.
@@ -407,10 +417,10 @@
         // We want to slide directly 3->0. 
         // However, our lerp logic assumes linear sequence.
         // Let's modify the blend weight calculation directly based on SourceCode visibility override.
-        
+
         // If jumping from 3->0 or 2->0 for source code, we handle it by treating 0 as "next step" from current max state.
         // BUT simpler: Just have a separate "returnToLogo" blend factor.
-        
+
         if (Math.abs(targetState - currentState) < morphSpeed) {
             currentState = targetState;
         } else if (currentState < targetState) {
@@ -422,7 +432,7 @@
         // Calculate weights for 5-way blend
         // 0: Logo, 1: Orb, 2: Fish, 3: Dwarf, 4: Logo2 (return)
         let wLogo = 0, wOrb = 0, wFish = 0, wDwarf = 0, wLogo2 = 0;
-        
+
         if (currentState <= 1) {
             wOrb = easeInOutCubic(currentState);
             wLogo = 1 - wOrb;
@@ -441,10 +451,14 @@
 
         // Render setup
         const container = screenElement.parentElement;
-        const width = Math.max(1, Math.floor(container.clientWidth / charWidth));
-        const height = Math.max(1, Math.floor(window.innerHeight / charHeight));
+
+        // Fixed resolution for consistent "video-like" scaling
+        const width = 64;
+        const height = 64;
+
         const size = width * height;
-        
+        const aspectCorrection = (charHeight / charWidth);
+
         // Prepare output buffers. Note: We need color now!
         // Since we are writing to a <pre>, we can't change color per char easily without <span>s which is slow.
         // HOWEVER, the prompt implies "color transition".
@@ -460,11 +474,11 @@
         // Let's assume we need to output spans OR use CSS gradients on the text itself?
         // CSS `background-clip: text` is used on the headers. 
         // Maybe we can just color the whole block? No, dwarf is multi-colored.
-        
+
         // Optimization: Only use spans if we are in Dwarf mode (wDwarf > 0).
         // Otherwise use innerText for performance.
         const useColor = (wDwarf > 0.01);
-        
+
         // If using color, we build an HTML string. Else plain text.
         let htmlBuffer = "";
         let textBuffer = new Array(size).fill(' ');
@@ -495,7 +509,8 @@
 
             if (zDist > 1.0) {
                 let ooz = 1.0 / zDist;
-                let xp = Math.floor(width / 2 + K1 * ooz * x * 2.0);
+                // Aspect Correction
+                let xp = Math.floor(width / 2 + K1 * ooz * x * aspectCorrection);
                 let yp = Math.floor(height / 2 - K1 * ooz * y);
 
                 if (xp >= 0 && xp < width && yp >= 0 && yp < height) {
@@ -506,76 +521,76 @@
                         // --- NORMALS ---
                         // Logo Normal
                         let nLogoX = 0, nLogoZ = 0;
-                        if (p.logoIsFace) { nLogoX = sinT * (p.logoZ>0?1:-1); nLogoZ = cosT * (p.logoZ>0?1:-1); }
+                        if (p.logoIsFace) { nLogoX = sinT * (p.logoZ > 0 ? 1 : -1); nLogoZ = cosT * (p.logoZ > 0 ? 1 : -1); }
                         else { nLogoX = cosT; nLogoZ = -sinT; }
 
                         // Orb Normal
-                        let orbLen = Math.hypot(p.orbX, p.orbY, p.orbZ)||1;
-                        let nOrbX = p.orbX/orbLen; let nOrbY = p.orbY/orbLen; let nOrbZ = p.orbZ/orbLen;
-                        let rOrbX = nOrbX*cosT - nOrbZ*sinT; let rOrbZ = nOrbX*sinT + nOrbZ*cosT;
+                        let orbLen = Math.hypot(p.orbX, p.orbY, p.orbZ) || 1;
+                        let nOrbX = p.orbX / orbLen; let nOrbY = p.orbY / orbLen; let nOrbZ = p.orbZ / orbLen;
+                        let rOrbX = nOrbX * cosT - nOrbZ * sinT; let rOrbZ = nOrbX * sinT + nOrbZ * cosT;
                         nOrbX = rOrbX; nOrbZ = rOrbZ;
 
                         // Fish Normal
                         let nFishX = 0, nFishZ = 0;
-                        if (p.fishIsFace) { nFishX = sinT * (p.fishZ>0?1:-1); nFishZ = cosT * (p.fishZ>0?1:-1); }
+                        if (p.fishIsFace) { nFishX = sinT * (p.fishZ > 0 ? 1 : -1); nFishZ = cosT * (p.fishZ > 0 ? 1 : -1); }
                         else { nFishX = cosT; nFishZ = -sinT; }
 
                         // Dwarf Normal (Sphere like orb)
-                        let dwarfLen = Math.hypot(p.dwarfX, p.dwarfY, p.dwarfZ)||1;
-                        let nDwarfX = p.dwarfX/dwarfLen; let nDwarfY = p.dwarfY/dwarfLen; let nDwarfZ = p.dwarfZ/dwarfLen;
-                        let rDwarfX = nDwarfX*cosT - nDwarfZ*sinT; let rDwarfZ = nDwarfX*sinT + nDwarfZ*cosT;
+                        let dwarfLen = Math.hypot(p.dwarfX, p.dwarfY, p.dwarfZ) || 1;
+                        let nDwarfX = p.dwarfX / dwarfLen; let nDwarfY = p.dwarfY / dwarfLen; let nDwarfZ = p.dwarfZ / dwarfLen;
+                        let rDwarfX = nDwarfX * cosT - nDwarfZ * sinT; let rDwarfZ = nDwarfX * sinT + nDwarfZ * cosT;
                         nDwarfX = rDwarfX; nDwarfZ = rDwarfZ;
 
                         // Blend Normals
                         // Since Logo and Logo2 have same normals (approximately, if we don't bake them), we can reuse nLogoX.
                         // But wait, nLogoX calculated above used p.logoZ. p.logo2Z is same.
                         // So yes, nLogoX applies to both.
-                        let nx = nLogoX*wLogo + nOrbX*wOrb + nFishX*wFish + nDwarfX*wDwarf + nLogoX*wLogo2;
-                        let ny = 0        + nOrbY*wOrb + 0         + nDwarfY*wDwarf + 0;
-                        let nz = nLogoZ*wLogo + nOrbZ*wOrb + nFishZ*wFish + nDwarfZ*wDwarf + nLogoZ*wLogo2;
-                        
-                        let norm = Math.hypot(nx, ny, nz) || 0.001;
-                        nx/=norm; ny/=norm; nz/=norm;
+                        let nx = nLogoX * wLogo + nOrbX * wOrb + nFishX * wFish + nDwarfX * wDwarf + nLogoX * wLogo2;
+                        let ny = 0 + nOrbY * wOrb + 0 + nDwarfY * wDwarf + 0;
+                        let nz = nLogoZ * wLogo + nOrbZ * wOrb + nFishZ * wFish + nDwarfZ * wDwarf + nLogoZ * wLogo2;
 
-                        let dot = nx*lx + ny*ly + nz*lz;
+                        let norm = Math.hypot(nx, ny, nz) || 0.001;
+                        nx /= norm; ny /= norm; nz /= norm;
+
+                        let dot = nx * lx + ny * ly + nz * lz;
                         let diffuse = Math.max(0.15, dot);
 
                         // --- COLOR CALCULATION (For Dwarf) ---
                         if (useColor) {
-                             // Texture Generation
-                             // We need "unrotated" coords for the texture to stick to the planet
-                             // But the planet spins. So we use the original coords relative to rotation?
-                             // Actually passing (x,y,z) to noise works if we account for rotation in time or coords.
-                             // The good_dwarf uses unrotated coords usually.
-                             // Let's use p.dwarfX, p.dwarfY, p.dwarfZ (local coords)
-                             
-                             let pat = getGasTexture(p.dwarfX/10, p.dwarfY/10, p.dwarfZ/10, time*1.5);
-                             let litPat = pat * (0.6 + diffuse * 0.9);
-                             let heatColor = getHeatColor(litPat);
-                             
-                             // Blend with default grey
-                             // If wDwarf is 0.5, we are halfway.
-                             // We lerp between COLOR_DEFAULT and heatColor based on wDwarf
-                             let finalColor = lerpColor(COLOR_DEFAULT, heatColor, wDwarf);
-                             colorBuffer[idx] = finalColor;
+                            // Texture Generation
+                            // We need "unrotated" coords for the texture to stick to the planet
+                            // But the planet spins. So we use the original coords relative to rotation?
+                            // Actually passing (x,y,z) to noise works if we account for rotation in time or coords.
+                            // The good_dwarf uses unrotated coords usually.
+                            // Let's use p.dwarfX, p.dwarfY, p.dwarfZ (local coords)
+
+                            let pat = getGasTexture(p.dwarfX / 10, p.dwarfY / 10, p.dwarfZ / 10, time * 1.5);
+                            let litPat = pat * (0.6 + diffuse * 0.9);
+                            let heatColor = getHeatColor(litPat);
+
+                            // Blend with default grey
+                            // If wDwarf is 0.5, we are halfway.
+                            // We lerp between COLOR_DEFAULT and heatColor based on wDwarf
+                            let finalColor = lerpColor(COLOR_DEFAULT, heatColor, wDwarf);
+                            colorBuffer[idx] = finalColor;
                         }
 
                         // --- BRIGHTNESS / CHAR ---
-                        let bLogo = p.logoIsFace ? (diffuse*0.4 + p.logoWeight*0.8) : (diffuse*0.7);
-                        let bOrb = diffuse*0.7 + (wOrb*0.12);
-                        let bFish = p.fishIsFace ? (diffuse*0.4 + p.fishWeight*0.8) : (diffuse*0.7);
-                        
+                        let bLogo = p.logoIsFace ? (diffuse * 0.4 + p.logoWeight * 0.8) : (diffuse * 0.7);
+                        let bOrb = diffuse * 0.7 + (wOrb * 0.12);
+                        let bFish = p.fishIsFace ? (diffuse * 0.4 + p.fishWeight * 0.8) : (diffuse * 0.7);
+
                         // Dwarf Brightness (gas pattern)
                         // We need to calculate pattern even if not using color for the char intensity
-                        let pat = getGasTexture(p.dwarfX/10, p.dwarfY/10, p.dwarfZ/10, time*1.5);
+                        let pat = getGasTexture(p.dwarfX / 10, p.dwarfY / 10, p.dwarfZ / 10, time * 1.5);
                         let bDwarf = (diffuse * 0.4) + (pat * 0.6);
 
                         // Blend Brightness
-                        let brightness = bLogo*wLogo + bOrb*wOrb + bFish*wFish + bDwarf*wDwarf + bLogo*wLogo2;
-                        
+                        let brightness = bLogo * wLogo + bOrb * wOrb + bFish * wFish + bDwarf * wDwarf + bLogo * wLogo2;
+
                         let fog = (z + 50) / 200.0;
                         brightness -= fog;
-                        if(brightness<0) brightness=0; if(brightness>=1) brightness=0.99;
+                        if (brightness < 0) brightness = 0; if (brightness >= 1) brightness = 0.99;
 
                         let charIdx = Math.floor(brightness * SHADE_CHARS.length);
                         let finalChar = SHADE_CHARS[charIdx];
@@ -595,7 +610,7 @@
             // We optimize by grouping spans of same color?
             // For now, naive per-char span or just per-line.
             // Per-char is safest for varying gas giant colors.
-            
+
             let html = "";
             for (let r = 0; r < height; r++) {
                 let lineHtml = "";
@@ -627,7 +642,7 @@
 
         // Speed
         // Logo2 also uses 1.0 speed
-        let speedMult = 1.0*wLogo + 0.5*wOrb + 3.0*wFish + 0.8*wDwarf + 1.0*wLogo2; 
+        let speedMult = 1.0 * wLogo + 0.5 * wOrb + 3.0 * wFish + 0.8 * wDwarf + 1.0 * wLogo2;
         angle += ROTATION_SPEED * speedMult;
         requestAnimationFrame(render);
     }
@@ -637,7 +652,7 @@
     const sunfish = document.getElementById('project-sunfish');
     const brownDwarf = document.getElementById('brown-dwarf');
     const sourceCode = document.getElementById('source-code');
-    
+
     let isPastProjectsVisible = false;
     let isSunfishVisible = false;
     let isBrownDwarfVisible = false;
@@ -645,9 +660,9 @@
 
     function updateState() {
         // Priority: Bottom up?
-        
+
         if (isSourceCodeVisible) {
-             targetState = 4; // Logo (State 4, after Dwarf)
+            targetState = 4; // Logo (State 4, after Dwarf)
         } else if (isBrownDwarfVisible) {
             targetState = 3; // Dwarf
         } else if (isSunfishVisible) {
@@ -661,17 +676,17 @@
 
     // Observers
     const obsOptions = { threshold: 0.45 };
-    
-    if (pastProjects) new IntersectionObserver((e) => { e.forEach(x => { isPastProjectsVisible = x.isIntersecting; updateState(); })} , obsOptions).observe(pastProjects);
-    if (sunfish) new IntersectionObserver((e) => { e.forEach(x => { isSunfishVisible = x.isIntersecting; updateState(); })} , obsOptions).observe(sunfish);
-    
+
+    if (pastProjects) new IntersectionObserver((e) => { e.forEach(x => { isPastProjectsVisible = x.isIntersecting; updateState(); }) }, obsOptions).observe(pastProjects);
+    if (sunfish) new IntersectionObserver((e) => { e.forEach(x => { isSunfishVisible = x.isIntersecting; updateState(); }) }, obsOptions).observe(sunfish);
+
     if (brownDwarf) {
-        new IntersectionObserver((e) => { e.forEach(x => { isBrownDwarfVisible = x.isIntersecting; updateState(); })} , obsOptions).observe(brownDwarf);
+        new IntersectionObserver((e) => { e.forEach(x => { isBrownDwarfVisible = x.isIntersecting; updateState(); }) }, obsOptions).observe(brownDwarf);
     }
 
     if (sourceCode) {
         // Trigger slightly earlier so the transition starts as it comes into view
-        new IntersectionObserver((e) => { e.forEach(x => { isSourceCodeVisible = x.isIntersecting; updateState(); })} , { threshold: 0.05 }).observe(sourceCode);
+        new IntersectionObserver((e) => { e.forEach(x => { isSourceCodeVisible = x.isIntersecting; updateState(); }) }, { threshold: 0.05 }).observe(sourceCode);
     }
 
     requestAnimationFrame(render);

@@ -255,21 +255,38 @@ const screenElement = document.getElementById('canvas');
 const computedCanvasStyle = getComputedStyle(screenElement);
 
 // Measure character size accurately to avoid vertical clipping
-const measureElement = document.createElement('span');
-measureElement.style.fontFamily = computedCanvasStyle.fontFamily;
-measureElement.style.fontSize = computedCanvasStyle.fontSize;
-measureElement.style.lineHeight = computedCanvasStyle.lineHeight;
-measureElement.style.position = 'absolute';
-measureElement.style.visibility = 'hidden';
-measureElement.innerText = "X";
-document.body.appendChild(measureElement);
-let rect = measureElement.getBoundingClientRect();
-const charWidth = rect.width || 6;
-let charHeight = parseFloat(computedCanvasStyle.lineHeight);
-if (!charHeight || Number.isNaN(charHeight)) {
-    charHeight = rect.height || 10;
+// Measure character size dynamically to handle responsive scaling
+let charWidth = 6;
+let charHeight = 10;
+
+function updateCharDimensions() {
+    const measureElement = document.createElement('span');
+    measureElement.style.fontFamily = computedCanvasStyle.fontFamily;
+    measureElement.style.fontSize = computedCanvasStyle.fontSize;
+    measureElement.style.lineHeight = computedCanvasStyle.lineHeight;
+    measureElement.style.position = 'absolute';
+    measureElement.style.visibility = 'hidden';
+    measureElement.innerText = "X";
+    document.body.appendChild(measureElement);
+
+    let rect = measureElement.getBoundingClientRect();
+    charWidth = rect.width || 6;
+
+    // Try to get line-height from styles first, else fallback to rect height
+    let lh = parseFloat(computedCanvasStyle.lineHeight);
+    if (!lh || Number.isNaN(lh)) {
+        lh = rect.height || 10;
+    }
+    charHeight = lh;
+
+    document.body.removeChild(measureElement);
 }
-document.body.removeChild(measureElement);
+
+// Initial measurement
+updateCharDimensions();
+
+// Update on resize
+window.addEventListener('resize', updateCharDimensions);
 
 let time = 0;
 let camPitch = 0;
@@ -294,14 +311,16 @@ function cubicBezier(t, p0, p1, p2, p3) {
 }
 
 function render() {
-    const width = Math.max(1, Math.floor(window.innerWidth / charWidth));
-    const height = Math.max(1, Math.floor(window.innerHeight / charHeight));
+    // Fixed resolution to ensure "actual characters displayed" never changes, only scales.
+    const width = 160;
+    const height = 80;
     const size = width * height;
 
     const zbuffer = new Float32Array(size).fill(-9999.0);
     const output = new Array(size).fill(' ');
 
     const K1 = Math.min(width, height) * 0.7;
+    const aspectCorrection = (charHeight / charWidth);
 
     stateTimer++;
 
@@ -439,7 +458,8 @@ function render() {
         if (z2 > -currentViewDist + 1) {
             let ooz = 1.0 / (currentViewDist + z2 / 4.0);
 
-            let xp = Math.floor(width / 2 + K1 * ooz * x2 * 2.0);
+            // Aspect ratio correction: (charHeight / charWidth) instead of 2.0
+            let xp = Math.floor(width / 2 + K1 * ooz * x2 * aspectCorrection);
             let yp = Math.floor(height / 2 - K1 * ooz * y2);
 
             if (xp >= 0 && xp < width && yp >= 0 && yp < height) {

@@ -3,6 +3,18 @@
  * Extracted from index.html
  */
 
+:root {
+    /* Responsive sizing variables */
+    --base-font-size: max(14px, 1vw);
+    --ascii-font-size: max(8px, 0.6vw);
+    --h2-size: max(2rem, 3vw);
+    --h3-size: max(1.2rem, 1.5vw);
+}
+
+html {
+    font-size: var(--base-font-size);
+}
+
 body {
     background-color: #050505;
     color: #e0e0e0;
@@ -10,7 +22,7 @@ body {
     padding: 0;
     overflow-x: hidden;
     font-family: 'Courier New', Courier, monospace;
-    font-size: 14px;
+    font-size: 1rem;
     line-height: 1.4;
     display: flex;
     flex-direction: column;
@@ -31,8 +43,8 @@ body {
 
 #canvas {
     font-family: 'Courier New', Courier, monospace;
-    font-size: 8px;
-    line-height: 8px;
+    font-size: var(--ascii-font-size);
+    line-height: var(--ascii-font-size);
     white-space: pre;
     text-align: center;
     text-shadow: 0 0 4px rgba(255, 255, 255, 0.4);
@@ -43,12 +55,12 @@ body {
 /* New Layout Styles */
 .content-container {
     width: 90vw;
-    max-width: 1400px;
+    /* Removed max-width to allow infinite scaling */
     display: flex;
     flex-direction: row;
     justify-content: center;
     align-items: flex-start;
-    gap: 6rem;
+    gap: 10vw;
     margin-bottom: 3rem;
     z-index: 20;
     position: relative;
@@ -89,7 +101,11 @@ body {
 .spinning-ascii {
     font-family: 'Courier New', Courier, monospace;
     font-size: 10px;
+    /* Fallback */
+    font-size: var(--ascii-font-size);
     line-height: 10px;
+    /* Fallback */
+    line-height: var(--ascii-font-size);
     white-space: pre;
     color: #e0e0e0;
     text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
@@ -99,8 +115,8 @@ body {
 
 #solid-logo-canvas {
     font-family: 'Courier New', Courier, monospace;
-    font-size: 10px;
-    line-height: 9px;
+    font-size: var(--ascii-font-size);
+    line-height: var(--ascii-font-size);
     white-space: pre;
     text-align: center;
     /* Subtle glow to help points bleed together visually */
@@ -126,7 +142,16 @@ body {
     /* Large gap for scrolling effect */
     padding-top: 20vh;
     padding-bottom: 5vh;
-    max-width: 600px;
+    max-width: none;
+    /* Let it scale */
+    width: 45vw;
+    /* Fixed width relative to screen to match half screen feel */
+}
+
+@media (max-width: 768px) {
+    .text-column {
+        width: 90vw;
+    }
 }
 
 .scroll-section {
@@ -142,8 +167,8 @@ body {
 }
 
 .scroll-section h2 {
-    font-size: 2.5rem;
-    margin-bottom: 1.5rem;
+    font-size: var(--h2-size);
+    margin-bottom: 2vh;
     background: linear-gradient(90deg, #fff, #888);
     -webkit-background-clip: text;
     background-clip: text;
@@ -153,14 +178,14 @@ body {
 }
 
 .scroll-section h3 {
-    font-size: 1.5rem;
+    font-size: var(--h3-size);
     color: #fff;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.5vh;
     font-weight: 600;
 }
 
 .scroll-section p {
-    font-size: 1.1rem;
+    font-size: 1.1em;
     line-height: 1.6;
     color: #aaa;
     margin-bottom: 1rem;
@@ -182,9 +207,9 @@ body {
 
 .badge {
     display: inline-block;
-    padding: 0.25rem 0.75rem;
+    padding: 0.25em 0.75em;
     border-radius: 100px;
-    font-size: 0.8rem;
+    font-size: 0.8em;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;

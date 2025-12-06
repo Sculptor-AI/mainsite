@@ -663,12 +663,14 @@
     }
 
     // Scroll Trigger Logic
+    const aboutUs = document.getElementById('about-us');
     const pastProjects = document.getElementById('past-projects');
     const futureProjects = document.getElementById('future-projects');
     const sunfish = document.getElementById('project-sunfish');
     const brownDwarf = document.getElementById('brown-dwarf');
     const sourceCode = document.getElementById('connect');
 
+    let isAboutUsVisible = false;
     let isPastProjectsVisible = false;
     let isFutureProjectsVisible = false;
     let isSunfishVisible = false;
@@ -691,6 +693,8 @@
             newTarget = 0; // Logo (brief return between Orb and Fish)
         } else if (isPastProjectsVisible) {
             newTarget = 1; // Orb
+        } else if (isAboutUsVisible) {
+            newTarget = 0; // Logo (top of page)
         }
         // Note: We no longer default to 0 when nothing is visible
         // This keeps the current state during scroll gaps
@@ -707,6 +711,7 @@
     // '-40% 0px -40% 0px' shrinks the observation zone to the middle 20% of the screen
     const obsOptions = { threshold: 0.1, rootMargin: '-40% 0px -40% 0px' };
 
+    if (aboutUs) new IntersectionObserver((e) => { e.forEach(x => { isAboutUsVisible = x.isIntersecting; updateState(); }) }, obsOptions).observe(aboutUs);
     if (pastProjects) new IntersectionObserver((e) => { e.forEach(x => { isPastProjectsVisible = x.isIntersecting; updateState(); }) }, obsOptions).observe(pastProjects);
     if (futureProjects) new IntersectionObserver((e) => { e.forEach(x => { isFutureProjectsVisible = x.isIntersecting; updateState(); }) }, obsOptions).observe(futureProjects);
     if (sunfish) new IntersectionObserver((e) => { e.forEach(x => { isSunfishVisible = x.isIntersecting; updateState(); }) }, obsOptions).observe(sunfish);

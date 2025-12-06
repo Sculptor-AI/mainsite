@@ -570,35 +570,31 @@
                         let dot = nx * lx + ny * ly + nz * lz;
                         let diffuse = Math.max(0.15, dot);
 
-                        // --- COLOR CALCULATION (For Dwarf) ---
-                        if (useColor) {
-                            // Texture Generation
-                            // We need "unrotated" coords for the texture to stick to the planet
-                            // But the planet spins. So we use the original coords relative to rotation?
-                            // Actually passing (x,y,z) to noise works if we account for rotation in time or coords.
-                            // The good_dwarf uses unrotated coords usually.
-                            // Let's use p.dwarfX, p.dwarfY, p.dwarfZ (local coords)
-
-                            let pat = getGasTexture(p.dwarfX / 10, p.dwarfY / 10, p.dwarfZ / 10, time * 1.5);
-                            let litPat = pat * (0.6 + diffuse * 0.9);
-                            let heatColor = getHeatColor(litPat);
-
-                            // Blend with default grey
-                            // If wDwarf is 0.5, we are halfway.
-                            // We lerp between COLOR_DEFAULT and heatColor based on wDwarf
-                            let finalColor = lerpColor(COLOR_DEFAULT, heatColor, wDwarf);
-                            colorBuffer[idx] = finalColor;
-                        }
-
                         // --- BRIGHTNESS / CHAR ---
                         let bLogo = p.logoIsFace ? (diffuse * 0.4 + p.logoWeight * 0.8) : (diffuse * 0.7);
                         let bOrb = diffuse * 0.7 + (wOrb * 0.12);
                         let bFish = p.fishIsFace ? (diffuse * 0.4 + p.fishWeight * 0.8) : (diffuse * 0.7);
 
-                        // Dwarf Brightness (gas pattern)
-                        // We need to calculate pattern even if not using color for the char intensity
-                        let pat = getGasTexture(p.dwarfX / 10, p.dwarfY / 10, p.dwarfZ / 10, time * 1.5);
-                        let bDwarf = (diffuse * 0.4) + (pat * 0.6);
+                        // --- COLOR & TEXTURE CALCULATION (Optimized) ---
+                        let bDwarf = 0;
+                        if (wDwarf > 0.01) {
+                            // Only compute expensive noise pattern if Dwarf is visible
+                            let pat = getGasTexture(p.dwarfX / 10, p.dwarfY / 10, p.dwarfZ / 10, time * 1.5);
+
+                            // Dwarf Brightness
+                            bDwarf = (diffuse * 0.4) + (pat * 0.6);
+
+                            if (useColor) {
+                                let litPat = pat * (0.6 + diffuse * 0.9);
+                                let heatColor = getHeatColor(litPat);
+                                // Blend with default grey
+                                let finalColor = lerpColor(COLOR_DEFAULT, heatColor, wDwarf);
+                                colorBuffer[idx] = finalColor;
+                            }
+                        } else {
+                            // If dwarf is hidden, just use a baseline equivalent to diffuse for smooth fade
+                            bDwarf = diffuse;
+                        }
 
                         // Blend Brightness
                         let brightness = bLogo * wLogo + bOrb * wOrb + bFish * wFish + bDwarf * wDwarf + bLogo * wLogo2;

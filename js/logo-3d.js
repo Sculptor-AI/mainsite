@@ -675,7 +675,9 @@
 
     function updateState() {
         // Priority: Bottom up
-        let newTarget = 0;
+        // Only change state when a section is actively visible
+        // Otherwise maintain current state (don't fall back to Logo during gaps)
+        let newTarget = null;
 
         if (isSourceCodeVisible) {
             newTarget = 4; // Logo (State 4, after Dwarf)
@@ -685,20 +687,21 @@
             newTarget = 2; // Fish
         } else if (isPastProjectsVisible) {
             newTarget = 1; // Orb
-        } else {
-            newTarget = 0; // Logo
         }
+        // Note: We no longer default to 0 when nothing is visible
+        // This keeps the current state during scroll gaps
 
-        // If target changed, start a new morph
-        if (newTarget !== targetState) {
+        // If a section is actively visible and it's different from current target, start morph
+        if (newTarget !== null && newTarget !== targetState) {
             sourceState = targetState; // Current target becomes new source
             targetState = newTarget;
             morphProgress = 0.0; // Reset morph progress
         }
     }
 
-    // Observers
-    const obsOptions = { threshold: 0.45 };
+    // Observers - use rootMargin to trigger when section crosses center of viewport
+    // '-40% 0px -40% 0px' shrinks the observation zone to the middle 20% of the screen
+    const obsOptions = { threshold: 0.1, rootMargin: '-40% 0px -40% 0px' };
 
     if (pastProjects) new IntersectionObserver((e) => { e.forEach(x => { isPastProjectsVisible = x.isIntersecting; updateState(); }) }, obsOptions).observe(pastProjects);
     if (sunfish) new IntersectionObserver((e) => { e.forEach(x => { isSunfishVisible = x.isIntersecting; updateState(); }) }, obsOptions).observe(sunfish);
@@ -708,8 +711,8 @@
     }
 
     if (sourceCode) {
-        // Trigger slightly earlier so the transition starts as it comes into view
-        new IntersectionObserver((e) => { e.forEach(x => { isSourceCodeVisible = x.isIntersecting; updateState(); }) }, { threshold: 0.05 }).observe(sourceCode);
+        // Trigger slightly earlier for the connect section
+        new IntersectionObserver((e) => { e.forEach(x => { isSourceCodeVisible = x.isIntersecting; updateState(); }) }, { threshold: 0.1, rootMargin: '-30% 0px -50% 0px' }).observe(sourceCode);
     }
 
     requestAnimationFrame(render);

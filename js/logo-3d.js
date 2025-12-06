@@ -398,9 +398,12 @@
 
     // State: 0 = Logo, 1 = Orb, 2 = Fish, 3 = Dwarf, 4 = Logo2 (Return)
     let targetState = 0;
-    let sourceState = 0;  // The state we're morphing FROM
-    let morphProgress = 1.0; // 0 = at source, 1 = at target
+    let morphProgress = 1.0; // 0 = transitioning, 1 = at target
     let lastTimestamp = performance.now();
+
+    // Track current blend weights continuously (allows smooth mid-morph transitions)
+    let currentWeights = { logo: 1, orb: 0, fish: 0, dwarf: 0, logo2: 0 };
+    let targetWeights = { logo: 1, orb: 0, fish: 0, dwarf: 0, logo2: 0 };
 
     // Helper to get position for a particle at a given state
     function getStatePosition(p, state) {
@@ -414,54 +417,51 @@
         }
     }
 
+    // Get target weights for a state
+    function getTargetWeightsForState(state) {
+        let w = { logo: 0, orb: 0, fish: 0, dwarf: 0, logo2: 0 };
+        switch (state) {
+            case 0: w.logo = 1; break;
+            case 1: w.orb = 1; break;
+            case 2: w.fish = 1; break;
+            case 3: w.dwarf = 1; break;
+            case 4: w.logo2 = 1; break;
+        }
+        return w;
+    }
+
     function render(timestamp) {
         const now = typeof timestamp === 'number' ? timestamp : performance.now();
         const dt = Math.min(0.05, Math.max(0, (now - lastTimestamp) / 1000)); // seconds
         lastTimestamp = now;
         time += dt;
 
-        // Morph State Logic - Direct transitions
-        const morphSpeed = dt / MORPH_DURATION;
+        // Smooth weight interpolation - always move current weights toward target weights
+        const morphSpeed = dt / MORPH_DURATION * 2; // Speed of weight change
 
-        // When target changes, start a new morph from current blended position
-        // morphProgress goes from 0 to 1 as we transition to targetState
-        if (morphProgress < 1.0) {
-            morphProgress += morphSpeed;
-            if (morphProgress > 1.0) morphProgress = 1.0;
+        // Smoothly interpolate each weight toward its target
+        currentWeights.logo += (targetWeights.logo - currentWeights.logo) * morphSpeed;
+        currentWeights.orb += (targetWeights.orb - currentWeights.orb) * morphSpeed;
+        currentWeights.fish += (targetWeights.fish - currentWeights.fish) * morphSpeed;
+        currentWeights.dwarf += (targetWeights.dwarf - currentWeights.dwarf) * morphSpeed;
+        currentWeights.logo2 += (targetWeights.logo2 - currentWeights.logo2) * morphSpeed;
+
+        // Normalize weights to ensure they sum to 1
+        let sum = currentWeights.logo + currentWeights.orb + currentWeights.fish + currentWeights.dwarf + currentWeights.logo2;
+        if (sum > 0.001) {
+            currentWeights.logo /= sum;
+            currentWeights.orb /= sum;
+            currentWeights.fish /= sum;
+            currentWeights.dwarf /= sum;
+            currentWeights.logo2 /= sum;
         }
 
-        // Get eased progress
-        let easedProgress = easeInOutCubic(morphProgress);
-
-        // Calculate weights based on direct source->target blend
-        let wLogo = 0, wOrb = 0, wFish = 0, wDwarf = 0, wLogo2 = 0;
-
-        // Source weights (what we're coming FROM)
-        let srcWeights = { logo: 0, orb: 0, fish: 0, dwarf: 0, logo2: 0 };
-        switch (sourceState) {
-            case 0: srcWeights.logo = 1; break;
-            case 1: srcWeights.orb = 1; break;
-            case 2: srcWeights.fish = 1; break;
-            case 3: srcWeights.dwarf = 1; break;
-            case 4: srcWeights.logo2 = 1; break;
-        }
-
-        // Target weights (what we're going TO)
-        let tgtWeights = { logo: 0, orb: 0, fish: 0, dwarf: 0, logo2: 0 };
-        switch (targetState) {
-            case 0: tgtWeights.logo = 1; break;
-            case 1: tgtWeights.orb = 1; break;
-            case 2: tgtWeights.fish = 1; break;
-            case 3: tgtWeights.dwarf = 1; break;
-            case 4: tgtWeights.logo2 = 1; break;
-        }
-
-        // Blend between source and target
-        wLogo = lerp(srcWeights.logo, tgtWeights.logo, easedProgress);
-        wOrb = lerp(srcWeights.orb, tgtWeights.orb, easedProgress);
-        wFish = lerp(srcWeights.fish, tgtWeights.fish, easedProgress);
-        wDwarf = lerp(srcWeights.dwarf, tgtWeights.dwarf, easedProgress);
-        wLogo2 = lerp(srcWeights.logo2, tgtWeights.logo2, easedProgress);
+        // Use current weights for rendering
+        let wLogo = currentWeights.logo;
+        let wOrb = currentWeights.orb;
+        let wFish = currentWeights.fish;
+        let wDwarf = currentWeights.dwarf;
+        let wLogo2 = currentWeights.logo2;
 
         // Render setup
         const container = screenElement.parentElement;
@@ -699,11 +699,10 @@
         // Note: We no longer default to 0 when nothing is visible
         // This keeps the current state during scroll gaps
 
-        // If a section is actively visible and it's different from current target, start morph
+        // If a section is actively visible and it's different from current target, update target weights
         if (newTarget !== null && newTarget !== targetState) {
-            sourceState = targetState; // Current target becomes new source
             targetState = newTarget;
-            morphProgress = 0.0; // Reset morph progress
+            targetWeights = getTargetWeightsForState(newTarget);
         }
     }
 

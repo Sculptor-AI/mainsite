@@ -140,7 +140,7 @@ body {
     flex-direction: column;
     gap: 40vh;
     /* Large gap for scrolling effect */
-    padding-top: 35vh;
+    padding-top: 25vh;
     padding-bottom: 5vh;
     max-width: none;
     /* Let it scale */

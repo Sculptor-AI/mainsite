@@ -19,7 +19,7 @@
     // A long gradient for better depth resolution
     const SHADE_CHARS = " `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@";
 
-    const CODE_TEXT = `function init() { return true; } if (sys.active) { process.start(); } const orb = new Entity(); orb.spin(); <div id="data"></div> while(loading) { await fetch(); } class AI extends System { constructor() { super(); } } export default function() { return "sculptor"; } console.log("booting..."); for(let i=0; i<99; i++) { update(i); } import { ref } from 'vue'; const data = ref(null); function render() { return <html></html>; } if (err) throw new Error("Fail"); const config = { speed: 0.5, mode: "auto" }; function animate(t) { requestAnimationFrame(animate); } const vector = new THREE.Vector3(0, 1, 0); `;
+    const CODE_TEXT = `import { Galaxy } from 'cosmos'; const star = new Star({ type: 'G2V', mass: 1.0 }); function main() { while(orbiting) { physics.simulate(dt); render(scene); } } class BlackHole extends Singularity { consume(light) { return void 0; } } const entropy = Math.random(); if (entropy > 0.99) { bigBang(); } // TODO: Fix gravity bug export default function() { return 42; } const darkMatter = calculate(95); `;
 
     const LOGO_ART = `
                                       .:=*##-
@@ -149,7 +149,8 @@
             const y = 1 - (i / denom) * 2;
             const radius = Math.sqrt(Math.max(0, 1 - y * y));
             const theta = golden * i;
-            const radiusJitter = ORB_RADIUS * (0.9 + Math.random() * 0.15);
+            // Tighter jitter for cleaner text lines
+            const radiusJitter = ORB_RADIUS * (0.98 + Math.random() * 0.04);
 
             targets.push({
                 x: Math.cos(theta) * radius * radiusJitter,
@@ -606,7 +607,16 @@
                         let charIdx = Math.floor(brightness * SHADE_CHARS.length);
                         let finalChar = SHADE_CHARS[charIdx];
 
-                        if (wOrb > 0.5 && brightness > 0.2 && Math.random() < wOrb) finalChar = p.orbChar;
+                        if (wOrb > 0.1) {
+                            // In orb state, prioritize the code character
+                            // If fully in orb state (wOrb near 1), make it solid code
+                            // If transitioning, mix it up
+                            let showCode = false;
+                            if (wOrb > 0.9) showCode = true;
+                            else if (Math.random() < wOrb) showCode = true;
+
+                            if (showCode && brightness > 0.15) finalChar = p.orbChar;
+                        }
                         if (wFish > 0.8 && p.fishWeight === 0) finalChar = ' ';
 
                         textBuffer[idx] = finalChar;
@@ -654,7 +664,10 @@
         // Speed
         // Logo2 also uses 1.0 speed
         let speedMult = 1.0 * wLogo + 0.5 * wOrb + 3.0 * wFish + 0.8 * wDwarf + 1.0 * wLogo2;
-        angle += ROTATION_SPEED * speedMult;
+
+        // Normalize speed to 60FPS (dt is in seconds, so dt * 60 gives us ratio relative to 1 frame at 60fps)
+        let timeScale = dt * 60.0;
+        angle += ROTATION_SPEED * speedMult * timeScale;
         requestAnimationFrame(render);
     }
 

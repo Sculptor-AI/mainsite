@@ -25,6 +25,9 @@ const TIME_GATHER_DURATION = isMobilePortrait ? 180 : 320;
 const TIME_TEXT_START = TIME_EXPLODE_END;
 
 let stateTimer = 0;
+let hasTriggeredExplosion = false;
+let hasTriggeredConvergence = false;
+let lastTimestamp = performance.now();
 
 // --- Geometry: The Blob ---
 const blobPoints = [];
@@ -313,7 +316,12 @@ function cubicBezier(t, p0, p1, p2, p3) {
     return (uuu * p0) + (3 * uu * t * p1) + (3 * u * tt * p2) + (ttt * p3);
 }
 
-function render() {
+function render(timestamp) {
+    if (!timestamp) timestamp = performance.now();
+    const dt = Math.min(0.05, (timestamp - lastTimestamp) / 1000); // Cap at 50ms to prevent glitches
+    lastTimestamp = timestamp;
+    const timeScale = (dt * 60.0) * 2.0; // Double speed
+
     // Fixed resolution to ensure "actual characters displayed" never changes, only scales.
     const width = 160;
     const height = 80;
@@ -325,13 +333,13 @@ function render() {
     const K1 = Math.min(width, height) * 0.7;
     const aspectCorrection = (charHeight / charWidth);
 
-    stateTimer++;
+    stateTimer += timeScale;
 
     // --- PHASE LOGIC ---
 
     if (stateTimer < TIME_BLOB_END) {
         // PHASE 1: BLOB
-        camYaw += CAM_YAW_SPEED;
+        camYaw += CAM_YAW_SPEED * timeScale;
         camPitch = Math.sin(time * 0.5) * 0.3;
 
         const pulseFreq = 4.0;
@@ -349,7 +357,8 @@ function render() {
 
     } else if (stateTimer < TIME_TEXT_START) {
         // PHASE 2: EXPLODE
-        if (stateTimer === TIME_BLOB_END) {
+        if (!hasTriggeredExplosion) {
+            hasTriggeredExplosion = true;
             for (let p of particles) {
                 p.vx = p.baseX * (Math.random() * 0.9 + 0.2);
                 p.vy = p.baseY * (Math.random() * 0.9 + 0.2);
@@ -357,21 +366,22 @@ function render() {
             }
         }
 
-        camYaw += CAM_YAW_SPEED;
+        camYaw += CAM_YAW_SPEED * timeScale;
         camPitch = Math.sin(time * 0.5) * 0.4;
 
         for (let p of particles) {
-            p.x += p.vx;
-            p.y += p.vy;
-            p.z += p.vz;
-            p.vx *= 0.98;
-            p.vy *= 0.98;
-            p.vz *= 0.98;
+            p.x += p.vx * timeScale;
+            p.y += p.vy * timeScale;
+            p.z += p.vz * timeScale;
+            p.vx *= Math.pow(0.98, timeScale);
+            p.vy *= Math.pow(0.98, timeScale);
+            p.vz *= Math.pow(0.98, timeScale);
         }
 
     } else {
         // PHASE 3: CONVERGENCE
-        if (stateTimer === TIME_TEXT_START) {
+        if (!hasTriggeredConvergence) {
+            hasTriggeredConvergence = true;
             capturedPitch = camPitch;
             capturedYaw = camYaw;
             targetYaw = Math.ceil((capturedYaw + 0.1) / (Math.PI * 2)) * (Math.PI * 2);
@@ -498,7 +508,7 @@ function render() {
     }
     screenElement.innerText = frame;
 
-    time += 0.03;
+    time += 0.03 * timeScale;
     requestAnimationFrame(render);
 }
 

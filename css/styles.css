@@ -53,6 +53,9 @@ body {
     white-space: pre;
     text-align: center;
     text-shadow: 0 0 4px rgba(255, 255, 255, 0.4);
+    font-variant-ligatures: none;
+    font-kerning: none;
+    user-select: none;
     margin: 0;
     display: block;
 }
@@ -130,6 +133,9 @@ body {
     text-align: center;
     /* Subtle glow to help points bleed together visually */
     text-shadow: 0 0 2px rgba(255, 255, 255, 0.2);
+    font-variant-ligatures: none;
+    font-kerning: none;
+    user-select: none;
 }
 
 @keyframes spin {

@@ -4,6 +4,17 @@
  */
 
 (function () {
+    const {
+        SPACE_CODE,
+        clamp01,
+        createTextSurface,
+        createVisibilityController,
+        hash01,
+        packColor,
+        sampleRampCode,
+        toCharCodes
+    } = window.ASCIIUtils;
+
     // --- Configuration ---
     const VIEW_DISTANCE = 55.0;
     const ROTATION_SPEED = 0.005; // Restored rotation
@@ -18,6 +29,8 @@
 
     // A long gradient for better depth resolution
     const SHADE_CHARS = " `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@";
+    const SHADE_CHAR_CODES = toCharCodes(SHADE_CHARS);
+    const SHADE_DITHER = 0.06;
 
     const CODE_TEXT = `import { Galaxy } from 'cosmos'; const star = new Star({ type: 'G2V', mass: 1.0 }); function main() { while(orbiting) { physics.simulate(dt); render(scene); } } class BlackHole extends Singularity { consume(light) { return void 0; } } const entropy = Math.random(); if (entropy > 0.99) { bigBang(); } // TODO: Fix gravity bug export default function() { return 42; } const darkMatter = calculate(95); `;
 
@@ -81,6 +94,15 @@
 
     // Default color (Logo/Orb/Fish are white/grey)
     const COLOR_DEFAULT = { r: 224, g: 224, b: 224 };
+    const DWARF_COLOR_LEVELS = 12;
+    const DWARF_COLOR_THRESHOLD = 0.16;
+    const DWARF_RIM_COLOR = { r: 255, g: 232, b: 180 };
+    const DWARF_BASE_PALETTE = Array.from({ length: DWARF_COLOR_LEVELS }, (_, i) => {
+        const t = i / Math.max(1, DWARF_COLOR_LEVELS - 1);
+        const heat = getHeatColor(t);
+        return lerpColor(heat, DWARF_RIM_COLOR, Math.pow(t, 3) * 0.3);
+    });
+    const DWARF_FRAME_PALETTE = new Uint32Array(DWARF_COLOR_LEVELS);
 
     // Map original chars to a "weight" (0.0 to 1.0)
     function getCharWeight(c) {
@@ -92,10 +114,6 @@
             '*': 0.7, '#': 0.8, '%': 0.9, '@': 1.0
         };
         return weights[c] || 0.6; // Default weight
-    }
-
-    function easeInOutCubic(t) {
-        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     }
 
     function lerp(start, end, t) {
@@ -123,21 +141,19 @@
         }
     }
 
-    function getGasTexture(x, y, z, time) {
-        // Latitude Bands
-        let wavyY = y + Math.sin(x * 3.0 + time * 0.5) * 0.1;
-        let band = Math.sin(wavyY * 12.0);
+    function buildDwarfPalette(blend) {
+        for (let i = 0; i < DWARF_COLOR_LEVELS; i++) {
+            const color = lerpColor(COLOR_DEFAULT, DWARF_BASE_PALETTE[i], blend);
+            DWARF_FRAME_PALETTE[i] = packColor(color.r, color.g, color.b);
+        }
+        return DWARF_FRAME_PALETTE;
+    }
 
-        // Turbulence
-        let turb = Math.sin(x * 6.0 + time) * Math.cos(z * 6.0 + time) * Math.sin(y * 8.0);
-
-        // Spots
-        let spot = Math.sin(x * 3.5 - time * 0.2) * Math.cos(y * 3.5);
-
-        // Mix
-        let noiseVal = band * 0.6 + turb * 0.3 + spot * 0.2;
-
-        return (noiseVal + 1.2) / 2.4;
+    function sampleDwarfSurface(p, timeData) {
+        const band = Math.sin(p.dwarfBandPhase + timeData.band + Math.sin(p.dwarfDriftPhase + timeData.drift) * 0.45);
+        const swirl = Math.sin(p.dwarfSwirlPhase + timeData.swirl) * 0.55;
+        const storm = Math.cos(p.dwarfStormPhase - timeData.storm) * (0.35 + p.dwarfEquatorBias * 0.25);
+        return clamp01((band * 0.5 + swirl * 0.32 + storm * 0.18 + 1.15) / 2.3);
     }
 
     function generateOrbTargets(count) {
@@ -293,16 +309,29 @@
                             logoY: baseY + (Math.random() - 0.5) * XY_JITTER,
                             logoZ: z,
                             logoIsFace: isFace,
+                            logoFaceSign: z >= 0 ? 1 : -1,
                             logoWeight: weight,
 
                             // State 1: Orb
-                            orbX: 0, orbY: 0, orbZ: 0, orbChar: ' ',
+                            orbX: 0, orbY: 0, orbZ: 0,
+                            orbNX: 0, orbNY: 0, orbNZ: 0,
+                            orbCharCode: SPACE_CODE,
+                            orbReveal: hash01((particles.length + 1) * 19.0),
 
                             // State 2: Fish
-                            fishX: 0, fishY: 0, fishZ: 0, fishIsFace: false, fishWeight: 0,
+                            fishX: 0, fishY: 0, fishZ: 0,
+                            fishIsFace: false,
+                            fishFaceSign: 1,
+                            fishWeight: 0,
 
                             // State 3: Brown Dwarf
-                            dwarfX: 0, dwarfY: 0, dwarfZ: 0
+                            dwarfX: 0, dwarfY: 0, dwarfZ: 0,
+                            dwarfNX: 0, dwarfNY: 0, dwarfNZ: 0,
+                            dwarfBandPhase: 0,
+                            dwarfSwirlPhase: 0,
+                            dwarfStormPhase: 0,
+                            dwarfDriftPhase: 0,
+                            dwarfEquatorBias: 0
                         });
                     }
                 }
@@ -349,20 +378,32 @@
 
         // Orb
         const tOrb = orbTargets[orbOrder[k]];
-        p.orbX = tOrb.x; p.orbY = tOrb.y; p.orbZ = tOrb.z; p.orbChar = tOrb.char;
+        const orbLen = Math.hypot(tOrb.x, tOrb.y, tOrb.z) || 1;
+        p.orbX = tOrb.x; p.orbY = tOrb.y; p.orbZ = tOrb.z;
+        p.orbNX = tOrb.x / orbLen; p.orbNY = tOrb.y / orbLen; p.orbNZ = tOrb.z / orbLen;
+        p.orbCharCode = tOrb.char.charCodeAt(0);
 
         // Fish
         if (k < fishTargets.length) {
             const tFish = fishTargets[fishOrder[k]];
             p.fishX = tFish.x; p.fishY = tFish.y; p.fishZ = tFish.z;
-            p.fishIsFace = tFish.isFace; p.fishWeight = tFish.weight;
+            p.fishIsFace = tFish.isFace;
+            p.fishFaceSign = tFish.z >= 0 ? 1 : -1;
+            p.fishWeight = tFish.weight;
         } else {
-            p.fishX = 0; p.fishY = 0; p.fishZ = 0; p.fishWeight = 0; p.fishIsFace = false;
+            p.fishX = 0; p.fishY = 0; p.fishZ = 0; p.fishWeight = 0; p.fishIsFace = false; p.fishFaceSign = 1;
         }
 
         // Dwarf
         const tDwarf = dwarfTargets[dwarfOrder[k]];
         p.dwarfX = tDwarf.x; p.dwarfY = tDwarf.y; p.dwarfZ = tDwarf.z;
+        const dwarfLen = Math.hypot(tDwarf.x, tDwarf.y, tDwarf.z) || 1;
+        p.dwarfNX = tDwarf.x / dwarfLen; p.dwarfNY = tDwarf.y / dwarfLen; p.dwarfNZ = tDwarf.z / dwarfLen;
+        p.dwarfBandPhase = p.dwarfNY * 12.0 + p.dwarfNX * 1.5;
+        p.dwarfSwirlPhase = (p.dwarfNX * 5.5) + (p.dwarfNZ * 4.5) + (p.dwarfNY * 2.0);
+        p.dwarfStormPhase = Math.atan2(p.dwarfNZ, p.dwarfNX) * 2.6 + p.dwarfNY * 3.5;
+        p.dwarfDriftPhase = (p.dwarfNX * 3.0) - (p.dwarfNZ * 2.0) + p.dwarfNY * 1.5;
+        p.dwarfEquatorBias = 1.0 - Math.abs(p.dwarfNY);
 
         // Logo2 (Return state - identical to Logo)
         p.logo2X = p.logoX;
@@ -372,6 +413,14 @@
 
     // --- Rendering ---
     const screenElement = document.getElementById('solid-logo-canvas');
+    const logoLoop = createVisibilityController(screenElement.closest('.ascii-column') || screenElement);
+    const surface = createTextSurface(128, 128);
+    const width = surface.width;
+    const height = surface.height;
+    const zbuffer = surface.zBuffer;
+    const textBuffer = surface.charBuffer;
+    const colorBuffer = surface.colorBuffer;
+    const DEFAULT_PACKED_COLOR = packColor(COLOR_DEFAULT.r, COLOR_DEFAULT.g, COLOR_DEFAULT.b);
 
     // Measure Char size
     // Measure Char size dynamically
@@ -383,11 +432,21 @@
         const style = getComputedStyle(screenElement);
         measureElement.style.fontFamily = style.fontFamily;
         measureElement.style.fontSize = style.fontSize;
-        measureElement.innerHTML = "X";
+        measureElement.style.lineHeight = style.lineHeight;
+        measureElement.style.position = 'absolute';
+        measureElement.style.visibility = 'hidden';
+        measureElement.textContent = 'X';
         document.body.appendChild(measureElement);
+
         let rect = measureElement.getBoundingClientRect();
         charWidth = rect.width || 6;
-        charHeight = (rect.height * 0.9) || 10;
+
+        let lineHeight = parseFloat(style.lineHeight);
+        if (!lineHeight || Number.isNaN(lineHeight)) {
+            lineHeight = (rect.height * 0.9) || 10;
+        }
+        charHeight = lineHeight;
+
         document.body.removeChild(measureElement);
     }
 
@@ -399,24 +458,11 @@
 
     // State: 0 = Logo, 1 = Orb, 2 = Fish, 3 = Dwarf, 4 = Logo2 (Return)
     let targetState = 0;
-    let morphProgress = 1.0; // 0 = transitioning, 1 = at target
     let lastTimestamp = performance.now();
 
     // Track current blend weights continuously (allows smooth mid-morph transitions)
     let currentWeights = { logo: 1, orb: 0, fish: 0, dwarf: 0, logo2: 0 };
     let targetWeights = { logo: 1, orb: 0, fish: 0, dwarf: 0, logo2: 0 };
-
-    // Helper to get position for a particle at a given state
-    function getStatePosition(p, state) {
-        switch (state) {
-            case 0: return { x: p.logoX, y: p.logoY, z: p.logoZ };
-            case 1: return { x: p.orbX, y: p.orbY, z: p.orbZ };
-            case 2: return { x: p.fishX, y: p.fishY, z: p.fishZ };
-            case 3: return { x: p.dwarfX, y: p.dwarfY, z: p.dwarfZ };
-            case 4: return { x: p.logo2X, y: p.logo2Y, z: p.logo2Z };
-            default: return { x: p.logoX, y: p.logoY, z: p.logoZ };
-        }
-    }
 
     // Get target weights for a state
     function getTargetWeightsForState(state) {
@@ -431,25 +477,10 @@
         return w;
     }
 
-    // PRE-ALLOCATE BUFFERS
-    const width = 128;
-    const height = 128;
-    const size = width * height;
-
-    // Reuse these arrays every frame to prevent GC spikes (common issue in Safari)
-    const textBuffer = new Array(size).fill(' ');
-    const zbuffer = new Float32Array(size).fill(-9999.0);
-    const colorBuffer = new Array(size).fill(null); // Objects {r,g,b}
-
-    // Fill color buffer with default objects to avoid allocation during render if possible
-    for (let i = 0; i < size; i++) colorBuffer[i] = { r: 0, g: 0, b: 0 };
-
     function render(timestamp) {
         const now = typeof timestamp === 'number' ? timestamp : performance.now();
 
-        // Mobile/Hidden Optimization:
-        // If the element is hidden (display: none), skip all calculations
-        if (screenElement.offsetParent === null) {
+        if (!logoLoop.isActive()) {
             lastTimestamp = now;
             requestAnimationFrame(render);
             return;
@@ -485,36 +516,65 @@
         let wFish = currentWeights.fish;
         let wDwarf = currentWeights.dwarf;
         let wLogo2 = currentWeights.logo2;
+        if (wLogo < 0.001) wLogo = 0;
+        if (wOrb < 0.001) wOrb = 0;
+        if (wFish < 0.001) wFish = 0;
+        if (wDwarf < 0.001) wDwarf = 0;
+        if (wLogo2 < 0.001) wLogo2 = 0;
+        const wLogoCombined = wLogo + wLogo2;
+        const hasOrb = wOrb > 0;
+        const hasFish = wFish > 0;
+        const hasDwarf = wDwarf > 0;
 
-        // Render setup
-        const container = screenElement.parentElement;
         const aspectCorrection = (charHeight / charWidth);
 
-        // RESET BUFFERS
-        // Float32Array doesn't need to be recreated, just filled
-        zbuffer.fill(-9999.0);
-        // textBuffer needs to be reset to space
-        for (let i = 0; i < size; i++) textBuffer[i] = ' ';
-        // colorBuffer contents don't strictly need reset if we overwrite, but let's be safe if logic depends on it
-        // actually we only read colorBuffer if we wrote it.
+        surface.reset();
 
-        const useColor = (wDwarf > 0.01);
-        let htmlBuffer = ""; // String building is still needed for useColor = true case
+        const dwarfColorBlend = clamp01((wDwarf - DWARF_COLOR_THRESHOLD) / (1.0 - DWARF_COLOR_THRESHOLD));
+        const useColor = dwarfColorBlend > 0.001;
+        const dwarfPalette = useColor ? buildDwarfPalette(dwarfColorBlend) : null;
+        const dwarfTime = hasDwarf ? {
+            band: time * 1.15,
+            drift: time * 0.35,
+            swirl: time * 1.7,
+            storm: time * 0.6
+        } : null;
 
         const K1 = 40.0;
         const cosT = Math.cos(angle);
         const sinT = Math.sin(angle);
+        const sideNormalX = cosT;
+        const sideNormalZ = -sinT;
 
         const lx = 0.6; const ly = 0.4; const lz = -0.5;
 
         for (let i = 0; i < particles.length; i++) {
             let p = particles[i];
 
-            // Position Blend
-            // Note: We add p.logo2*wLogo2. Since p.logo2 is identical to p.logo, it smoothly returns to logo shape.
-            let px = p.logoX * wLogo + p.orbX * wOrb + p.fishX * wFish + p.dwarfX * wDwarf + p.logo2X * wLogo2;
-            let py = p.logoY * wLogo + p.orbY * wOrb + p.fishY * wFish + p.dwarfY * wDwarf + p.logo2Y * wLogo2;
-            let pz = p.logoZ * wLogo + p.orbZ * wOrb + p.fishZ * wFish + p.dwarfZ * wDwarf + p.logo2Z * wLogo2;
+            let px = 0;
+            let py = 0;
+            let pz = 0;
+
+            if (wLogoCombined) {
+                px += p.logoX * wLogoCombined;
+                py += p.logoY * wLogoCombined;
+                pz += p.logoZ * wLogoCombined;
+            }
+            if (hasOrb) {
+                px += p.orbX * wOrb;
+                py += p.orbY * wOrb;
+                pz += p.orbZ * wOrb;
+            }
+            if (hasFish) {
+                px += p.fishX * wFish;
+                py += p.fishY * wFish;
+                pz += p.fishZ * wFish;
+            }
+            if (hasDwarf) {
+                px += p.dwarfX * wDwarf;
+                py += p.dwarfY * wDwarf;
+                pz += p.dwarfZ * wDwarf;
+            }
 
             // Rotate
             let x = px * cosT - pz * sinT;
@@ -534,36 +594,34 @@
                     if (ooz > zbuffer[idx]) {
                         zbuffer[idx] = ooz;
 
-                        // --- NORMALS ---
-                        // Logo Normal
-                        let nLogoX = 0, nLogoZ = 0;
-                        if (p.logoIsFace) { nLogoX = sinT * (p.logoZ > 0 ? 1 : -1); nLogoZ = cosT * (p.logoZ > 0 ? 1 : -1); }
-                        else { nLogoX = cosT; nLogoZ = -sinT; }
+                        let nLogoX = p.logoIsFace ? sinT * p.logoFaceSign : sideNormalX;
+                        let nLogoZ = p.logoIsFace ? cosT * p.logoFaceSign : sideNormalZ;
+                        let nx = nLogoX * wLogoCombined;
+                        let ny = 0;
+                        let nz = nLogoZ * wLogoCombined;
 
-                        // Orb Normal
-                        let orbLen = Math.hypot(p.orbX, p.orbY, p.orbZ) || 1;
-                        let nOrbX = p.orbX / orbLen; let nOrbY = p.orbY / orbLen; let nOrbZ = p.orbZ / orbLen;
-                        let rOrbX = nOrbX * cosT - nOrbZ * sinT; let rOrbZ = nOrbX * sinT + nOrbZ * cosT;
-                        nOrbX = rOrbX; nOrbZ = rOrbZ;
+                        if (hasOrb) {
+                            const nOrbX = p.orbNX * cosT - p.orbNZ * sinT;
+                            const nOrbZ = p.orbNX * sinT + p.orbNZ * cosT;
+                            nx += nOrbX * wOrb;
+                            ny += p.orbNY * wOrb;
+                            nz += nOrbZ * wOrb;
+                        }
 
-                        // Fish Normal
-                        let nFishX = 0, nFishZ = 0;
-                        if (p.fishIsFace) { nFishX = sinT * (p.fishZ > 0 ? 1 : -1); nFishZ = cosT * (p.fishZ > 0 ? 1 : -1); }
-                        else { nFishX = cosT; nFishZ = -sinT; }
+                        if (hasFish) {
+                            const nFishX = p.fishIsFace ? sinT * p.fishFaceSign : sideNormalX;
+                            const nFishZ = p.fishIsFace ? cosT * p.fishFaceSign : sideNormalZ;
+                            nx += nFishX * wFish;
+                            nz += nFishZ * wFish;
+                        }
 
-                        // Dwarf Normal (Sphere like orb)
-                        let dwarfLen = Math.hypot(p.dwarfX, p.dwarfY, p.dwarfZ) || 1;
-                        let nDwarfX = p.dwarfX / dwarfLen; let nDwarfY = p.dwarfY / dwarfLen; let nDwarfZ = p.dwarfZ / dwarfLen;
-                        let rDwarfX = nDwarfX * cosT - nDwarfZ * sinT; let rDwarfZ = nDwarfX * sinT + nDwarfZ * cosT;
-                        nDwarfX = rDwarfX; nDwarfZ = rDwarfZ;
-
-                        // Blend Normals
-                        // Since Logo and Logo2 have same normals (approximately, if we don't bake them), we can reuse nLogoX.
-                        // But wait, nLogoX calculated above used p.logoZ. p.logo2Z is same.
-                        // So yes, nLogoX applies to both.
-                        let nx = nLogoX * wLogo + nOrbX * wOrb + nFishX * wFish + nDwarfX * wDwarf + nLogoX * wLogo2;
-                        let ny = 0 + nOrbY * wOrb + 0 + nDwarfY * wDwarf + 0;
-                        let nz = nLogoZ * wLogo + nOrbZ * wOrb + nFishZ * wFish + nDwarfZ * wDwarf + nLogoZ * wLogo2;
+                        if (hasDwarf) {
+                            const nDwarfX = p.dwarfNX * cosT - p.dwarfNZ * sinT;
+                            const nDwarfZ = p.dwarfNX * sinT + p.dwarfNZ * cosT;
+                            nx += nDwarfX * wDwarf;
+                            ny += p.dwarfNY * wDwarf;
+                            nz += nDwarfZ * wDwarf;
+                        }
 
                         let norm = Math.hypot(nx, ny, nz) || 0.001;
                         nx /= norm; ny /= norm; nz /= norm;
@@ -571,99 +629,63 @@
                         let dot = nx * lx + ny * ly + nz * lz;
                         let diffuse = Math.max(0.15, dot);
 
-                        // --- BRIGHTNESS / CHAR ---
-                        let bLogo = p.logoIsFace ? (diffuse * 0.4 + p.logoWeight * 0.8) : (diffuse * 0.7);
-                        let bOrb = diffuse * 0.7 + (wOrb * 0.12);
-                        let bFish = p.fishIsFace ? (diffuse * 0.4 + p.fishWeight * 0.8) : (diffuse * 0.7);
+                        let brightness = 0;
 
-                        // --- COLOR & TEXTURE CALCULATION (Optimized) ---
-                        let bDwarf = 0;
-                        if (wDwarf > 0.01) {
-                            // Only compute expensive noise pattern if Dwarf is visible
-                            let pat = getGasTexture(p.dwarfX / 10, p.dwarfY / 10, p.dwarfZ / 10, time * 1.5);
-
-                            // Dwarf Brightness
-                            bDwarf = (diffuse * 0.4) + (pat * 0.6);
-
-                            if (useColor) {
-                                let litPat = pat * (0.6 + diffuse * 0.9);
-                                let heatColor = getHeatColor(litPat);
-                                // Blend with default grey
-                                let finalColor = lerpColor(COLOR_DEFAULT, heatColor, wDwarf);
-                                colorBuffer[idx] = finalColor;
-                            }
-                        } else {
-                            // If dwarf is hidden, just use a baseline equivalent to diffuse for smooth fade
-                            bDwarf = diffuse;
+                        if (wLogoCombined) {
+                            const bLogo = p.logoIsFace ? (diffuse * 0.4 + p.logoWeight * 0.8) : (diffuse * 0.7);
+                            brightness += bLogo * wLogoCombined;
                         }
 
-                        // Blend Brightness
-                        let brightness = bLogo * wLogo + bOrb * wOrb + bFish * wFish + bDwarf * wDwarf + bLogo * wLogo2;
+                        if (hasOrb) {
+                            const bOrb = diffuse * 0.7 + (wOrb * 0.12);
+                            brightness += bOrb * wOrb;
+                        }
+
+                        if (hasFish) {
+                            const bFish = p.fishIsFace ? (diffuse * 0.4 + p.fishWeight * 0.8) : (diffuse * 0.7);
+                            brightness += bFish * wFish;
+                        }
+
+                        if (hasDwarf) {
+                            const pat = sampleDwarfSurface(p, dwarfTime);
+                            const rim = Math.pow(Math.max(0, 1.0 - Math.abs(nz)), 2) * (0.24 + p.dwarfEquatorBias * 0.14);
+                            const thermal = clamp01(pat * (0.72 + diffuse * 0.24) + rim * 0.55);
+                            const bDwarf = clamp01(diffuse * 0.34 + pat * 0.46 + rim * 0.42);
+                            brightness += bDwarf * wDwarf;
+
+                            if (useColor) {
+                                const paletteIndex = Math.min(DWARF_COLOR_LEVELS - 1, Math.floor(thermal * (DWARF_COLOR_LEVELS - 1)));
+                                colorBuffer[idx] = dwarfPalette[paletteIndex];
+                            }
+                        }
 
                         let fog = (z + 50) / 200.0;
                         brightness -= fog;
                         if (brightness < 0) brightness = 0; if (brightness >= 1) brightness = 0.99;
 
-                        let charIdx = Math.floor(brightness * SHADE_CHARS.length);
-                        let finalChar = SHADE_CHARS[charIdx];
+                        let finalCharCode = sampleRampCode(SHADE_CHAR_CODES, brightness, xp, yp, SHADE_DITHER);
 
-                        if (wOrb > 0.1) {
-                            // In orb state, prioritize the code character
-                            // If fully in orb state (wOrb near 1), make it solid code
-                            // If transitioning, mix it up
-                            let showCode = false;
-                            if (wOrb > 0.9) showCode = true;
-                            else if (Math.random() < wOrb) showCode = true;
-
-                            if (showCode && brightness > 0.15) finalChar = p.orbChar;
+                        if (hasOrb && wOrb > 0.1) {
+                            const showCode = wOrb > 0.92 || wOrb >= p.orbReveal;
+                            if (showCode && brightness > 0.15) finalCharCode = p.orbCharCode;
                         }
-                        if (wFish > 0.8 && p.fishWeight === 0) finalChar = ' ';
+                        if (hasFish && wFish > 0.8 && p.fishWeight === 0) finalCharCode = SPACE_CODE;
 
-                        textBuffer[idx] = finalChar;
+                        textBuffer[idx] = finalCharCode;
                     }
                 }
             }
         }
 
-        // Output Generation
         if (useColor) {
-            // Full HTML generation (slower, but needed for color)
-            // We optimize by grouping spans of same color?
-            // For now, naive per-char span or just per-line.
-            // Per-char is safest for varying gas giant colors.
-
-            let html = "";
-            for (let r = 0; r < height; r++) {
-                let lineHtml = "";
-                for (let c = 0; c < width; c++) {
-                    let idx = c + r * width;
-                    let char = textBuffer[idx];
-                    if (char === ' ') {
-                        lineHtml += " ";
-                    } else {
-                        let col = colorBuffer[idx] || COLOR_DEFAULT;
-                        // Optimization: don't output style if it's default grey?
-                        // Actually, just outputting spans is heavy.
-                        // Let's try to keep it relatively efficient.
-                        lineHtml += `<span style="color:rgb(${col.r},${col.g},${col.b})">${char}</span>`;
-                    }
-                }
-                html += lineHtml + "\n";
-            }
-            screenElement.innerHTML = html;
+            surface.presentColor(screenElement, DEFAULT_PACKED_COLOR);
         } else {
-            // Fast plain text path
-            let frame = "";
-            for (let k = 0; k < size; k++) {
-                frame += textBuffer[k];
-                if ((k + 1) % width === 0) frame += "\n";
-            }
-            screenElement.innerText = frame;
+            surface.presentText(screenElement);
         }
 
         // Speed
         // Logo2 also uses 1.0 speed
-        let speedMult = 1.0 * wLogo + 0.5 * wOrb + 3.0 * wFish + 0.8 * wDwarf + 1.0 * wLogo2;
+        let speedMult = 1.0 * wLogoCombined + 0.5 * wOrb + 3.0 * wFish + 0.8 * wDwarf;
 
         // Normalize speed to 60FPS (dt is in seconds, so dt * 60 gives us ratio relative to 1 frame at 60fps)
         let timeScale = dt * 60.0;

@@ -3,6 +3,15 @@
  * Handles the Blob -> Explode -> Text convergence animation.
  */
 
+const {
+    SPACE_CODE,
+    createTextSurface,
+    createVisibilityController,
+    hash01,
+    sampleRampCode,
+    toCharCodes
+} = window.ASCIIUtils;
+
 // --- Configuration ---
 const isMobilePortrait = window.innerWidth < 768 && window.innerHeight > window.innerWidth;
 
@@ -13,8 +22,10 @@ const NUM_POINTS = isMobilePortrait ? 12000 : 32000; // Reduced particles for mo
 const VIEW_DISTANCE_START = 110.0;
 const VIEW_DISTANCE_END = 210.0;
 
-// Standard shading characters for the Blob phase
-const SHADE_CHARS = " ·-:;=+*#%@";
+// Slightly richer monochrome ramp for cleaner gradients without changing the overall look.
+const SHADE_CHARS = " .,:-~=+*xX#%@";
+const SHADE_CHAR_CODES = toCharCodes(SHADE_CHARS);
+const SHADE_DITHER = 0.08;
 const CAM_YAW_SPEED = 0.01;
 
 // --- Timings (in frames) ---
@@ -244,7 +255,8 @@ for (let i = 0; i < NUM_POINTS; i++) {
         c1x: 0, c1y: 0, c1z: 0,
         c2x: 0, c2y: 0, c2z: 0,
         tx: 0, ty: 0, tz: 0,
-        tChar: ' ', // Target Character
+        tCharCode: SPACE_CODE,
+        revealThreshold: hash01((i + 1) * 17.0),
 
         vx: 0, vy: 0, vz: 0,
         baseX: blobPoints[i % blobPoints.length].x,
@@ -258,7 +270,10 @@ const particleOrder = Array.from({ length: NUM_POINTS }, (_, i) => i)
     .sort((a, b) => particles[a].baseX - particles[b].baseX);
 
 const screenElement = document.getElementById('canvas');
-const computedCanvasStyle = getComputedStyle(screenElement);
+const heroLoop = createVisibilityController(document.getElementById('hero'));
+const FRAME_WIDTH = 160;
+const FRAME_HEIGHT = 80;
+const surface = createTextSurface(FRAME_WIDTH, FRAME_HEIGHT);
 
 // Measure character size accurately to avoid vertical clipping
 // Measure character size dynamically to handle responsive scaling
@@ -266,13 +281,14 @@ let charWidth = 6;
 let charHeight = 10;
 
 function updateCharDimensions() {
+    const computedCanvasStyle = getComputedStyle(screenElement);
     const measureElement = document.createElement('span');
     measureElement.style.fontFamily = computedCanvasStyle.fontFamily;
     measureElement.style.fontSize = computedCanvasStyle.fontSize;
     measureElement.style.lineHeight = computedCanvasStyle.lineHeight;
     measureElement.style.position = 'absolute';
     measureElement.style.visibility = 'hidden';
-    measureElement.innerText = "X";
+    measureElement.textContent = "X";
     document.body.appendChild(measureElement);
 
     let rect = measureElement.getBoundingClientRect();
@@ -318,17 +334,22 @@ function cubicBezier(t, p0, p1, p2, p3) {
 
 function render(timestamp) {
     if (!timestamp) timestamp = performance.now();
+
+    if (!heroLoop.isActive()) {
+        lastTimestamp = timestamp;
+        requestAnimationFrame(render);
+        return;
+    }
+
     const dt = Math.min(0.05, (timestamp - lastTimestamp) / 1000); // Cap at 50ms to prevent glitches
     lastTimestamp = timestamp;
     const timeScale = (dt * 60.0) * 2.0; // Double speed
 
-    // Fixed resolution to ensure "actual characters displayed" never changes, only scales.
-    const width = 160;
-    const height = 80;
-    const size = width * height;
-
-    const zbuffer = new Float32Array(size).fill(-9999.0);
-    const output = new Array(size).fill(' ');
+    const width = surface.width;
+    const height = surface.height;
+    surface.reset();
+    const zbuffer = surface.zBuffer;
+    const output = surface.charBuffer;
 
     const K1 = Math.min(width, height) * 0.7;
     const aspectCorrection = (charHeight / charWidth);
@@ -393,7 +414,7 @@ function render(timestamp) {
                 let t = sortedTargets[i];
 
                 // Assign the specific character
-                p.tChar = t.char;
+                p.tCharCode = t.char.charCodeAt(0);
 
                 let jitter = t.isLogo ? 0.05 : 0.1;
 
@@ -483,30 +504,25 @@ function render(timestamp) {
                     // 1. Calculate Standard Light Shade
                     let bBlob = (x2 * -0.5 + y2 * -0.5 + z2 * -1.0) / SPHERE_RADIUS + 0.3;
                     if (bBlob < 0) bBlob = 0; if (bBlob > 1) bBlob = 1;
-                    let shadeChar = SHADE_CHARS[Math.floor(bBlob * (SHADE_CHARS.length - 1))];
+                    let shadeCharCode = sampleRampCode(SHADE_CHAR_CODES, bBlob, xp, yp, SHADE_DITHER);
 
                     // 2. Determine Final Char
-                    let finalChar = shadeChar;
+                    let finalCharCode = shadeCharCode;
 
-                    if (stateTimer > TIME_TEXT_START && p.tChar) {
-                        // Transition from shading to actual character
-                        if (Math.random() < morphToText) {
-                            finalChar = p.tChar;
+                    if (stateTimer > TIME_TEXT_START && p.tCharCode !== SPACE_CODE) {
+                        // Deterministic reveal prevents noisy frame-to-frame flicker while preserving the morph.
+                        if (morphToText >= p.revealThreshold) {
+                            finalCharCode = p.tCharCode;
                         }
                     }
 
-                    output[idx] = finalChar;
+                    output[idx] = finalCharCode;
                 }
             }
         }
     }
 
-    let frame = "";
-    for (let k = 0; k < size; k++) {
-        frame += output[k];
-        if ((k + 1) % width === 0) frame += "\n";
-    }
-    screenElement.innerText = frame;
+    surface.presentText(screenElement);
 
     time += 0.03 * timeScale;
     requestAnimationFrame(render);

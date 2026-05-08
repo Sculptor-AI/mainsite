@@ -1,36 +1,43 @@
 /*
  * Sculptor AI - 3D Logo Animation
  * Handles the solid 3D logo in the left column.
+ * Features: shape-vector ASCII rendering, click-and-drag rotation, momentum.
  */
 
 (function () {
     const {
         SPACE_CODE,
+        EMPTY_DEPTH,
         clamp01,
         createTextSurface,
         createVisibilityController,
         hash01,
         packColor,
-        sampleRampCode,
-        toCharCodes
+        toCharCodes,
+        computeShapeVectors,
+        cachedShapeLookup,
+        applyGlobalContrast,
+        SHAPE_DIMS
     } = window.ASCIIUtils;
 
     // --- Configuration ---
     const VIEW_DISTANCE = 55.0;
-    const ROTATION_SPEED = 0.005; // Restored rotation
-    const EXTRUSION_DEPTH = 3.75; // Reduced 25%
-    const ORB_RADIUS = 24.0;      // Reduced 25%
-    const MORPH_DURATION = 1.2; // seconds to morph logo -> orb
+    const BASE_ROTATION_SPEED = 0.005;
+    const EXTRUSION_DEPTH = 3.75;
+    const ORB_RADIUS = 24.0;
+    const MORPH_DURATION = 1.2;
     const BURST_DISTANCE = 14.0;
 
     // Voxel density
-    const Z_STEP = 0.2; // High resolution depth
-    const XY_JITTER = 0.5; // Randomness to fill gaps
+    const Z_STEP = 0.2;
+    const XY_JITTER = 0.5;
 
-    // A long gradient for better depth resolution
+    // Shape-based rendering config
+    const CONTRAST_EXPONENT = 3.5; // higher = sharper edges between regions
+
+    // A long gradient for fallback and orb text
     const SHADE_CHARS = " `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@";
     const SHADE_CHAR_CODES = toCharCodes(SHADE_CHARS);
-    const SHADE_DITHER = 0.06;
 
     const CODE_TEXT = `import { Galaxy } from 'cosmos'; const star = new Star({ type: 'G2V', mass: 1.0 }); function main() { while(orbiting) { physics.simulate(dt); render(scene); } } class BlackHole extends Singularity { consume(light) { return void 0; } } const entropy = Math.random(); if (entropy > 0.99) { bigBang(); } // TODO: Fix gravity bug export default function() { return 42; } const darkMatter = calculate(95); `;
 
@@ -59,7 +66,6 @@
                                          =+=-.
 `;
 
-    // Your specific Sunfish ASCII Art
     const FISH_ART = `
                            .
                          .\` \`.
@@ -75,50 +81,28 @@
    \`.        .  .'''.                   _....._         \`.
      \`-.    .   '....'               ..'.      \`-.        .
         \`-..._                    _.\`    '        \`-.     .
-              \`-.................'.    .'            \`-.__.
+              \`-.................'.    .'            \`-.__. 
                    \`.         :    '. '
                      \`.       :      '
                        \`._.  .'
                           \`.\`
 `;
 
-    const GRID_X = 1.35; // Reduced 25%
-    const GRID_Y = 2.6;  // Reduced ~25%
+    const GRID_X = 1.35;
+    const GRID_Y = 2.6;
 
     const particles = [];
 
-    // Colors for Brown Dwarf (State 3)
+    // Colors
     const COLOR_COLD = { r: 60, g: 20, b: 70 };
     const COLOR_MID = { r: 220, g: 60, b: 100 };
     const COLOR_HOT = { r: 255, g: 210, b: 140 };
-
-    // Default color (Logo/Orb/Fish are white/grey)
     const COLOR_DEFAULT = { r: 224, g: 224, b: 224 };
     const DWARF_COLOR_LEVELS = 12;
     const DWARF_COLOR_THRESHOLD = 0.16;
     const DWARF_RIM_COLOR = { r: 255, g: 232, b: 180 };
-    const DWARF_BASE_PALETTE = Array.from({ length: DWARF_COLOR_LEVELS }, (_, i) => {
-        const t = i / Math.max(1, DWARF_COLOR_LEVELS - 1);
-        const heat = getHeatColor(t);
-        return lerpColor(heat, DWARF_RIM_COLOR, Math.pow(t, 3) * 0.3);
-    });
-    const DWARF_FRAME_PALETTE = new Uint32Array(DWARF_COLOR_LEVELS);
 
-    // Map original chars to a "weight" (0.0 to 1.0)
-    function getCharWeight(c) {
-        const weights = {
-            '.': 0.3, ',': 0.3, "'": 0.3, '`': 0.3,
-            ':': 0.4, '-': 0.4, '_': 0.5,
-            '=': 0.5, '+': 0.6,
-            '(': 0.7, ')': 0.7,
-            '*': 0.7, '#': 0.8, '%': 0.9, '@': 1.0
-        };
-        return weights[c] || 0.6; // Default weight
-    }
-
-    function lerp(start, end, t) {
-        return start * (1 - t) + end * t;
-    }
+    function lerp(start, end, t) { return start * (1 - t) + end * t; }
 
     function lerpColor(c1, c2, t) {
         return {
@@ -129,17 +113,28 @@
     }
 
     function getHeatColor(val) {
-        if (val < 0) val = 0;
-        if (val > 1) val = 1;
-
-        if (val < 0.5) {
-            let t = val * 2.0;
-            return lerpColor(COLOR_COLD, COLOR_MID, t);
-        } else {
-            let t = (val - 0.5) * 2.0;
-            return lerpColor(COLOR_MID, COLOR_HOT, t);
-        }
+        val = clamp01(val);
+        if (val < 0.5) return lerpColor(COLOR_COLD, COLOR_MID, val * 2.0);
+        return lerpColor(COLOR_MID, COLOR_HOT, (val - 0.5) * 2.0);
     }
+
+    function getCharWeight(c) {
+        const weights = {
+            '.': 0.3, ',': 0.3, "'": 0.3, '`': 0.3,
+            ':': 0.4, '-': 0.4, '_': 0.5,
+            '=': 0.5, '+': 0.6,
+            '(': 0.7, ')': 0.7,
+            '*': 0.7, '#': 0.8, '%': 0.9, '@': 1.0
+        };
+        return weights[c] || 0.6;
+    }
+
+    const DWARF_BASE_PALETTE = Array.from({ length: DWARF_COLOR_LEVELS }, (_, i) => {
+        const t = i / Math.max(1, DWARF_COLOR_LEVELS - 1);
+        const heat = getHeatColor(t);
+        return lerpColor(heat, DWARF_RIM_COLOR, Math.pow(t, 3) * 0.3);
+    });
+    const DWARF_FRAME_PALETTE = new Uint32Array(DWARF_COLOR_LEVELS);
 
     function buildDwarfPalette(blend) {
         for (let i = 0; i < DWARF_COLOR_LEVELS; i++) {
@@ -160,14 +155,11 @@
         const targets = [];
         const golden = Math.PI * (3 - Math.sqrt(5));
         const denom = Math.max(1, count - 1);
-
         for (let i = 0; i < count; i++) {
             const y = 1 - (i / denom) * 2;
             const radius = Math.sqrt(Math.max(0, 1 - y * y));
             const theta = golden * i;
-            // Tighter jitter for cleaner text lines
             const radiusJitter = ORB_RADIUS * (0.98 + Math.random() * 0.04);
-
             targets.push({
                 x: Math.cos(theta) * radius * radiusJitter,
                 y: y * radiusJitter,
@@ -178,25 +170,19 @@
         return targets;
     }
 
-    // Brown Dwarf uses similar spherical targets but packed more densely visually?
-    // Actually we can reuse the orb target generation but maybe modify radius/jitter
     function generateDwarfTargets(count) {
         const targets = [];
         const golden = Math.PI * (3 - Math.sqrt(5));
         const denom = Math.max(1, count - 1);
-        const DWARF_RADIUS = 21.0; // Reduced to 75% size
-
+        const DWARF_RADIUS = 21.0;
         for (let i = 0; i < count; i++) {
             const y = 1 - (i / denom) * 2;
             const radius = Math.sqrt(Math.max(0, 1 - y * y));
             const theta = golden * i;
-            // Less jitter for a smoother gas giant surface
-            const r = DWARF_RADIUS;
-
             targets.push({
-                x: Math.cos(theta) * r * radius,
-                y: y * r,
-                z: Math.sin(theta) * r * radius
+                x: Math.cos(theta) * DWARF_RADIUS * radius,
+                y: y * DWARF_RADIUS,
+                z: Math.sin(theta) * DWARF_RADIUS * radius
             });
         }
         return targets;
@@ -205,50 +191,31 @@
     function generateFishTargets() {
         const targets = [];
         const lines = FISH_ART.split('\n');
-
-        // Center Calculation
-        let minC = 9999, maxC = 0;
-        let minR = 9999, maxR = 0;
-
+        let minC = 9999, maxC = 0, minR = 9999, maxR = 0;
         for (let r = 0; r < lines.length; r++) {
-            let line = lines[r];
-            for (let c = 0; c < line.length; c++) {
-                if (line[c] !== ' ' && line[c] !== undefined && line[c] !== '\n') {
-                    if (c < minC) minC = c;
-                    if (c > maxC) maxC = c;
-                    if (r < minR) minR = r;
-                    if (r > maxR) maxR = r;
+            for (let c = 0; c < lines[r].length; c++) {
+                if (lines[r][c] !== ' ' && lines[r][c] !== '\n') {
+                    if (c < minC) minC = c; if (c > maxC) maxC = c;
+                    if (r < minR) minR = r; if (r > maxR) maxR = r;
                 }
             }
         }
-
         const centerX = (minC + maxC) / 2;
         const centerY = (minR + maxR) / 2;
-
-        // Generate Voxels
         for (let r = 0; r < lines.length; r++) {
-            let line = lines[r];
-            for (let c = 0; c < line.length; c++) {
-                let char = line[c];
+            for (let c = 0; c < lines[r].length; c++) {
+                let char = lines[r][c];
                 if (char && char !== ' ' && char !== '\n') {
-
                     const baseX = (c - centerX) * GRID_X;
                     const baseY = -(r - centerY) * GRID_Y;
                     const weight = getCharWeight(char);
-
-                    // Extrude Z - Using 4.0 to match the fish demo
-                    const FISH_EXTRUSION = 4.0;
-                    const FISH_SCALE = 0.5;
-
+                    const FISH_EXTRUSION = 4.0, FISH_SCALE = 0.5;
                     for (let z = -FISH_EXTRUSION; z <= FISH_EXTRUSION; z += Z_STEP) {
-
-                        let isFace = (z > FISH_EXTRUSION - 1.0 || z < -FISH_EXTRUSION + 1.0);
-
                         targets.push({
                             x: (baseX + (Math.random() - 0.5) * XY_JITTER) * FISH_SCALE,
                             y: (baseY + (Math.random() - 0.5) * XY_JITTER) * FISH_SCALE,
                             z: z * FISH_SCALE,
-                            isFace: isFace,
+                            isFace: (z > FISH_EXTRUSION - 1.0 || z < -FISH_EXTRUSION + 1.0),
                             weight: weight
                         });
                     }
@@ -271,13 +238,10 @@
     // --- Initialization ---
     function initLogo() {
         const lines = LOGO_ART.split('\n');
-
-        // Center Calculation
         let totalC = 0, totalR = 0, count = 0;
         for (let r = 0; r < lines.length; r++) {
-            let line = lines[r];
-            for (let c = 0; c < line.length; c++) {
-                if (line[c] !== ' ' && line[c] !== undefined && line[c] !== '\n') {
+            for (let c = 0; c < lines[r].length; c++) {
+                if (lines[r][c] !== ' ' && lines[r][c] !== '\n') {
                     totalC += c; totalR += r; count++;
                 }
             }
@@ -285,52 +249,36 @@
         const centerX = count > 0 ? totalC / count : 0;
         const centerY = count > 0 ? totalR / count : 0;
 
-        // Generate Voxels
         for (let r = 0; r < lines.length; r++) {
-            let line = lines[r];
-            for (let c = 0; c < line.length; c++) {
-                let char = line[c];
+            for (let c = 0; c < lines[r].length; c++) {
+                let char = lines[r][c];
                 if (char && char !== ' ' && char !== '\n') {
-
                     const baseX = (c - centerX) * GRID_X;
                     const baseY = -(r - centerY) * GRID_Y;
                     const weight = getCharWeight(char);
 
                     for (let z = -EXTRUSION_DEPTH; z <= EXTRUSION_DEPTH; z += Z_STEP) {
                         let isFace = (z > EXTRUSION_DEPTH - 1.0 || z < -EXTRUSION_DEPTH + 1.0);
-
                         particles.push({
                             x: baseX + (Math.random() - 0.5) * XY_JITTER,
                             y: baseY + (Math.random() - 0.5) * XY_JITTER,
                             z: z,
-
-                            // State 0: Logo
                             logoX: baseX + (Math.random() - 0.5) * XY_JITTER,
                             logoY: baseY + (Math.random() - 0.5) * XY_JITTER,
                             logoZ: z,
                             logoIsFace: isFace,
                             logoFaceSign: z >= 0 ? 1 : -1,
                             logoWeight: weight,
-
-                            // State 1: Orb
                             orbX: 0, orbY: 0, orbZ: 0,
                             orbNX: 0, orbNY: 0, orbNZ: 0,
                             orbCharCode: SPACE_CODE,
                             orbReveal: hash01((particles.length + 1) * 19.0),
-
-                            // State 2: Fish
                             fishX: 0, fishY: 0, fishZ: 0,
-                            fishIsFace: false,
-                            fishFaceSign: 1,
-                            fishWeight: 0,
-
-                            // State 3: Brown Dwarf
+                            fishIsFace: false, fishFaceSign: 1, fishWeight: 0,
                             dwarfX: 0, dwarfY: 0, dwarfZ: 0,
                             dwarfNX: 0, dwarfNY: 0, dwarfNZ: 0,
-                            dwarfBandPhase: 0,
-                            dwarfSwirlPhase: 0,
-                            dwarfStormPhase: 0,
-                            dwarfDriftPhase: 0,
+                            dwarfBandPhase: 0, dwarfSwirlPhase: 0,
+                            dwarfStormPhase: 0, dwarfDriftPhase: 0,
                             dwarfEquatorBias: 0
                         });
                     }
@@ -341,33 +289,24 @@
 
     initLogo();
 
-    // Generate Orb Layout
+    // Generate targets
     const orbTargets = generateOrbTargets(particles.length);
-
-    // Apply Code Text Wrapping
     const cleanText = CODE_TEXT.replace(/\s+/g, ' ');
     const textOrder = orbTargets.map((t, i) => i).sort((a, b) => {
-        const ta = orbTargets[a];
-        const tb = orbTargets[b];
+        const ta = orbTargets[a], tb = orbTargets[b];
         const rows = 25;
         const rowA = Math.floor((1 - ta.y / ORB_RADIUS) / 2 * rows);
         const rowB = Math.floor((1 - tb.y / ORB_RADIUS) / 2 * rows);
         if (rowA !== rowB) return rowA - rowB;
-        const angA = Math.atan2(ta.z, ta.x);
-        const angB = Math.atan2(tb.z, tb.x);
-        return angB - angA;
+        return Math.atan2(tb.z, tb.x) - Math.atan2(ta.z, ta.x);
     });
     textOrder.forEach((targetIndex, i) => {
         orbTargets[targetIndex].char = cleanText[i % cleanText.length];
     });
 
-    // Generate Fish Layout
     const fishTargets = generateFishTargets();
-
-    // Generate Dwarf Layout
     const dwarfTargets = generateDwarfTargets(particles.length);
 
-    // Map particles
     const particleOrder = buildSortedIndices(particles.length, i => ({ x: particles[i].logoX, y: particles[i].logoY, z: particles[i].logoZ }));
     const orbOrder = buildSortedIndices(orbTargets.length, i => orbTargets[i]);
     const fishOrder = buildSortedIndices(fishTargets.length, i => fishTargets[i]);
@@ -375,26 +314,20 @@
 
     for (let k = 0; k < particles.length; k++) {
         const p = particles[particleOrder[k]];
-
-        // Orb
         const tOrb = orbTargets[orbOrder[k]];
         const orbLen = Math.hypot(tOrb.x, tOrb.y, tOrb.z) || 1;
         p.orbX = tOrb.x; p.orbY = tOrb.y; p.orbZ = tOrb.z;
         p.orbNX = tOrb.x / orbLen; p.orbNY = tOrb.y / orbLen; p.orbNZ = tOrb.z / orbLen;
         p.orbCharCode = tOrb.char.charCodeAt(0);
 
-        // Fish
         if (k < fishTargets.length) {
             const tFish = fishTargets[fishOrder[k]];
             p.fishX = tFish.x; p.fishY = tFish.y; p.fishZ = tFish.z;
             p.fishIsFace = tFish.isFace;
             p.fishFaceSign = tFish.z >= 0 ? 1 : -1;
             p.fishWeight = tFish.weight;
-        } else {
-            p.fishX = 0; p.fishY = 0; p.fishZ = 0; p.fishWeight = 0; p.fishIsFace = false; p.fishFaceSign = 1;
         }
 
-        // Dwarf
         const tDwarf = dwarfTargets[dwarfOrder[k]];
         p.dwarfX = tDwarf.x; p.dwarfY = tDwarf.y; p.dwarfZ = tDwarf.z;
         const dwarfLen = Math.hypot(tDwarf.x, tDwarf.y, tDwarf.z) || 1;
@@ -405,15 +338,20 @@
         p.dwarfDriftPhase = (p.dwarfNX * 3.0) - (p.dwarfNZ * 2.0) + p.dwarfNY * 1.5;
         p.dwarfEquatorBias = 1.0 - Math.abs(p.dwarfNY);
 
-        // Logo2 (Return state - identical to Logo)
-        p.logo2X = p.logoX;
-        p.logo2Y = p.logoY;
-        p.logo2Z = p.logoZ;
+        p.logo2X = p.logoX; p.logo2Y = p.logoY; p.logo2Z = p.logoZ;
     }
 
-    // --- Rendering ---
+    // --- Shape Vector System ---
+    const shapeData = computeShapeVectors("'Courier New', Courier, monospace");
+    // Verify shape vectors computed correctly
+    let nonZeroVecs = 0;
+    for (let i = 0; i < shapeData.numChars * 6; i++) if (shapeData.vectors[i] > 0.01) nonZeroVecs++;
+    console.log(`[ShapeVectors] Computed ${shapeData.numChars} chars, ${nonZeroVecs} non-zero components (expected ~400+)`);
+
+    // --- Rendering Setup ---
     const screenElement = document.getElementById('solid-logo-canvas');
-    const logoLoop = createVisibilityController(screenElement.closest('.ascii-column') || screenElement);
+    const asciiColumn = screenElement.closest('.ascii-column') || screenElement;
+    const logoLoop = createVisibilityController(asciiColumn);
     const surface = createTextSurface(128, 128);
     const width = surface.width;
     const height = surface.height;
@@ -422,10 +360,11 @@
     const colorBuffer = surface.colorBuffer;
     const DEFAULT_PACKED_COLOR = packColor(COLOR_DEFAULT.r, COLOR_DEFAULT.g, COLOR_DEFAULT.b);
 
-    // Measure Char size
-    // Measure Char size dynamically
-    let charWidth = 6;
-    let charHeight = 10;
+    // Brightness buffer for shape-vector post-processing
+    const brightnessBuffer = new Float32Array(width * height);
+
+    // Char metrics
+    let charWidth = 6, charHeight = 10;
 
     function updateLogoMetrics() {
         const measureElement = document.createElement('span');
@@ -437,34 +376,81 @@
         measureElement.style.visibility = 'hidden';
         measureElement.textContent = 'X';
         document.body.appendChild(measureElement);
-
         let rect = measureElement.getBoundingClientRect();
         charWidth = rect.width || 6;
-
         let lineHeight = parseFloat(style.lineHeight);
         if (!lineHeight || Number.isNaN(lineHeight)) {
             lineHeight = (rect.height * 0.9) || 10;
         }
         charHeight = lineHeight;
-
         document.body.removeChild(measureElement);
     }
 
     updateLogoMetrics();
     window.addEventListener('resize', updateLogoMetrics);
 
+    // --- Drag Interaction ---
     let angle = 0;
     let time = 0;
+    let isDragging = false;
+    let lastDragX = 0;
+    let angularVelocity = 0; // current spin rate (radians per frame-unit)
+    const DRAG_SENSITIVITY = 0.008;
+    const MOMENTUM_DECAY = 0.07; // how fast velocity settles back to auto-speed (0-1, higher = faster)
 
-    // State: 0 = Logo, 1 = Orb, 2 = Fish, 3 = Dwarf, 4 = Logo2 (Return)
+    asciiColumn.style.cursor = 'grab';
+
+    function handleDragStart(clientX) {
+        isDragging = true;
+        lastDragX = clientX;
+        angularVelocity = 0;
+        asciiColumn.style.cursor = 'grabbing';
+    }
+
+    function handleDragMove(clientX) {
+        if (!isDragging) return;
+        const dx = clientX - lastDragX;
+        angularVelocity = dx * DRAG_SENSITIVITY; // track instantaneous velocity
+        angle += angularVelocity;
+        lastDragX = clientX;
+    }
+
+    function handleDragEnd() {
+        if (!isDragging) return;
+        isDragging = false;
+        // angularVelocity carries the release momentum
+        asciiColumn.style.cursor = 'grab';
+    }
+
+    // Mouse events
+    asciiColumn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        handleDragStart(e.clientX);
+    });
+    window.addEventListener('mousemove', (e) => handleDragMove(e.clientX));
+    window.addEventListener('mouseup', handleDragEnd);
+
+    // Touch events
+    asciiColumn.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+            e.preventDefault();
+            handleDragStart(e.touches[0].clientX);
+        }
+    }, { passive: false });
+    window.addEventListener('touchmove', (e) => {
+        if (isDragging && e.touches.length === 1) {
+            handleDragMove(e.touches[0].clientX);
+        }
+    });
+    window.addEventListener('touchend', handleDragEnd);
+    window.addEventListener('touchcancel', handleDragEnd);
+
+    // State: 0 = Logo, 1 = Orb, 2 = Fish, 3 = Dwarf, 4 = Logo2
     let targetState = 0;
     let lastTimestamp = performance.now();
-
-    // Track current blend weights continuously (allows smooth mid-morph transitions)
     let currentWeights = { logo: 1, orb: 0, fish: 0, dwarf: 0, logo2: 0 };
     let targetWeights = { logo: 1, orb: 0, fish: 0, dwarf: 0, logo2: 0 };
 
-    // Get target weights for a state
     function getTargetWeightsForState(state) {
         let w = { logo: 0, orb: 0, fish: 0, dwarf: 0, logo2: 0 };
         switch (state) {
@@ -477,6 +463,7 @@
         return w;
     }
 
+    // --- Main Render Loop ---
     function render(timestamp) {
         const now = typeof timestamp === 'number' ? timestamp : performance.now();
 
@@ -486,41 +473,30 @@
             return;
         }
 
-        const dt = Math.min(0.05, Math.max(0, (now - lastTimestamp) / 1000)); // seconds
+        const dt = Math.min(0.05, Math.max(0, (now - lastTimestamp) / 1000));
         lastTimestamp = now;
         time += dt;
 
-        // Smooth weight interpolation - always move current weights toward target weights
-        const morphSpeed = dt / MORPH_DURATION * 2; // Speed of weight change
-
-        // Smoothly interpolate each weight toward its target
+        // Morph weights
+        const morphSpeed = dt / MORPH_DURATION * 2;
         currentWeights.logo += (targetWeights.logo - currentWeights.logo) * morphSpeed;
         currentWeights.orb += (targetWeights.orb - currentWeights.orb) * morphSpeed;
         currentWeights.fish += (targetWeights.fish - currentWeights.fish) * morphSpeed;
         currentWeights.dwarf += (targetWeights.dwarf - currentWeights.dwarf) * morphSpeed;
         currentWeights.logo2 += (targetWeights.logo2 - currentWeights.logo2) * morphSpeed;
 
-        // Normalize weights to ensure they sum to 1
         let sum = currentWeights.logo + currentWeights.orb + currentWeights.fish + currentWeights.dwarf + currentWeights.logo2;
         if (sum > 0.001) {
-            currentWeights.logo /= sum;
-            currentWeights.orb /= sum;
-            currentWeights.fish /= sum;
-            currentWeights.dwarf /= sum;
+            currentWeights.logo /= sum; currentWeights.orb /= sum;
+            currentWeights.fish /= sum; currentWeights.dwarf /= sum;
             currentWeights.logo2 /= sum;
         }
 
-        // Use current weights for rendering
-        let wLogo = currentWeights.logo;
-        let wOrb = currentWeights.orb;
-        let wFish = currentWeights.fish;
-        let wDwarf = currentWeights.dwarf;
-        let wLogo2 = currentWeights.logo2;
-        if (wLogo < 0.001) wLogo = 0;
-        if (wOrb < 0.001) wOrb = 0;
-        if (wFish < 0.001) wFish = 0;
-        if (wDwarf < 0.001) wDwarf = 0;
-        if (wLogo2 < 0.001) wLogo2 = 0;
+        let wLogo = currentWeights.logo < 0.001 ? 0 : currentWeights.logo;
+        let wOrb = currentWeights.orb < 0.001 ? 0 : currentWeights.orb;
+        let wFish = currentWeights.fish < 0.001 ? 0 : currentWeights.fish;
+        let wDwarf = currentWeights.dwarf < 0.001 ? 0 : currentWeights.dwarf;
+        let wLogo2 = currentWeights.logo2 < 0.001 ? 0 : currentWeights.logo2;
         const wLogoCombined = wLogo + wLogo2;
         const hasOrb = wOrb > 0;
         const hasFish = wFish > 0;
@@ -528,16 +504,16 @@
 
         const aspectCorrection = (charHeight / charWidth);
 
+        // Reset buffers
         surface.reset();
+        brightnessBuffer.fill(0);
 
         const dwarfColorBlend = clamp01((wDwarf - DWARF_COLOR_THRESHOLD) / (1.0 - DWARF_COLOR_THRESHOLD));
         const useColor = dwarfColorBlend > 0.001;
         const dwarfPalette = useColor ? buildDwarfPalette(dwarfColorBlend) : null;
         const dwarfTime = hasDwarf ? {
-            band: time * 1.15,
-            drift: time * 0.35,
-            swirl: time * 1.7,
-            storm: time * 0.6
+            band: time * 1.15, drift: time * 0.35,
+            swirl: time * 1.7, storm: time * 0.6
         } : null;
 
         const K1 = 40.0;
@@ -545,82 +521,58 @@
         const sinT = Math.sin(angle);
         const sideNormalX = cosT;
         const sideNormalZ = -sinT;
+        const lx = 0.6, ly = 0.4, lz = -0.5;
 
-        const lx = 0.6; const ly = 0.4; const lz = -0.5;
-
+        // ====== PASS 1: Project particles, compute brightness ======
         for (let i = 0; i < particles.length; i++) {
             let p = particles[i];
-
-            let px = 0;
-            let py = 0;
-            let pz = 0;
+            let px = 0, py = 0, pz = 0;
 
             if (wLogoCombined) {
                 px += p.logoX * wLogoCombined;
                 py += p.logoY * wLogoCombined;
                 pz += p.logoZ * wLogoCombined;
             }
-            if (hasOrb) {
-                px += p.orbX * wOrb;
-                py += p.orbY * wOrb;
-                pz += p.orbZ * wOrb;
-            }
-            if (hasFish) {
-                px += p.fishX * wFish;
-                py += p.fishY * wFish;
-                pz += p.fishZ * wFish;
-            }
-            if (hasDwarf) {
-                px += p.dwarfX * wDwarf;
-                py += p.dwarfY * wDwarf;
-                pz += p.dwarfZ * wDwarf;
-            }
+            if (hasOrb) { px += p.orbX * wOrb; py += p.orbY * wOrb; pz += p.orbZ * wOrb; }
+            if (hasFish) { px += p.fishX * wFish; py += p.fishY * wFish; pz += p.fishZ * wFish; }
+            if (hasDwarf) { px += p.dwarfX * wDwarf; py += p.dwarfY * wDwarf; pz += p.dwarfZ * wDwarf; }
 
-            // Rotate
             let x = px * cosT - pz * sinT;
             let z = px * sinT + pz * cosT;
             let y = py;
-
             let zDist = VIEW_DISTANCE + z;
 
             if (zDist > 1.0) {
                 let ooz = 1.0 / zDist;
-                // Aspect Correction
-                let xp = Math.floor(width / 2 + K1 * ooz * x * aspectCorrection);
-                let yp = Math.floor(height / 2 - K1 * ooz * y);
+                let exactX = width / 2 + K1 * ooz * x * aspectCorrection;
+                let exactY = height / 2 - K1 * ooz * y;
+                let xp = Math.floor(exactX);
+                let yp = Math.floor(exactY);
 
                 if (xp >= 0 && xp < width && yp >= 0 && yp < height) {
                     let idx = xp + yp * width;
+
                     if (ooz > zbuffer[idx]) {
                         zbuffer[idx] = ooz;
 
+                        // Compute normal
                         let nLogoX = p.logoIsFace ? sinT * p.logoFaceSign : sideNormalX;
                         let nLogoZ = p.logoIsFace ? cosT * p.logoFaceSign : sideNormalZ;
-                        let nx = nLogoX * wLogoCombined;
-                        let ny = 0;
-                        let nz = nLogoZ * wLogoCombined;
+                        let nx = nLogoX * wLogoCombined, ny = 0, nz = nLogoZ * wLogoCombined;
 
                         if (hasOrb) {
-                            const nOrbX = p.orbNX * cosT - p.orbNZ * sinT;
-                            const nOrbZ = p.orbNX * sinT + p.orbNZ * cosT;
-                            nx += nOrbX * wOrb;
+                            nx += (p.orbNX * cosT - p.orbNZ * sinT) * wOrb;
                             ny += p.orbNY * wOrb;
-                            nz += nOrbZ * wOrb;
+                            nz += (p.orbNX * sinT + p.orbNZ * cosT) * wOrb;
                         }
-
                         if (hasFish) {
-                            const nFishX = p.fishIsFace ? sinT * p.fishFaceSign : sideNormalX;
-                            const nFishZ = p.fishIsFace ? cosT * p.fishFaceSign : sideNormalZ;
-                            nx += nFishX * wFish;
-                            nz += nFishZ * wFish;
+                            nx += (p.fishIsFace ? sinT * p.fishFaceSign : sideNormalX) * wFish;
+                            nz += (p.fishIsFace ? cosT * p.fishFaceSign : sideNormalZ) * wFish;
                         }
-
                         if (hasDwarf) {
-                            const nDwarfX = p.dwarfNX * cosT - p.dwarfNZ * sinT;
-                            const nDwarfZ = p.dwarfNX * sinT + p.dwarfNZ * cosT;
-                            nx += nDwarfX * wDwarf;
+                            nx += (p.dwarfNX * cosT - p.dwarfNZ * sinT) * wDwarf;
                             ny += p.dwarfNY * wDwarf;
-                            nz += nDwarfZ * wDwarf;
+                            nz += (p.dwarfNX * sinT + p.dwarfNZ * cosT) * wDwarf;
                         }
 
                         let norm = Math.hypot(nx, ny, nz) || 0.001;
@@ -630,70 +582,122 @@
                         let diffuse = Math.max(0.15, dot);
 
                         let brightness = 0;
-
                         if (wLogoCombined) {
-                            const bLogo = p.logoIsFace ? (diffuse * 0.4 + p.logoWeight * 0.8) : (diffuse * 0.7);
-                            brightness += bLogo * wLogoCombined;
+                            brightness += (p.logoIsFace ? (diffuse * 0.4 + p.logoWeight * 0.8) : (diffuse * 0.7)) * wLogoCombined;
                         }
-
-                        if (hasOrb) {
-                            const bOrb = diffuse * 0.7 + (wOrb * 0.12);
-                            brightness += bOrb * wOrb;
-                        }
-
+                        if (hasOrb) brightness += (diffuse * 0.7 + wOrb * 0.12) * wOrb;
                         if (hasFish) {
-                            const bFish = p.fishIsFace ? (diffuse * 0.4 + p.fishWeight * 0.8) : (diffuse * 0.7);
-                            brightness += bFish * wFish;
+                            brightness += (p.fishIsFace ? (diffuse * 0.4 + p.fishWeight * 0.8) : (diffuse * 0.7)) * wFish;
                         }
 
+                        let dwarfThermal = 0;
                         if (hasDwarf) {
                             const pat = sampleDwarfSurface(p, dwarfTime);
                             const rim = Math.pow(Math.max(0, 1.0 - Math.abs(nz)), 2) * (0.24 + p.dwarfEquatorBias * 0.14);
-                            const thermal = clamp01(pat * (0.72 + diffuse * 0.24) + rim * 0.55);
-                            const bDwarf = clamp01(diffuse * 0.34 + pat * 0.46 + rim * 0.42);
-                            brightness += bDwarf * wDwarf;
-
-                            if (useColor) {
-                                const paletteIndex = Math.min(DWARF_COLOR_LEVELS - 1, Math.floor(thermal * (DWARF_COLOR_LEVELS - 1)));
-                                colorBuffer[idx] = dwarfPalette[paletteIndex];
-                            }
+                            dwarfThermal = clamp01(pat * (0.72 + diffuse * 0.24) + rim * 0.55);
+                            brightness += clamp01(diffuse * 0.34 + pat * 0.46 + rim * 0.42) * wDwarf;
                         }
 
                         let fog = (z + 50) / 200.0;
                         brightness -= fog;
-                        if (brightness < 0) brightness = 0; if (brightness >= 1) brightness = 0.99;
+                        brightness = clamp01(brightness);
 
-                        let finalCharCode = sampleRampCode(SHADE_CHAR_CODES, brightness, xp, yp, SHADE_DITHER);
+                        brightnessBuffer[idx] = brightness;
 
+                        // Sentinel: 0 = needs shape matching in Pass 2
+                        textBuffer[idx] = 0;
+
+                        // Special overrides: orb text chars
                         if (hasOrb && wOrb > 0.1) {
                             const showCode = wOrb > 0.92 || wOrb >= p.orbReveal;
-                            if (showCode && brightness > 0.15) finalCharCode = p.orbCharCode;
+                            if (showCode && brightness > 0.15) {
+                                textBuffer[idx] = p.orbCharCode;
+                            }
                         }
-                        if (hasFish && wFish > 0.8 && p.fishWeight === 0) finalCharCode = SPACE_CODE;
+                        if (hasFish && wFish > 0.8 && p.fishWeight === 0) {
+                            textBuffer[idx] = SPACE_CODE;
+                        }
 
-                        textBuffer[idx] = finalCharCode;
+                        // Dwarf color
+                        if (useColor && hasDwarf) {
+                            const paletteIndex = Math.min(DWARF_COLOR_LEVELS - 1, Math.floor(dwarfThermal * (DWARF_COLOR_LEVELS - 1)));
+                            colorBuffer[idx] = dwarfPalette[paletteIndex];
+                        }
                     }
                 }
             }
         }
 
+        // ====== PASS 2: Neighborhood-based shape-vector matching ======
+        // For each filled cell, sample surrounding cells' brightness to build
+        // a 6D vector that captures the local edge structure.
+        // At silhouette edges, some neighbors are empty (brightness=0),
+        // creating non-uniform vectors that match edge-appropriate characters.
+        const sv = new Float32Array(6);
+
+        for (let py = 0; py < height; py++) {
+            for (let px = 0; px < width; px++) {
+                let idx = px + py * width;
+
+                if (zbuffer[idx] <= EMPTY_DEPTH) continue;
+                if (textBuffer[idx] !== 0) continue; // has override
+
+                let c = brightnessBuffer[idx];
+                if (c < 0.01) { textBuffer[idx] = SPACE_CODE; continue; }
+
+                // Sample 3x3 neighborhood brightness (0 for empty/out-of-bounds)
+                let n  = (py > 0)                          ? brightnessBuffer[idx - width] : 0;
+                let s_ = (py < height - 1)                 ? brightnessBuffer[idx + width] : 0;
+                let w  = (px > 0)                          ? brightnessBuffer[idx - 1] : 0;
+                let e  = (px < width - 1)                  ? brightnessBuffer[idx + 1] : 0;
+                let nw = (py > 0 && px > 0)                ? brightnessBuffer[idx - width - 1] : 0;
+                let ne = (py > 0 && px < width - 1)        ? brightnessBuffer[idx - width + 1] : 0;
+                let sw = (py < height - 1 && px > 0)       ? brightnessBuffer[idx + width - 1] : 0;
+                let se = (py < height - 1 && px < width - 1) ? brightnessBuffer[idx + width + 1] : 0;
+
+                // Build 6D sampling vector (3 rows × 2 cols)
+                // Each component blends the cell's own brightness with its neighbors
+                // in the corresponding direction
+                sv[0] = (nw * 0.3 + n * 0.3 + w * 0.15 + c * 0.25);  // top-left
+                sv[1] = (ne * 0.3 + n * 0.3 + e * 0.15 + c * 0.25);  // top-right
+                sv[2] = (w * 0.45 + c * 0.35 + nw * 0.1 + sw * 0.1); // mid-left
+                sv[3] = (e * 0.45 + c * 0.35 + ne * 0.1 + se * 0.1); // mid-right
+                sv[4] = (sw * 0.3 + s_ * 0.3 + w * 0.15 + c * 0.25); // bot-left
+                sv[5] = (se * 0.3 + s_ * 0.3 + e * 0.15 + c * 0.25); // bot-right
+
+                // Apply global contrast enhancement — sharpens edges
+                applyGlobalContrast(sv, CONTRAST_EXPONENT);
+
+                // Find best matching character via cached 6D lookup
+                textBuffer[idx] = cachedShapeLookup(sv[0], sv[1], sv[2], sv[3], sv[4], sv[5], shapeData);
+            }
+        }
+
+        // Present
         if (useColor) {
             surface.presentColor(screenElement, DEFAULT_PACKED_COLOR);
         } else {
             surface.presentText(screenElement);
         }
 
-        // Speed
-        // Logo2 also uses 1.0 speed
+        // --- Rotation & Speed ---
         let speedMult = 1.0 * wLogoCombined + 0.5 * wOrb + 3.0 * wFish + 0.8 * wDwarf;
-
-        // Normalize speed to 60FPS (dt is in seconds, so dt * 60 gives us ratio relative to 1 frame at 60fps)
         let timeScale = dt * 60.0;
-        angle += ROTATION_SPEED * speedMult * timeScale;
+        let autoSpeed = BASE_ROTATION_SPEED * speedMult;
+
+        if (!isDragging) {
+            // Blend angular velocity toward the auto-rotation speed.
+            // On release with momentum, this smoothly decays the flick velocity
+            // into the constant spin — never stops, just settles.
+            let blend = 1.0 - Math.pow(1.0 - MOMENTUM_DECAY, timeScale);
+            angularVelocity = angularVelocity + (autoSpeed - angularVelocity) * blend;
+            angle += angularVelocity * timeScale;
+        }
+
         requestAnimationFrame(render);
     }
 
-    // Scroll Trigger Logic
+    // --- Scroll Trigger Logic ---
     const aboutUs = document.getElementById('about-us');
     const pastProjects = document.getElementById('past-projects');
     const futureProjects = document.getElementById('future-projects');
@@ -701,59 +705,32 @@
     const brownDwarf = document.getElementById('brown-dwarf');
     const sourceCode = document.getElementById('connect');
 
-    let isAboutUsVisible = false;
-    let isPastProjectsVisible = false;
-    let isFutureProjectsVisible = false;
-    let isSunfishVisible = false;
-    let isBrownDwarfVisible = false;
-    let isSourceCodeVisible = false;
+    let isAboutUsVisible = false, isPastProjectsVisible = false;
+    let isFutureProjectsVisible = false, isSunfishVisible = false;
+    let isBrownDwarfVisible = false, isSourceCodeVisible = false;
 
     function updateState() {
-        // Priority: Bottom up
-        // Only change state when a section is actively visible
-        // Otherwise maintain current state (don't fall back to Logo during gaps)
         let newTarget = null;
+        if (isSourceCodeVisible) newTarget = 4;
+        else if (isBrownDwarfVisible) newTarget = 3;
+        else if (isSunfishVisible) newTarget = 2;
+        else if (isFutureProjectsVisible) newTarget = 0;
+        else if (isPastProjectsVisible) newTarget = 1;
+        else if (isAboutUsVisible) newTarget = 0;
 
-        if (isSourceCodeVisible) {
-            newTarget = 4; // Logo (State 4, after Dwarf)
-        } else if (isBrownDwarfVisible) {
-            newTarget = 3; // Dwarf
-        } else if (isSunfishVisible) {
-            newTarget = 2; // Fish
-        } else if (isFutureProjectsVisible) {
-            newTarget = 0; // Logo (brief return between Orb and Fish)
-        } else if (isPastProjectsVisible) {
-            newTarget = 1; // Orb
-        } else if (isAboutUsVisible) {
-            newTarget = 0; // Logo (top of page)
-        }
-        // Note: We no longer default to 0 when nothing is visible
-        // This keeps the current state during scroll gaps
-
-        // If a section is actively visible and it's different from current target, update target weights
         if (newTarget !== null && newTarget !== targetState) {
             targetState = newTarget;
             targetWeights = getTargetWeightsForState(newTarget);
         }
     }
 
-    // Observers - use rootMargin to trigger when section crosses center of viewport
-    // '-40% 0px -40% 0px' shrinks the observation zone to the middle 20% of the screen
     const obsOptions = { threshold: 0.1, rootMargin: '-40% 0px -40% 0px' };
-
-    if (aboutUs) new IntersectionObserver((e) => { e.forEach(x => { isAboutUsVisible = x.isIntersecting; updateState(); }) }, obsOptions).observe(aboutUs);
-    if (pastProjects) new IntersectionObserver((e) => { e.forEach(x => { isPastProjectsVisible = x.isIntersecting; updateState(); }) }, obsOptions).observe(pastProjects);
-    if (futureProjects) new IntersectionObserver((e) => { e.forEach(x => { isFutureProjectsVisible = x.isIntersecting; updateState(); }) }, obsOptions).observe(futureProjects);
-    if (sunfish) new IntersectionObserver((e) => { e.forEach(x => { isSunfishVisible = x.isIntersecting; updateState(); }) }, obsOptions).observe(sunfish);
-
-    if (brownDwarf) {
-        new IntersectionObserver((e) => { e.forEach(x => { isBrownDwarfVisible = x.isIntersecting; updateState(); }) }, obsOptions).observe(brownDwarf);
-    }
-
-    if (sourceCode) {
-        // Trigger slightly earlier for the connect section
-        new IntersectionObserver((e) => { e.forEach(x => { isSourceCodeVisible = x.isIntersecting; updateState(); }) }, { threshold: 0.1, rootMargin: '-30% 0px -50% 0px' }).observe(sourceCode);
-    }
+    if (aboutUs) new IntersectionObserver((e) => { e.forEach(x => { isAboutUsVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(aboutUs);
+    if (pastProjects) new IntersectionObserver((e) => { e.forEach(x => { isPastProjectsVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(pastProjects);
+    if (futureProjects) new IntersectionObserver((e) => { e.forEach(x => { isFutureProjectsVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(futureProjects);
+    if (sunfish) new IntersectionObserver((e) => { e.forEach(x => { isSunfishVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(sunfish);
+    if (brownDwarf) new IntersectionObserver((e) => { e.forEach(x => { isBrownDwarfVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(brownDwarf);
+    if (sourceCode) new IntersectionObserver((e) => { e.forEach(x => { isSourceCodeVisible = x.isIntersecting; updateState(); }); }, { threshold: 0.1, rootMargin: '-30% 0px -50% 0px' }).observe(sourceCode);
 
     requestAnimationFrame(render);
 })();

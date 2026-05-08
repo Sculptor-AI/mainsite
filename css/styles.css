@@ -107,21 +107,24 @@ body {
     height: 80vh;
     text-rendering: optimizeSpeed;
     will-change: transform;
-    /* Hint for compositing */
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.ascii-column:active {
+    cursor: grabbing;
 }
 
 .spinning-ascii {
     font-family: 'Courier New', Courier, monospace;
     font-size: 10px;
-    /* Fallback */
     font-size: var(--ascii-font-size);
     line-height: 10px;
-    /* Fallback */
     line-height: var(--ascii-font-size);
     white-space: pre;
     color: #e0e0e0;
     text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
-    /* animation: spin 15s linear infinite; REMOVED STATIC SPIN */
     transform-style: preserve-3d;
 }
 
@@ -131,11 +134,13 @@ body {
     line-height: var(--ascii-font-size);
     white-space: pre;
     text-align: center;
-    /* Subtle glow to help points bleed together visually */
-    text-shadow: 0 0 2px rgba(255, 255, 255, 0.2);
+    /* Reduced glow for sharper shape-vector rendering */
+    text-shadow: 0 0 1px rgba(255, 255, 255, 0.15);
     font-variant-ligatures: none;
     font-kerning: none;
     user-select: none;
+    -webkit-user-select: none;
+    pointer-events: none;
 }
 
 @keyframes spin {

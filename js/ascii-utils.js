@@ -1,5 +1,6 @@
 /*
  * Shared ASCII rendering helpers.
+ * Includes shape-vector based character matching for sharp edge rendering.
  */
 
 (function () {
@@ -192,14 +193,200 @@
         };
     }
 
+    // ====================================================================
+    // Shape-Vector System — 6D character shape matching
+    // Inspired by https://alexharri.com/blog/ascii-rendering
+    // ====================================================================
+
+    const SHAPE_DIMS = 6;
+
+    // Sampling circle positions relative to cell [0,1]×[0,1]
+    // 3 rows × 2 cols, staggered for maximum coverage
+    const CIRCLE_POS = [
+        [0.28, 0.20], [0.72, 0.13],   // top row
+        [0.28, 0.50], [0.72, 0.47],   // mid row
+        [0.28, 0.83], [0.72, 0.90],   // bot row
+    ];
+    const CIRCLE_RADIUS = 0.26;
+    const SAMPLES_PER_CIRCLE = 37;
+
+    /**
+     * Pre-compute 6D shape vectors for all 95 printable ASCII characters.
+     * Renders each character to an offscreen canvas and samples 6 regions.
+     * Returns a reusable ShapeData object for lookups.
+     */
+    function computeShapeVectors(fontFamily) {
+        const CELL_W = 30;
+        const CELL_H = 50; // monospace chars are taller than wide
+        const canvas = document.createElement('canvas');
+        canvas.width = CELL_W;
+        canvas.height = CELL_H;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        const NUM_CHARS = 95; // ASCII 32–126
+        const vectors = new Float32Array(NUM_CHARS * SHAPE_DIMS);
+        const charCodes = new Uint8Array(NUM_CHARS);
+
+        // Pre-compute sample positions for each circle (relative to cell)
+        const sampleOffsets = [];
+        for (let ci = 0; ci < SHAPE_DIMS; ci++) {
+            const cx = CIRCLE_POS[ci][0];
+            const cy = CIRCLE_POS[ci][1];
+            const offsets = [];
+            for (let s = 0; s < SAMPLES_PER_CIRCLE; s++) {
+                const frac = (s + 0.5) / SAMPLES_PER_CIRCLE;
+                const ang = s * 2.39996323; // golden angle
+                const dist = Math.sqrt(frac) * CIRCLE_RADIUS;
+                offsets.push([
+                    cx + Math.cos(ang) * dist,
+                    cy + Math.sin(ang) * dist
+                ]);
+            }
+            sampleOffsets.push(offsets);
+        }
+
+        const fontSize = Math.floor(CELL_H * 0.72);
+        ctx.font = `${fontSize}px ${fontFamily}`;
+        ctx.textBaseline = 'top';
+        ctx.textAlign = 'left';
+
+        // Measure actual character width to center it
+        const metrics = ctx.measureText('M');
+        const charActualW = metrics.width;
+        const xOff = Math.max(0, (CELL_W - charActualW) / 2);
+
+        for (let ci = 0; ci < NUM_CHARS; ci++) {
+            const code = 32 + ci;
+            charCodes[ci] = code;
+
+            if (code === 32) continue; // space = all zeros
+
+            ctx.clearRect(0, 0, CELL_W, CELL_H);
+            ctx.fillStyle = '#fff';
+            ctx.fillText(String.fromCharCode(code), xOff, 2);
+
+            const imgData = ctx.getImageData(0, 0, CELL_W, CELL_H);
+            const px = imgData.data;
+
+            for (let si = 0; si < SHAPE_DIMS; si++) {
+                let sum = 0;
+                let count = 0;
+                const offsets = sampleOffsets[si];
+
+                for (let s = 0; s < offsets.length; s++) {
+                    const sx = Math.round(offsets[s][0] * CELL_W);
+                    const sy = Math.round(offsets[s][1] * CELL_H);
+                    if (sx >= 0 && sx < CELL_W && sy >= 0 && sy < CELL_H) {
+                        sum += px[(sy * CELL_W + sx) * 4 + 3] / 255;
+                        count++;
+                    }
+                }
+
+                vectors[ci * SHAPE_DIMS + si] = count > 0 ? sum / count : 0;
+            }
+        }
+
+        // Normalize each dimension by its max
+        const maxPerDim = new Float32Array(SHAPE_DIMS);
+        for (let d = 0; d < SHAPE_DIMS; d++) {
+            for (let ci = 0; ci < NUM_CHARS; ci++) {
+                const v = vectors[ci * SHAPE_DIMS + d];
+                if (v > maxPerDim[d]) maxPerDim[d] = v;
+            }
+            if (maxPerDim[d] > 0.001) {
+                for (let ci = 0; ci < NUM_CHARS; ci++) {
+                    vectors[ci * SHAPE_DIMS + d] /= maxPerDim[d];
+                }
+            }
+        }
+
+        return { vectors, charCodes, numChars: NUM_CHARS, dims: SHAPE_DIMS, maxPerDim };
+    }
+
+    /**
+     * Brute-force nearest-neighbor lookup in 6D shape space.
+     * Returns the char code of the best matching character.
+     */
+    function findBestShapeChar(s0, s1, s2, s3, s4, s5, shapeData) {
+        const vecs = shapeData.vectors;
+        const codes = shapeData.charCodes;
+        const n = shapeData.numChars;
+        let bestDist = Infinity;
+        let bestCode = SPACE_CODE;
+
+        for (let ci = 0; ci < n; ci++) {
+            const off = ci * 6;
+            const d0 = s0 - vecs[off];
+            const d1 = s1 - vecs[off + 1];
+            const d2 = s2 - vecs[off + 2];
+            const d3 = s3 - vecs[off + 3];
+            const d4 = s4 - vecs[off + 4];
+            const d5 = s5 - vecs[off + 5];
+            const dist = d0 * d0 + d1 * d1 + d2 * d2 + d3 * d3 + d4 * d4 + d5 * d5;
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestCode = codes[ci];
+            }
+        }
+        return bestCode;
+    }
+
+    /**
+     * Apply global contrast enhancement to a 6-element sampling vector (in-place).
+     * Normalizes to [0,1], applies exponent, then denormalizes.
+     */
+    function applyGlobalContrast(s, exponent) {
+        let maxVal = s[0];
+        for (let i = 1; i < 6; i++) if (s[i] > maxVal) maxVal = s[i];
+        if (maxVal < 0.001) return;
+
+        const inv = 1.0 / maxVal;
+        for (let i = 0; i < 6; i++) {
+            s[i] = Math.pow(s[i] * inv, exponent) * maxVal;
+        }
+    }
+
+    /**
+     * Build a quantized cache key from a 6D sampling vector.
+     * Each component quantized to BITS levels, packed into a single integer.
+     */
+    const CACHE_BITS = 4;
+    const CACHE_RANGE = 1 << CACHE_BITS; // 16
+    const shapeLookupCache = new Map();
+
+    function cachedShapeLookup(s0, s1, s2, s3, s4, s5, shapeData) {
+        // Quantize to cache key
+        const q0 = Math.min(CACHE_RANGE - 1, (s0 * CACHE_RANGE) | 0);
+        const q1 = Math.min(CACHE_RANGE - 1, (s1 * CACHE_RANGE) | 0);
+        const q2 = Math.min(CACHE_RANGE - 1, (s2 * CACHE_RANGE) | 0);
+        const q3 = Math.min(CACHE_RANGE - 1, (s3 * CACHE_RANGE) | 0);
+        const q4 = Math.min(CACHE_RANGE - 1, (s4 * CACHE_RANGE) | 0);
+        const q5 = Math.min(CACHE_RANGE - 1, (s5 * CACHE_RANGE) | 0);
+
+        const key = (q0 << 20) | (q1 << 16) | (q2 << 12) | (q3 << 8) | (q4 << 4) | q5;
+
+        let code = shapeLookupCache.get(key);
+        if (code !== undefined) return code;
+
+        code = findBestShapeChar(s0, s1, s2, s3, s4, s5, shapeData);
+        shapeLookupCache.set(key, code);
+        return code;
+    }
+
     window.ASCIIUtils = {
         SPACE_CODE,
+        EMPTY_DEPTH,
         clamp01,
         createTextSurface,
         createVisibilityController,
         hash01,
         packColor,
         sampleRampCode,
-        toCharCodes
+        toCharCodes,
+        computeShapeVectors,
+        findBestShapeChar,
+        cachedShapeLookup,
+        applyGlobalContrast,
+        SHAPE_DIMS
     };
 })();

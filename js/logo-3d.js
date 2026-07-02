@@ -29,17 +29,44 @@
     const BURST_DISTANCE = 14.0;
 
     // Voxel density
-    const Z_STEP = 0.2;
+    const Z_STEP = 0.16;
     const XY_JITTER = 0.5;
 
     // Shape-based rendering config
     const CONTRAST_EXPONENT = 3.5; // higher = sharper edges between regions
 
+    // Directional key light (normalized) + Blinn half-vector for specular
+    const L_RAW_X = 0.6, L_RAW_Y = 0.4, L_RAW_Z = -0.5;
+    const L_LEN = Math.hypot(L_RAW_X, L_RAW_Y, L_RAW_Z);
+    const LX = L_RAW_X / L_LEN, LY = L_RAW_Y / L_LEN, LZ = L_RAW_Z / L_LEN;
+    const H_LEN = Math.hypot(LX, LY, LZ - 1.0);
+    const HX = LX / H_LEN, HY = LY / H_LEN, HZ = (LZ - 1.0) / H_LEN;
+
+    // --- Car diorama configuration (AV research section) ---
+    const CAR_PLATFORM_Y = -17.0;
+    const CAR_SLAB_HALF_X = 26.0;  // half-length of the diorama base along the road
+    const CAR_SLAB_HALF_Z = 15.0;  // half-width of the diorama base
+    const CAR_ROAD_HALF = 10.0;
+    const CAR_ROAD_Y = -16.6;
+    const CAR_WHEEL_R = 3.8;
+    const CAR_WHEEL_HALF = 1.1;
+    const CAR_WHEEL_X = 11.0;      // wheelbase half-length
+    const CAR_ARCH_R = 4.8;        // wheel-arch cutout radius
+    const CAR_AXLE_Y = CAR_ROAD_Y + CAR_WHEEL_R;
+    const CAR_ROAD_SPEED = 26.0;   // world units per second the road scrolls
+    const CAR_DASH_PERIOD = 14.0;
+    const CAR_DASH_LEN = 7.0;
+    const CAR_SPOKES = 4;
+
+    // Car target kinds
+    const CK_BODY = 0, CK_WHEEL = 1, CK_ROAD = 2, CK_DASH = 3,
+        CK_EDGE = 4, CK_PLATFORM = 5, CK_RIM = 6, CK_GLASS = 7;
+
     // A long gradient for fallback and orb text
     const SHADE_CHARS = " `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@";
     const SHADE_CHAR_CODES = toCharCodes(SHADE_CHARS);
 
-    const CODE_TEXT = `import { Galaxy } from 'cosmos'; const star = new Star({ type: 'G2V', mass: 1.0 }); function main() { while(orbiting) { physics.simulate(dt); render(scene); } } class BlackHole extends Singularity { consume(light) { return void 0; } } const entropy = Math.random(); if (entropy > 0.99) { bigBang(); } // TODO: Fix gravity bug export default function() { return 42; } const darkMatter = calculate(95); `;
+    const CODE_TEXT = `def train(model, loader, opt): for batch in loader: loss = model(batch).loss; loss.backward(); opt.step(); opt.zero_grad() class Encoder(nn.Module): def forward(self, x): return self.net(x) logits = model(tokens); probs = softmax(logits / temperature) with torch.no_grad(): metrics = evaluate(model, val_set) `;
 
     const LOGO_ART = `
                                       .:=*##-
@@ -225,6 +252,190 @@
         return targets;
     }
 
+    // --- Car diorama geometry ---
+    // A model-style scene: a slab of road with animated lane markings and a
+    // car with spoke-shaded wheels, held in profile view while active.
+    // Targets carry a kind + phase so the render loop can animate brightness
+    // (scrolling dashes, spinning wheels) without moving any particles.
+
+    function roundedBoxSDF(x, y, z, hx, hy, hz, r) {
+        const qx = Math.abs(x) - hx + r;
+        const qy = Math.abs(y) - hy + r;
+        const qz = Math.abs(z) - hz + r;
+        const ax = Math.max(qx, 0), ay = Math.max(qy, 0), az = Math.max(qz, 0);
+        return Math.hypot(ax, ay, az) + Math.min(Math.max(qx, Math.max(qy, qz)), 0) - r;
+    }
+
+    function carCabinTaper(y) {
+        // Cabin length shrinks toward the roof: windshield and rear window slopes
+        const t = clamp01((y + 7.8) / 5.8);
+        const front = 7.0 - t * 5.0;
+        const rear = 10.5 - t * 2.0;
+        return { cx: (front - rear) / 2, hx: (front + rear) / 2, t };
+    }
+
+    function carBodySDF(x, y, z) {
+        // Lower body shell with wheel arches carved out
+        let lower = roundedBoxSDF(x, y + 10.2, z, 16.5, 3.4, 7.0, 1.5);
+        const arch = Math.hypot(Math.abs(x) - CAR_WHEEL_X, y - CAR_AXLE_Y) - CAR_ARCH_R;
+        lower = Math.max(lower, -arch);
+        const taper = carCabinTaper(y);
+        const cabin = roundedBoxSDF(x - taper.cx, y + 4.9, z, taper.hx, 2.9, 6.0 - taper.t * 0.8, 1.2);
+        return Math.min(lower, cabin);
+    }
+
+    function pushCarBody(targets, count) {
+        const eps = 0.25;
+        let added = 0, guard = count * 300;
+        while (added < count && guard-- > 0) {
+            const x = (Math.random() * 2 - 1) * 18.5;
+            const y = -15.2 + Math.random() * 13.4;
+            const z = (Math.random() * 2 - 1) * 7.8;
+            const d = carBodySDF(x, y, z);
+            if (Math.abs(d) > 1.0) continue;
+
+            let gx = carBodySDF(x + eps, y, z) - carBodySDF(x - eps, y, z);
+            let gy = carBodySDF(x, y + eps, z) - carBodySDF(x, y - eps, z);
+            let gz = carBodySDF(x, y, z + eps) - carBodySDF(x, y, z - eps);
+            const gl = Math.hypot(gx, gy, gz) || 1;
+            gx /= gl; gy /= gl; gz /= gl;
+
+            // Project the sample onto the surface along the gradient
+            const sx = x - gx * d, sy = y - gy * d, sz = z - gz * d;
+            if (sy < CAR_ROAD_Y + 0.4) continue;
+
+            // Glasshouse: everything between beltline and roof reads as glass,
+            // including the windshield and rear-window slopes
+            let kind = CK_BODY;
+            if (sy > -6.4 && sy < -3.2 && Math.abs(gy) < 0.6) {
+                kind = CK_GLASS;
+            }
+
+            targets.push({
+                x: sx, y: sy, z: sz, nx: gx, ny: gy, nz: gz,
+                kind, a: 0, s: 0, bob: 1
+            });
+            added++;
+        }
+    }
+
+    function pushCarWheels(targets, count) {
+        const centers = [
+            [CAR_WHEEL_X, 6.2], [CAR_WHEEL_X, -6.2],
+            [-CAR_WHEEL_X, 6.2], [-CAR_WHEEL_X, -6.2]
+        ];
+        const perWheel = Math.floor(count / centers.length);
+        for (const [wx, wz] of centers) {
+            for (let i = 0; i < perWheel; i++) {
+                const ang = Math.random() * Math.PI * 2;
+                if (Math.random() < 0.72) {
+                    // Side discs — spoke pattern animates via `a`
+                    const rad = Math.sqrt(Math.random()) * CAR_WHEEL_R;
+                    const side = Math.random() < 0.5 ? 1 : -1;
+                    targets.push({
+                        x: wx + Math.cos(ang) * rad,
+                        y: CAR_AXLE_Y + Math.sin(ang) * rad,
+                        z: wz + side * CAR_WHEEL_HALF,
+                        nx: 0, ny: 0, nz: side,
+                        kind: CK_WHEEL, a: ang,
+                        s: 1.0 - rad / CAR_WHEEL_R, // hub highlight
+                        bob: 0
+                    });
+                } else {
+                    // Tread
+                    targets.push({
+                        x: wx + Math.cos(ang) * CAR_WHEEL_R,
+                        y: CAR_AXLE_Y + Math.sin(ang) * CAR_WHEEL_R,
+                        z: wz + (Math.random() * 2 - 1) * CAR_WHEEL_HALF,
+                        nx: Math.cos(ang), ny: Math.sin(ang), nz: 0,
+                        kind: CK_WHEEL, a: ang, s: 0, bob: 0
+                    });
+                }
+            }
+        }
+    }
+
+    function pushCarRoad(targets, count) {
+        // Road surface, dense enough to read as a solid slab
+        for (let i = 0; i < count; i++) {
+            const z = (Math.random() * 2 - 1) * CAR_ROAD_HALF;
+            const x = (Math.random() * 2 - 1) * CAR_SLAB_HALF_X;
+            targets.push({
+                x, y: CAR_ROAD_Y, z, nx: 0, ny: 1, nz: 0,
+                kind: CK_ROAD, a: x, s: 0, bob: 0
+            });
+        }
+    }
+
+    function pushCarShoulder(targets, count) {
+        // Grass strips either side of the road
+        for (let i = 0; i < count; i++) {
+            const side = i % 2 === 0 ? 1 : -1;
+            const z = side * (CAR_ROAD_HALF + Math.random() * (CAR_SLAB_HALF_Z - CAR_ROAD_HALF));
+            const x = (Math.random() * 2 - 1) * CAR_SLAB_HALF_X;
+            targets.push({
+                x, y: CAR_PLATFORM_Y, z, nx: 0, ny: 1, nz: 0,
+                kind: CK_PLATFORM, a: 0, s: Math.random(), bob: 0
+            });
+        }
+    }
+
+    function pushCarSkirt(targets, count) {
+        // Vertical sides of the diorama base
+        for (let i = 0; i < count; i++) {
+            const y = CAR_PLATFORM_Y - Math.random() * 2.5;
+            if (Math.random() < 0.5) {
+                // Long front/back faces
+                const side = Math.random() < 0.5 ? 1 : -1;
+                targets.push({
+                    x: (Math.random() * 2 - 1) * CAR_SLAB_HALF_X,
+                    y, z: side * CAR_SLAB_HALF_Z,
+                    nx: 0, ny: 0, nz: side,
+                    kind: CK_RIM, a: 0, s: 0, bob: 0
+                });
+            } else {
+                // Road-end faces
+                const side = Math.random() < 0.5 ? 1 : -1;
+                targets.push({
+                    x: side * CAR_SLAB_HALF_X,
+                    y, z: (Math.random() * 2 - 1) * CAR_SLAB_HALF_Z,
+                    nx: side, ny: 0, nz: 0,
+                    kind: CK_RIM, a: 0, s: 0, bob: 0
+                });
+            }
+        }
+    }
+
+    function pushCarMarkings(targets, count) {
+        const edgeShare = Math.floor(count * 0.4);
+        for (let i = 0; i < count; i++) {
+            const isEdge = i < edgeShare;
+            const z = isEdge
+                ? (i % 2 === 0 ? 1 : -1) * (CAR_ROAD_HALF - 1.0)
+                : (Math.random() * 2 - 1) * 0.45;
+            const x = (Math.random() * 2 - 1) * CAR_SLAB_HALF_X;
+            targets.push({
+                x, y: CAR_ROAD_Y + 0.15, z, nx: 0, ny: 1, nz: 0,
+                kind: isEdge ? CK_EDGE : CK_DASH, a: x, s: 0, bob: 0
+            });
+        }
+    }
+
+    function generateCarTargets(count) {
+        const targets = [];
+        pushCarBody(targets, Math.floor(count * 0.40));
+        pushCarWheels(targets, Math.floor(count * 0.14));
+        pushCarRoad(targets, Math.floor(count * 0.24));
+        pushCarMarkings(targets, Math.floor(count * 0.06));
+        pushCarShoulder(targets, Math.floor(count * 0.08));
+        pushCarSkirt(targets, Math.floor(count * 0.08));
+        // Pad any rounding shortfall with extra road points
+        pushCarRoad(targets, count - targets.length);
+        // Lift the whole diorama so it sits centered in frame
+        for (const t of targets) t.y += 9.0;
+        return targets.slice(0, count);
+    }
+
     function buildSortedIndices(length, extractor) {
         return Array.from({ length }, (_, i) => {
             const { x, y, z } = extractor(i);
@@ -279,7 +490,11 @@
                             dwarfNX: 0, dwarfNY: 0, dwarfNZ: 0,
                             dwarfBandPhase: 0, dwarfSwirlPhase: 0,
                             dwarfStormPhase: 0, dwarfDriftPhase: 0,
-                            dwarfEquatorBias: 0
+                            dwarfEquatorBias: 0,
+                            carX: 0, carY: 0, carZ: 0,
+                            carNX: 0, carNY: 0, carNZ: 0,
+                            carKind: CK_PLATFORM, carPhase: 0,
+                            carShade: 0, carBob: 0
                         });
                     }
                 }
@@ -306,11 +521,13 @@
 
     const fishTargets = generateFishTargets();
     const dwarfTargets = generateDwarfTargets(particles.length);
+    const carTargets = generateCarTargets(particles.length);
 
     const particleOrder = buildSortedIndices(particles.length, i => ({ x: particles[i].logoX, y: particles[i].logoY, z: particles[i].logoZ }));
     const orbOrder = buildSortedIndices(orbTargets.length, i => orbTargets[i]);
     const fishOrder = buildSortedIndices(fishTargets.length, i => fishTargets[i]);
     const dwarfOrder = buildSortedIndices(dwarfTargets.length, i => dwarfTargets[i]);
+    const carOrder = buildSortedIndices(carTargets.length, i => carTargets[i]);
 
     for (let k = 0; k < particles.length; k++) {
         const p = particles[particleOrder[k]];
@@ -338,15 +555,21 @@
         p.dwarfDriftPhase = (p.dwarfNX * 3.0) - (p.dwarfNZ * 2.0) + p.dwarfNY * 1.5;
         p.dwarfEquatorBias = 1.0 - Math.abs(p.dwarfNY);
 
+        if (k < carTargets.length) {
+            const tCar = carTargets[carOrder[k]];
+            p.carX = tCar.x; p.carY = tCar.y; p.carZ = tCar.z;
+            p.carNX = tCar.nx; p.carNY = tCar.ny; p.carNZ = tCar.nz;
+            p.carKind = tCar.kind;
+            p.carPhase = tCar.a;
+            p.carShade = tCar.s;
+            p.carBob = tCar.bob;
+        }
+
         p.logo2X = p.logoX; p.logo2Y = p.logoY; p.logo2Z = p.logoZ;
     }
 
     // --- Shape Vector System ---
     const shapeData = computeShapeVectors("'Courier New', Courier, monospace");
-    // Verify shape vectors computed correctly
-    let nonZeroVecs = 0;
-    for (let i = 0; i < shapeData.numChars * 6; i++) if (shapeData.vectors[i] > 0.01) nonZeroVecs++;
-    console.log(`[ShapeVectors] Computed ${shapeData.numChars} chars, ${nonZeroVecs} non-zero components (expected ~400+)`);
 
     // --- Rendering Setup ---
     const screenElement = document.getElementById('solid-logo-canvas');
@@ -445,20 +668,21 @@
     window.addEventListener('touchend', handleDragEnd);
     window.addEventListener('touchcancel', handleDragEnd);
 
-    // State: 0 = Logo, 1 = Orb, 2 = Fish, 3 = Dwarf, 4 = Logo2
+    // State: 0 = Logo, 1 = Orb, 2 = Fish, 3 = Dwarf, 4 = Logo2, 5 = Car
     let targetState = 0;
     let lastTimestamp = performance.now();
-    let currentWeights = { logo: 1, orb: 0, fish: 0, dwarf: 0, logo2: 0 };
-    let targetWeights = { logo: 1, orb: 0, fish: 0, dwarf: 0, logo2: 0 };
+    let currentWeights = { logo: 1, orb: 0, fish: 0, dwarf: 0, logo2: 0, car: 0 };
+    let targetWeights = { logo: 1, orb: 0, fish: 0, dwarf: 0, logo2: 0, car: 0 };
 
     function getTargetWeightsForState(state) {
-        let w = { logo: 0, orb: 0, fish: 0, dwarf: 0, logo2: 0 };
+        let w = { logo: 0, orb: 0, fish: 0, dwarf: 0, logo2: 0, car: 0 };
         switch (state) {
             case 0: w.logo = 1; break;
             case 1: w.orb = 1; break;
             case 2: w.fish = 1; break;
             case 3: w.dwarf = 1; break;
             case 4: w.logo2 = 1; break;
+            case 5: w.car = 1; break;
         }
         return w;
     }
@@ -484,12 +708,13 @@
         currentWeights.fish += (targetWeights.fish - currentWeights.fish) * morphSpeed;
         currentWeights.dwarf += (targetWeights.dwarf - currentWeights.dwarf) * morphSpeed;
         currentWeights.logo2 += (targetWeights.logo2 - currentWeights.logo2) * morphSpeed;
+        currentWeights.car += (targetWeights.car - currentWeights.car) * morphSpeed;
 
-        let sum = currentWeights.logo + currentWeights.orb + currentWeights.fish + currentWeights.dwarf + currentWeights.logo2;
+        let sum = currentWeights.logo + currentWeights.orb + currentWeights.fish + currentWeights.dwarf + currentWeights.logo2 + currentWeights.car;
         if (sum > 0.001) {
             currentWeights.logo /= sum; currentWeights.orb /= sum;
             currentWeights.fish /= sum; currentWeights.dwarf /= sum;
-            currentWeights.logo2 /= sum;
+            currentWeights.logo2 /= sum; currentWeights.car /= sum;
         }
 
         let wLogo = currentWeights.logo < 0.001 ? 0 : currentWeights.logo;
@@ -497,10 +722,12 @@
         let wFish = currentWeights.fish < 0.001 ? 0 : currentWeights.fish;
         let wDwarf = currentWeights.dwarf < 0.001 ? 0 : currentWeights.dwarf;
         let wLogo2 = currentWeights.logo2 < 0.001 ? 0 : currentWeights.logo2;
+        let wCar = currentWeights.car < 0.001 ? 0 : currentWeights.car;
         const wLogoCombined = wLogo + wLogo2;
         const hasOrb = wOrb > 0;
         const hasFish = wFish > 0;
         const hasDwarf = wDwarf > 0;
+        const hasCar = wCar > 0;
 
         const aspectCorrection = (charHeight / charWidth);
 
@@ -516,12 +743,21 @@
             swirl: time * 1.7, storm: time * 0.6
         } : null;
 
-        const K1 = 40.0;
+        // Car animation clocks: dashes scroll backward, wheels spin to match
+        const carRoadScroll = time * CAR_ROAD_SPEED;
+        const carWheelSpin = time * (CAR_ROAD_SPEED / CAR_WHEEL_R);
+        const carBobOffset = hasCar ? Math.sin(time * 5.0) * 0.25 : 0;
+        // Camera tilts down for the diorama; pulling back while lengthening the
+        // focal length flattens perspective so the scene reads like a model
+        const carTilt = 0.34 * wCar;
+        const carTiltCos = Math.cos(carTilt), carTiltSin = Math.sin(carTilt);
+        const viewDist = VIEW_DISTANCE + 25.0 * wCar;
+
+        const K1 = 40.0 * (1.0 + 1.5 * wCar);
         const cosT = Math.cos(angle);
         const sinT = Math.sin(angle);
         const sideNormalX = cosT;
         const sideNormalZ = -sinT;
-        const lx = 0.6, ly = 0.4, lz = -0.5;
 
         // ====== PASS 1: Project particles, compute brightness ======
         for (let i = 0; i < particles.length; i++) {
@@ -536,11 +772,21 @@
             if (hasOrb) { px += p.orbX * wOrb; py += p.orbY * wOrb; pz += p.orbZ * wOrb; }
             if (hasFish) { px += p.fishX * wFish; py += p.fishY * wFish; pz += p.fishZ * wFish; }
             if (hasDwarf) { px += p.dwarfX * wDwarf; py += p.dwarfY * wDwarf; pz += p.dwarfZ * wDwarf; }
+            if (hasCar) {
+                px += p.carX * wCar;
+                py += (p.carY + carBobOffset * p.carBob) * wCar;
+                pz += p.carZ * wCar;
+            }
 
             let x = px * cosT - pz * sinT;
             let z = px * sinT + pz * cosT;
             let y = py;
-            let zDist = VIEW_DISTANCE + z;
+            if (hasCar) {
+                const ty = y * carTiltCos + z * carTiltSin;
+                z = z * carTiltCos - y * carTiltSin;
+                y = ty;
+            }
+            let zDist = viewDist + z;
 
             if (zDist > 1.0) {
                 let ooz = 1.0 / zDist;
@@ -574,11 +820,22 @@
                             ny += p.dwarfNY * wDwarf;
                             nz += (p.dwarfNX * sinT + p.dwarfNZ * cosT) * wDwarf;
                         }
+                        if (hasCar) {
+                            nx += (p.carNX * cosT - p.carNZ * sinT) * wCar;
+                            ny += p.carNY * wCar;
+                            nz += (p.carNX * sinT + p.carNZ * cosT) * wCar;
+                        }
+
+                        if (hasCar) {
+                            const tny = ny * carTiltCos + nz * carTiltSin;
+                            nz = nz * carTiltCos - ny * carTiltSin;
+                            ny = tny;
+                        }
 
                         let norm = Math.hypot(nx, ny, nz) || 0.001;
                         nx /= norm; ny /= norm; nz /= norm;
 
-                        let dot = nx * lx + ny * ly + nz * lz;
+                        let dot = nx * LX + ny * LY + nz * LZ;
                         let diffuse = Math.max(0.15, dot);
 
                         let brightness = 0;
@@ -590,6 +847,52 @@
                             brightness += (p.fishIsFace ? (diffuse * 0.4 + p.fishWeight * 0.8) : (diffuse * 0.7)) * wFish;
                         }
 
+                        if (hasCar) {
+                            let cb;
+                            switch (p.carKind) {
+                                case CK_BODY: {
+                                    // Product-shot lighting: camera-facing panels carry the
+                                    // silhouette, roof stays quieter, plus a specular kick
+                                    let facing = -nz;
+                                    if (facing < 0) facing = 0;
+                                    let spec = nx * HX + ny * HY + nz * HZ;
+                                    if (spec < 0) spec = 0;
+                                    spec *= spec; spec *= spec; spec *= spec; spec *= spec;
+                                    cb = 0.18 + facing * 0.7 + diffuse * 0.2 + spec * 0.5;
+                                    break;
+                                }
+                                case CK_WHEEL: {
+                                    if (p.carShade === 0) {
+                                        // Tread: dark rubber
+                                        cb = 0.06 + diffuse * 0.06;
+                                    } else if (p.carShade < 0.28) {
+                                        // Tire sidewall ring
+                                        cb = 0.08 + diffuse * 0.08;
+                                    } else {
+                                        // Hub: bright rotating spokes
+                                        const spoke = Math.sin((p.carPhase - carWheelSpin) * CAR_SPOKES);
+                                        cb = 0.12 + (spoke > 0.3 ? 0.5 : 0.08) + p.carShade * 0.2;
+                                    }
+                                    break;
+                                }
+                                case CK_DASH: {
+                                    let u = (p.carPhase + carRoadScroll) % CAR_DASH_PERIOD;
+                                    if (u < 0) u += CAR_DASH_PERIOD;
+                                    cb = u < CAR_DASH_LEN ? 0.9 : 0.1;
+                                    break;
+                                }
+                                case CK_EDGE: cb = 0.4; break;
+                                case CK_ROAD:
+                                    // Faint moving texture sells the road scroll
+                                    cb = 0.07 + diffuse * 0.08 + Math.sin((p.carPhase + carRoadScroll) * 0.9) * 0.03;
+                                    break;
+                                case CK_PLATFORM: cb = 0.02 + diffuse * 0.05; break;
+                                case CK_RIM: cb = 0.03 + diffuse * 0.2; break;
+                                default: cb = 0.02 + diffuse * 0.05; break; // glass
+                            }
+                            brightness += clamp01(cb) * wCar;
+                        }
+
                         let dwarfThermal = 0;
                         if (hasDwarf) {
                             const pat = sampleDwarfSurface(p, dwarfTime);
@@ -598,8 +901,10 @@
                             brightness += clamp01(diffuse * 0.34 + pat * 0.46 + rim * 0.42) * wDwarf;
                         }
 
+                        // Depth fog — mostly cancelled for the car diorama, whose
+                        // platform is wide enough that full fog would crush the far half
                         let fog = (z + 50) / 200.0;
-                        brightness -= fog;
+                        brightness -= fog * (1.0 - wCar * 0.65);
                         brightness = clamp01(brightness);
 
                         brightnessBuffer[idx] = brightness;
@@ -692,6 +997,14 @@
             let blend = 1.0 - Math.pow(1.0 - MOMENTUM_DECAY, timeScale);
             angularVelocity = angularVelocity + (autoSpeed - angularVelocity) * blend;
             angle += angularVelocity * timeScale;
+
+            // The car diorama holds a profile view instead of spinning,
+            // so the scene stays readable. Drag still spins it freely.
+            if (hasCar) {
+                const profileAngle = Math.round(angle / (Math.PI * 2)) * (Math.PI * 2);
+                const pull = 1.0 - Math.pow(0.96, timeScale);
+                angle += (profileAngle - angle) * pull * wCar;
+            }
         }
 
         requestAnimationFrame(render);
@@ -703,15 +1016,17 @@
     const futureProjects = document.getElementById('future-projects');
     const sunfish = document.getElementById('project-sunfish');
     const brownDwarf = document.getElementById('brown-dwarf');
+    const avResearch = document.getElementById('av-research');
     const sourceCode = document.getElementById('connect');
 
     let isAboutUsVisible = false, isPastProjectsVisible = false;
     let isFutureProjectsVisible = false, isSunfishVisible = false;
-    let isBrownDwarfVisible = false, isSourceCodeVisible = false;
+    let isBrownDwarfVisible = false, isAvResearchVisible = false, isSourceCodeVisible = false;
 
     function updateState() {
         let newTarget = null;
         if (isSourceCodeVisible) newTarget = 4;
+        else if (isAvResearchVisible) newTarget = 5;
         else if (isBrownDwarfVisible) newTarget = 3;
         else if (isSunfishVisible) newTarget = 2;
         else if (isFutureProjectsVisible) newTarget = 0;
@@ -730,6 +1045,7 @@
     if (futureProjects) new IntersectionObserver((e) => { e.forEach(x => { isFutureProjectsVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(futureProjects);
     if (sunfish) new IntersectionObserver((e) => { e.forEach(x => { isSunfishVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(sunfish);
     if (brownDwarf) new IntersectionObserver((e) => { e.forEach(x => { isBrownDwarfVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(brownDwarf);
+    if (avResearch) new IntersectionObserver((e) => { e.forEach(x => { isAvResearchVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(avResearch);
     if (sourceCode) new IntersectionObserver((e) => { e.forEach(x => { isSourceCodeVisible = x.isIntersecting; updateState(); }); }, { threshold: 0.1, rootMargin: '-30% 0px -50% 0px' }).observe(sourceCode);
 
     requestAnimationFrame(render);

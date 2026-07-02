@@ -15,6 +15,9 @@ html {
     font-size: var(--base-font-size);
     overflow-x: hidden;
     width: 100vw;
+    /* Two snap points: hero top and content top. Scrolling past the hero
+       settles on the content; the tall content area scrolls freely. */
+    scroll-snap-type: y mandatory;
 }
 
 body {
@@ -36,6 +39,7 @@ body {
 #hero {
     height: 100vh;
     /* Full screen hero */
+    scroll-snap-align: start;
     width: 100%;
     display: flex;
     justify-content: center;
@@ -63,6 +67,7 @@ body {
 /* New Layout Styles */
 .content-container {
     width: 90vw;
+    scroll-snap-align: start;
     /* Removed max-width to allow infinite scaling */
     display: flex;
     flex-direction: row;

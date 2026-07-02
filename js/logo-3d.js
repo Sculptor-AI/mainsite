@@ -11,7 +11,6 @@
         clamp01,
         createTextSurface,
         createVisibilityController,
-        hash01,
         packColor,
         toCharCodes,
         computeShapeVectors,
@@ -24,7 +23,6 @@
     const VIEW_DISTANCE = 55.0;
     const BASE_ROTATION_SPEED = 0.005;
     const EXTRUSION_DEPTH = 3.75;
-    const ORB_RADIUS = 24.0;
     const MORPH_DURATION = 1.2;
     const BURST_DISTANCE = 14.0;
 
@@ -45,7 +43,7 @@
     // --- Car diorama configuration (AV research section) ---
     const CAR_PLATFORM_Y = -17.0;
     const CAR_SLAB_HALF_X = 26.0;  // half-length of the diorama base along the road
-    const CAR_SLAB_HALF_Z = 15.0;  // half-width of the diorama base
+    const CAR_SLAB_HALF_Z = 10.0;  // half-width of the diorama base (road spans the full slab)
     const CAR_ROAD_HALF = 10.0;
     const CAR_ROAD_Y = -16.6;
     const CAR_WHEEL_R = 3.8;
@@ -60,13 +58,11 @@
 
     // Car target kinds
     const CK_BODY = 0, CK_WHEEL = 1, CK_ROAD = 2, CK_DASH = 3,
-        CK_EDGE = 4, CK_PLATFORM = 5, CK_RIM = 6, CK_GLASS = 7;
+        CK_EDGE = 4, CK_RIM = 5, CK_GLASS = 6;
 
-    // A long gradient for fallback and orb text
+    // A long gradient used as a fallback ramp
     const SHADE_CHARS = " `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@";
     const SHADE_CHAR_CODES = toCharCodes(SHADE_CHARS);
-
-    const CODE_TEXT = `def train(model, loader, opt): for batch in loader: loss = model(batch).loss; loss.backward(); opt.step(); opt.zero_grad() class Encoder(nn.Module): def forward(self, x): return self.net(x) logits = model(tokens); probs = softmax(logits / temperature) with torch.no_grad(): metrics = evaluate(model, val_set) `;
 
     const LOGO_ART = `
                                       .:=*##-
@@ -176,25 +172,6 @@
         const swirl = Math.sin(p.dwarfSwirlPhase + timeData.swirl) * 0.55;
         const storm = Math.cos(p.dwarfStormPhase - timeData.storm) * (0.35 + p.dwarfEquatorBias * 0.25);
         return clamp01((band * 0.5 + swirl * 0.32 + storm * 0.18 + 1.15) / 2.3);
-    }
-
-    function generateOrbTargets(count) {
-        const targets = [];
-        const golden = Math.PI * (3 - Math.sqrt(5));
-        const denom = Math.max(1, count - 1);
-        for (let i = 0; i < count; i++) {
-            const y = 1 - (i / denom) * 2;
-            const radius = Math.sqrt(Math.max(0, 1 - y * y));
-            const theta = golden * i;
-            const radiusJitter = ORB_RADIUS * (0.98 + Math.random() * 0.04);
-            targets.push({
-                x: Math.cos(theta) * radius * radiusJitter,
-                y: y * radiusJitter,
-                z: Math.sin(theta) * radius * radiusJitter,
-                char: ' '
-            });
-        }
-        return targets;
     }
 
     function generateDwarfTargets(count) {
@@ -367,19 +344,6 @@
         }
     }
 
-    function pushCarShoulder(targets, count) {
-        // Grass strips either side of the road
-        for (let i = 0; i < count; i++) {
-            const side = i % 2 === 0 ? 1 : -1;
-            const z = side * (CAR_ROAD_HALF + Math.random() * (CAR_SLAB_HALF_Z - CAR_ROAD_HALF));
-            const x = (Math.random() * 2 - 1) * CAR_SLAB_HALF_X;
-            targets.push({
-                x, y: CAR_PLATFORM_Y, z, nx: 0, ny: 1, nz: 0,
-                kind: CK_PLATFORM, a: 0, s: Math.random(), bob: 0
-            });
-        }
-    }
-
     function pushCarSkirt(targets, count) {
         // Vertical sides of the diorama base
         for (let i = 0; i < count; i++) {
@@ -423,11 +387,10 @@
 
     function generateCarTargets(count) {
         const targets = [];
-        pushCarBody(targets, Math.floor(count * 0.40));
+        pushCarBody(targets, Math.floor(count * 0.44));
         pushCarWheels(targets, Math.floor(count * 0.14));
-        pushCarRoad(targets, Math.floor(count * 0.24));
+        pushCarRoad(targets, Math.floor(count * 0.28));
         pushCarMarkings(targets, Math.floor(count * 0.06));
-        pushCarShoulder(targets, Math.floor(count * 0.08));
         pushCarSkirt(targets, Math.floor(count * 0.08));
         // Pad any rounding shortfall with extra road points
         pushCarRoad(targets, count - targets.length);
@@ -480,10 +443,6 @@
                             logoIsFace: isFace,
                             logoFaceSign: z >= 0 ? 1 : -1,
                             logoWeight: weight,
-                            orbX: 0, orbY: 0, orbZ: 0,
-                            orbNX: 0, orbNY: 0, orbNZ: 0,
-                            orbCharCode: SPACE_CODE,
-                            orbReveal: hash01((particles.length + 1) * 19.0),
                             fishX: 0, fishY: 0, fishZ: 0,
                             fishIsFace: false, fishFaceSign: 1, fishWeight: 0,
                             dwarfX: 0, dwarfY: 0, dwarfZ: 0,
@@ -493,7 +452,7 @@
                             dwarfEquatorBias: 0,
                             carX: 0, carY: 0, carZ: 0,
                             carNX: 0, carNY: 0, carNZ: 0,
-                            carKind: CK_PLATFORM, carPhase: 0,
+                            carKind: CK_ROAD, carPhase: 0,
                             carShade: 0, carBob: 0
                         });
                     }
@@ -505,37 +464,17 @@
     initLogo();
 
     // Generate targets
-    const orbTargets = generateOrbTargets(particles.length);
-    const cleanText = CODE_TEXT.replace(/\s+/g, ' ');
-    const textOrder = orbTargets.map((t, i) => i).sort((a, b) => {
-        const ta = orbTargets[a], tb = orbTargets[b];
-        const rows = 25;
-        const rowA = Math.floor((1 - ta.y / ORB_RADIUS) / 2 * rows);
-        const rowB = Math.floor((1 - tb.y / ORB_RADIUS) / 2 * rows);
-        if (rowA !== rowB) return rowA - rowB;
-        return Math.atan2(tb.z, tb.x) - Math.atan2(ta.z, ta.x);
-    });
-    textOrder.forEach((targetIndex, i) => {
-        orbTargets[targetIndex].char = cleanText[i % cleanText.length];
-    });
-
     const fishTargets = generateFishTargets();
     const dwarfTargets = generateDwarfTargets(particles.length);
     const carTargets = generateCarTargets(particles.length);
 
     const particleOrder = buildSortedIndices(particles.length, i => ({ x: particles[i].logoX, y: particles[i].logoY, z: particles[i].logoZ }));
-    const orbOrder = buildSortedIndices(orbTargets.length, i => orbTargets[i]);
     const fishOrder = buildSortedIndices(fishTargets.length, i => fishTargets[i]);
     const dwarfOrder = buildSortedIndices(dwarfTargets.length, i => dwarfTargets[i]);
     const carOrder = buildSortedIndices(carTargets.length, i => carTargets[i]);
 
     for (let k = 0; k < particles.length; k++) {
         const p = particles[particleOrder[k]];
-        const tOrb = orbTargets[orbOrder[k]];
-        const orbLen = Math.hypot(tOrb.x, tOrb.y, tOrb.z) || 1;
-        p.orbX = tOrb.x; p.orbY = tOrb.y; p.orbZ = tOrb.z;
-        p.orbNX = tOrb.x / orbLen; p.orbNY = tOrb.y / orbLen; p.orbNZ = tOrb.z / orbLen;
-        p.orbCharCode = tOrb.char.charCodeAt(0);
 
         if (k < fishTargets.length) {
             const tFish = fishTargets[fishOrder[k]];
@@ -668,17 +607,16 @@
     window.addEventListener('touchend', handleDragEnd);
     window.addEventListener('touchcancel', handleDragEnd);
 
-    // State: 0 = Logo, 1 = Orb, 2 = Fish, 3 = Dwarf, 4 = Logo2, 5 = Car
+    // State: 0 = Logo, 2 = Fish, 3 = Dwarf, 4 = Logo2, 5 = Car
     let targetState = 0;
     let lastTimestamp = performance.now();
-    let currentWeights = { logo: 1, orb: 0, fish: 0, dwarf: 0, logo2: 0, car: 0 };
-    let targetWeights = { logo: 1, orb: 0, fish: 0, dwarf: 0, logo2: 0, car: 0 };
+    let currentWeights = { logo: 1, fish: 0, dwarf: 0, logo2: 0, car: 0 };
+    let targetWeights = { logo: 1, fish: 0, dwarf: 0, logo2: 0, car: 0 };
 
     function getTargetWeightsForState(state) {
-        let w = { logo: 0, orb: 0, fish: 0, dwarf: 0, logo2: 0, car: 0 };
+        let w = { logo: 0, fish: 0, dwarf: 0, logo2: 0, car: 0 };
         switch (state) {
             case 0: w.logo = 1; break;
-            case 1: w.orb = 1; break;
             case 2: w.fish = 1; break;
             case 3: w.dwarf = 1; break;
             case 4: w.logo2 = 1; break;
@@ -704,27 +642,24 @@
         // Morph weights
         const morphSpeed = dt / MORPH_DURATION * 2;
         currentWeights.logo += (targetWeights.logo - currentWeights.logo) * morphSpeed;
-        currentWeights.orb += (targetWeights.orb - currentWeights.orb) * morphSpeed;
         currentWeights.fish += (targetWeights.fish - currentWeights.fish) * morphSpeed;
         currentWeights.dwarf += (targetWeights.dwarf - currentWeights.dwarf) * morphSpeed;
         currentWeights.logo2 += (targetWeights.logo2 - currentWeights.logo2) * morphSpeed;
         currentWeights.car += (targetWeights.car - currentWeights.car) * morphSpeed;
 
-        let sum = currentWeights.logo + currentWeights.orb + currentWeights.fish + currentWeights.dwarf + currentWeights.logo2 + currentWeights.car;
+        let sum = currentWeights.logo + currentWeights.fish + currentWeights.dwarf + currentWeights.logo2 + currentWeights.car;
         if (sum > 0.001) {
-            currentWeights.logo /= sum; currentWeights.orb /= sum;
+            currentWeights.logo /= sum;
             currentWeights.fish /= sum; currentWeights.dwarf /= sum;
             currentWeights.logo2 /= sum; currentWeights.car /= sum;
         }
 
         let wLogo = currentWeights.logo < 0.001 ? 0 : currentWeights.logo;
-        let wOrb = currentWeights.orb < 0.001 ? 0 : currentWeights.orb;
         let wFish = currentWeights.fish < 0.001 ? 0 : currentWeights.fish;
         let wDwarf = currentWeights.dwarf < 0.001 ? 0 : currentWeights.dwarf;
         let wLogo2 = currentWeights.logo2 < 0.001 ? 0 : currentWeights.logo2;
         let wCar = currentWeights.car < 0.001 ? 0 : currentWeights.car;
         const wLogoCombined = wLogo + wLogo2;
-        const hasOrb = wOrb > 0;
         const hasFish = wFish > 0;
         const hasDwarf = wDwarf > 0;
         const hasCar = wCar > 0;
@@ -769,7 +704,6 @@
                 py += p.logoY * wLogoCombined;
                 pz += p.logoZ * wLogoCombined;
             }
-            if (hasOrb) { px += p.orbX * wOrb; py += p.orbY * wOrb; pz += p.orbZ * wOrb; }
             if (hasFish) { px += p.fishX * wFish; py += p.fishY * wFish; pz += p.fishZ * wFish; }
             if (hasDwarf) { px += p.dwarfX * wDwarf; py += p.dwarfY * wDwarf; pz += p.dwarfZ * wDwarf; }
             if (hasCar) {
@@ -806,11 +740,6 @@
                         let nLogoZ = p.logoIsFace ? cosT * p.logoFaceSign : sideNormalZ;
                         let nx = nLogoX * wLogoCombined, ny = 0, nz = nLogoZ * wLogoCombined;
 
-                        if (hasOrb) {
-                            nx += (p.orbNX * cosT - p.orbNZ * sinT) * wOrb;
-                            ny += p.orbNY * wOrb;
-                            nz += (p.orbNX * sinT + p.orbNZ * cosT) * wOrb;
-                        }
                         if (hasFish) {
                             nx += (p.fishIsFace ? sinT * p.fishFaceSign : sideNormalX) * wFish;
                             nz += (p.fishIsFace ? cosT * p.fishFaceSign : sideNormalZ) * wFish;
@@ -842,7 +771,6 @@
                         if (wLogoCombined) {
                             brightness += (p.logoIsFace ? (diffuse * 0.4 + p.logoWeight * 0.8) : (diffuse * 0.7)) * wLogoCombined;
                         }
-                        if (hasOrb) brightness += (diffuse * 0.7 + wOrb * 0.12) * wOrb;
                         if (hasFish) {
                             brightness += (p.fishIsFace ? (diffuse * 0.4 + p.fishWeight * 0.8) : (diffuse * 0.7)) * wFish;
                         }
@@ -887,7 +815,6 @@
                                     // Faint moving texture sells the road scroll
                                     cb = 0.07 + diffuse * 0.08 + Math.sin((p.carPhase + carRoadScroll) * 0.9) * 0.03;
                                     break;
-                                case CK_PLATFORM: cb = 0.02 + diffuse * 0.05; break;
                                 case CK_RIM: cb = 0.03 + diffuse * 0.2; break;
                                 default: cb = 0.02 + diffuse * 0.05; break; // glass
                             }
@@ -913,13 +840,6 @@
                         // Sentinel: 0 = needs shape matching in Pass 2
                         textBuffer[idx] = 0;
 
-                        // Special overrides: orb text chars
-                        if (hasOrb && wOrb > 0.1) {
-                            const showCode = wOrb > 0.92 || wOrb >= p.orbReveal;
-                            if (showCode && brightness > 0.15) {
-                                textBuffer[idx] = p.orbCharCode;
-                            }
-                        }
                         if (hasFish && wFish > 0.8 && p.fishWeight === 0) {
                             textBuffer[idx] = SPACE_CODE;
                         }
@@ -987,7 +907,7 @@
         }
 
         // --- Rotation & Speed ---
-        let speedMult = 1.0 * wLogoCombined + 0.5 * wOrb + 3.0 * wFish + 0.8 * wDwarf;
+        let speedMult = 1.0 * wLogoCombined + 3.0 * wFish + 0.8 * wDwarf;
         let timeScale = dt * 60.0;
         let autoSpeed = BASE_ROTATION_SPEED * speedMult;
 
@@ -1013,14 +933,13 @@
 
     // --- Scroll Trigger Logic ---
     const aboutUs = document.getElementById('about-us');
-    const pastProjects = document.getElementById('past-projects');
     const futureProjects = document.getElementById('future-projects');
     const sunfish = document.getElementById('project-sunfish');
     const brownDwarf = document.getElementById('brown-dwarf');
     const avResearch = document.getElementById('av-research');
     const sourceCode = document.getElementById('connect');
 
-    let isAboutUsVisible = false, isPastProjectsVisible = false;
+    let isAboutUsVisible = false;
     let isFutureProjectsVisible = false, isSunfishVisible = false;
     let isBrownDwarfVisible = false, isAvResearchVisible = false, isSourceCodeVisible = false;
 
@@ -1031,7 +950,6 @@
         else if (isBrownDwarfVisible) newTarget = 3;
         else if (isSunfishVisible) newTarget = 2;
         else if (isFutureProjectsVisible) newTarget = 0;
-        else if (isPastProjectsVisible) newTarget = 1;
         else if (isAboutUsVisible) newTarget = 0;
 
         if (newTarget !== null && newTarget !== targetState) {
@@ -1042,7 +960,6 @@
 
     const obsOptions = { threshold: 0.1, rootMargin: '-40% 0px -40% 0px' };
     if (aboutUs) new IntersectionObserver((e) => { e.forEach(x => { isAboutUsVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(aboutUs);
-    if (pastProjects) new IntersectionObserver((e) => { e.forEach(x => { isPastProjectsVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(pastProjects);
     if (futureProjects) new IntersectionObserver((e) => { e.forEach(x => { isFutureProjectsVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(futureProjects);
     if (sunfish) new IntersectionObserver((e) => { e.forEach(x => { isSunfishVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(sunfish);
     if (brownDwarf) new IntersectionObserver((e) => { e.forEach(x => { isBrownDwarfVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(brownDwarf);

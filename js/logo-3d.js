@@ -869,8 +869,9 @@
                                         // Tire sidewall ring
                                         cb = 0.08 + diffuse * 0.08;
                                     } else {
-                                        // Hub: bright rotating spokes
-                                        const spoke = Math.sin((p.carPhase - carWheelSpin) * CAR_SPOKES);
+                                        // Hub: bright spokes rolling forward (clockwise on
+                                        // screen, matching the road scrolling toward -x)
+                                        const spoke = Math.sin((p.carPhase + carWheelSpin) * CAR_SPOKES);
                                         cb = 0.12 + (spoke > 0.3 ? 0.5 : 0.08) + p.carShade * 0.2;
                                     }
                                     break;

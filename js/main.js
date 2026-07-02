@@ -1,6 +1,9 @@
 /*
- * Sculptor AI - Main Animation Script
- * Handles the Blob -> Explode -> Text convergence animation.
+ * Sculptor AI - Hero Animation
+ * Blob -> Explode -> Text convergence, rendered as shaded ASCII.
+ *
+ * Particle state lives in flat Float32Arrays (structure-of-arrays) so the
+ * per-frame loops stay allocation-free and cache-friendly.
  */
 
 const {
@@ -22,11 +25,17 @@ const NUM_POINTS = isMobilePortrait ? 12000 : 32000; // Reduced particles for mo
 const VIEW_DISTANCE_START = 110.0;
 const VIEW_DISTANCE_END = 210.0;
 
-// Slightly richer monochrome ramp for cleaner gradients without changing the overall look.
-const SHADE_CHARS = " .,:-~=+*xX#%@";
+const SHADE_CHARS = " .,:;-~=+*ox#X%@";
 const SHADE_CHAR_CODES = toCharCodes(SHADE_CHARS);
 const SHADE_DITHER = 0.08;
 const CAM_YAW_SPEED = 0.01;
+
+// Key light (upper-left, toward the camera) and its Blinn half-vector.
+const LIGHT_X = -0.45, LIGHT_Y = 0.55, LIGHT_Z = -0.7;
+const lightLen = Math.hypot(LIGHT_X, LIGHT_Y, LIGHT_Z);
+const LX = LIGHT_X / lightLen, LY = LIGHT_Y / lightLen, LZ = LIGHT_Z / lightLen;
+const halfLen = Math.hypot(LX, LY, LZ - 1.0);
+const HX = LX / halfLen, HY = LY / halfLen, HZ = (LZ - 1.0) / halfLen;
 
 // --- Timings (in frames) ---
 // Speed up on mobile to let particles settle faster
@@ -40,19 +49,44 @@ let hasTriggeredExplosion = false;
 let hasTriggeredConvergence = false;
 let lastTimestamp = performance.now();
 
-// --- Geometry: The Blob ---
-const blobPoints = [];
-const phi = Math.PI * (3.0 - Math.sqrt(5.0));
+// --- Particle State (structure-of-arrays) ---
+// dir* doubles as the unit-sphere base position and the surface normal.
+const dirX = new Float32Array(NUM_POINTS);
+const dirY = new Float32Array(NUM_POINTS);
+const dirZ = new Float32Array(NUM_POINTS);
+const posX = new Float32Array(NUM_POINTS);
+const posY = new Float32Array(NUM_POINTS);
+const posZ = new Float32Array(NUM_POINTS);
+const velX = new Float32Array(NUM_POINTS);
+const velY = new Float32Array(NUM_POINTS);
+const velZ = new Float32Array(NUM_POINTS);
+// Bezier control points for the convergence flight path.
+const startX = new Float32Array(NUM_POINTS);
+const startY = new Float32Array(NUM_POINTS);
+const startZ = new Float32Array(NUM_POINTS);
+const ctrl1X = new Float32Array(NUM_POINTS);
+const ctrl1Y = new Float32Array(NUM_POINTS);
+const ctrl1Z = new Float32Array(NUM_POINTS);
+const ctrl2X = new Float32Array(NUM_POINTS);
+const ctrl2Y = new Float32Array(NUM_POINTS);
+const ctrl2Z = new Float32Array(NUM_POINTS);
+const tgtX = new Float32Array(NUM_POINTS);
+const tgtY = new Float32Array(NUM_POINTS);
+const tgtZ = new Float32Array(NUM_POINTS);
+const tgtChar = new Uint8Array(NUM_POINTS);
+const reveal = new Float32Array(NUM_POINTS);
 
+// Fibonacci sphere distribution
+const phi = Math.PI * (3.0 - Math.sqrt(5.0));
 for (let i = 0; i < NUM_POINTS; i++) {
     const y = 1 - (i / (NUM_POINTS - 1)) * 2;
     const radiusAtY = Math.sqrt(1 - y * y);
     const theta = phi * i;
-    blobPoints.push({
-        x: Math.cos(theta) * radiusAtY,
-        y: y,
-        z: Math.sin(theta) * radiusAtY
-    });
+    dirX[i] = Math.cos(theta) * radiusAtY;
+    dirY[i] = y;
+    dirZ[i] = Math.sin(theta) * radiusAtY;
+    tgtChar[i] = SPACE_CODE;
+    reveal[i] = hash01((i + 1) * 17.0);
 }
 
 // --- Geometry: Target Generation ---
@@ -86,15 +120,15 @@ const LOGO_ART_MAIN = `
 
 // 2. Define the Text Art (Specific Characters)
 const TEXT_ART = `
- .oooooo..o                       oooo                 .                      
-d8P'    \`Y8                       \`888               .o8                      
-Y88bo.       .ooooo.  oooo  oooo   888  oo.ooooo.  .o888oo  .ooooo.  oooo d8b 
- \`"Y8888o.  d88' \`"Y8 \`888  \`888   888   888' \`88b   888   d88' \`88b \`888""8P 
-     \`"Y88b 888        888   888   888   888   888   888   888   888  888     
-oo     .d8P 888   .o8  888   888   888   888   888   888 . 888   888  888     
-8""88888P'  \`Y8bod8P'  \`V88V"V8P' o888o  888bod8P'   "888" \`Y8bod8P' d888b    
-                                         888                                  
-                                        o888o                                 
+ .oooooo..o                       oooo                 .
+d8P'    \`Y8                       \`888               .o8
+Y88bo.       .ooooo.  oooo  oooo   888  oo.ooooo.  .o888oo  .ooooo.  oooo d8b
+ \`"Y8888o.  d88' \`"Y8 \`888  \`888   888   888' \`88b   888   d88' \`88b \`888""8P
+     \`"Y88b 888        888   888   888   888   888   888   888   888  888
+oo     .d8P 888   .o8  888   888   888   888   888   888 . 888   888  888
+8""88888P'  \`Y8bod8P'  \`V88V"V8P' o888o  888bod8P'   "888" \`Y8bod8P' d888b
+                                         888
+                                        o888o
 `;
 
 const GRID_X = 2.1;
@@ -199,26 +233,23 @@ function generateLogoTargets() {
 const textData = generateTextTargets();
 const logoData = generateLogoTargets();
 
-// isMobilePortrait is now defined at the top for config
-
-
 const GAP = 25.0;
 let totalWidth;
-let startX;
+let startXOffset;
 
 if (isMobilePortrait) {
     // Only show logo
     totalWidth = logoData.width;
-    startX = -totalWidth / 2;
+    startXOffset = -totalWidth / 2;
 } else {
     // Show logo + text
     totalWidth = logoData.width + GAP + textData.width;
-    startX = -totalWidth / 2;
+    startXOffset = -totalWidth / 2;
 }
 
 for (let p of logoData.points) {
     possibleTargets.push({
-        x: p.x + startX,
+        x: p.x + startXOffset,
         y: p.y,
         z: p.z,
         isLogo: true,
@@ -227,7 +258,7 @@ for (let p of logoData.points) {
 }
 
 if (!isMobilePortrait) {
-    const textOffsetX = startX + logoData.width + GAP;
+    const textOffsetX = startXOffset + logoData.width + GAP;
     for (let p of textData.points) {
         possibleTargets.push({
             x: p.x + textOffsetX,
@@ -246,28 +277,9 @@ for (let i = 0; i < NUM_POINTS; i++) {
 }
 sortedTargets.sort((a, b) => a.x - b.x);
 
-// --- Particle System ---
-let particles = [];
-for (let i = 0; i < NUM_POINTS; i++) {
-    particles.push({
-        x: 0, y: 0, z: 0,
-        sx: 0, sy: 0, sz: 0,
-        c1x: 0, c1y: 0, c1z: 0,
-        c2x: 0, c2y: 0, c2z: 0,
-        tx: 0, ty: 0, tz: 0,
-        tCharCode: SPACE_CODE,
-        revealThreshold: hash01((i + 1) * 17.0),
-
-        vx: 0, vy: 0, vz: 0,
-        baseX: blobPoints[i % blobPoints.length].x,
-        baseY: blobPoints[i % blobPoints.length].y,
-        baseZ: blobPoints[i % blobPoints.length].z
-    });
-}
-
-// Pre-sort particle indices by their baseX so we can map targets without a runtime sort
+// Pre-sort particle indices by base X so targets map left-to-right without a runtime sort
 const particleOrder = Array.from({ length: NUM_POINTS }, (_, i) => i)
-    .sort((a, b) => particles[a].baseX - particles[b].baseX);
+    .sort((a, b) => dirX[a] - dirX[b]);
 
 const screenElement = document.getElementById('canvas');
 const heroLoop = createVisibilityController(document.getElementById('hero'));
@@ -275,7 +287,6 @@ const FRAME_WIDTH = 160;
 const FRAME_HEIGHT = 80;
 const surface = createTextSurface(FRAME_WIDTH, FRAME_HEIGHT);
 
-// Measure character size accurately to avoid vertical clipping
 // Measure character size dynamically to handle responsive scaling
 let charWidth = 6;
 let charHeight = 10;
@@ -323,15 +334,6 @@ function easeInOutCubic(x) {
     return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
 }
 
-function cubicBezier(t, p0, p1, p2, p3) {
-    const u = 1 - t;
-    const tt = t * t;
-    const uu = u * u;
-    const uuu = uu * u;
-    const ttt = tt * t;
-    return (uuu * p0) + (3 * uu * t * p1) + (3 * u * tt * p2) + (ttt * p3);
-}
-
 function render(timestamp) {
     if (!timestamp) timestamp = performance.now();
 
@@ -343,7 +345,7 @@ function render(timestamp) {
 
     const dt = Math.min(0.05, (timestamp - lastTimestamp) / 1000); // Cap at 50ms to prevent glitches
     lastTimestamp = timestamp;
-    const timeScale = (dt * 60.0) * 2.0; // Double speed
+    const timeScale = dt * 120.0;
 
     const width = surface.width;
     const height = surface.height;
@@ -366,37 +368,37 @@ function render(timestamp) {
         const pulseFreq = 4.0;
         const pulseSpeed = time * 3.0;
 
-        for (let p of particles) {
-            const noise = Math.sin(p.baseX * pulseFreq + pulseSpeed) *
-                Math.cos(p.baseY * pulseFreq + pulseSpeed);
-            const morph = 1.0 + (noise * 0.2);
-
-            p.x = p.baseX * SPHERE_RADIUS * morph;
-            p.y = p.baseY * SPHERE_RADIUS * morph;
-            p.z = p.baseZ * SPHERE_RADIUS * morph;
+        for (let i = 0; i < NUM_POINTS; i++) {
+            const noise = Math.sin(dirX[i] * pulseFreq + pulseSpeed) *
+                Math.cos(dirY[i] * pulseFreq + pulseSpeed);
+            const r = SPHERE_RADIUS * (1.0 + noise * 0.2);
+            posX[i] = dirX[i] * r;
+            posY[i] = dirY[i] * r;
+            posZ[i] = dirZ[i] * r;
         }
 
     } else if (stateTimer < TIME_TEXT_START) {
         // PHASE 2: EXPLODE
         if (!hasTriggeredExplosion) {
             hasTriggeredExplosion = true;
-            for (let p of particles) {
-                p.vx = p.baseX * (Math.random() * 0.9 + 0.2);
-                p.vy = p.baseY * (Math.random() * 0.9 + 0.2);
-                p.vz = p.baseZ * (Math.random() * 0.9 + 0.2);
+            for (let i = 0; i < NUM_POINTS; i++) {
+                velX[i] = dirX[i] * (Math.random() * 0.9 + 0.2);
+                velY[i] = dirY[i] * (Math.random() * 0.9 + 0.2);
+                velZ[i] = dirZ[i] * (Math.random() * 0.9 + 0.2);
             }
         }
 
         camYaw += CAM_YAW_SPEED * timeScale;
         camPitch = Math.sin(time * 0.5) * 0.4;
 
-        for (let p of particles) {
-            p.x += p.vx * timeScale;
-            p.y += p.vy * timeScale;
-            p.z += p.vz * timeScale;
-            p.vx *= Math.pow(0.98, timeScale);
-            p.vy *= Math.pow(0.98, timeScale);
-            p.vz *= Math.pow(0.98, timeScale);
+        const decay = Math.pow(0.98, timeScale);
+        for (let i = 0; i < NUM_POINTS; i++) {
+            posX[i] += velX[i] * timeScale;
+            posY[i] += velY[i] * timeScale;
+            posZ[i] += velZ[i] * timeScale;
+            velX[i] *= decay;
+            velY[i] *= decay;
+            velZ[i] *= decay;
         }
 
     } else {
@@ -409,33 +411,32 @@ function render(timestamp) {
             // Compute a correction so yaw keeps its existing velocity and still lands on target
             yawCorrection = targetYaw - (capturedYaw + CAM_YAW_SPEED * TIME_GATHER_DURATION);
 
-            for (let i = 0; i < NUM_POINTS; i++) {
-                let p = particles[particleOrder[i]];
-                let t = sortedTargets[i];
+            const momentum = 120.0;
+            const spread = 40.0;
+            const approach = 50.0;
 
-                // Assign the specific character
-                p.tCharCode = t.char.charCodeAt(0);
+            for (let k = 0; k < NUM_POINTS; k++) {
+                const i = particleOrder[k];
+                const t = sortedTargets[k];
 
-                let jitter = t.isLogo ? 0.05 : 0.1;
+                tgtChar[i] = t.char.charCodeAt(0);
 
-                p.tx = t.x + (Math.random() - 0.5) * jitter;
-                p.ty = t.y + (Math.random() - 0.5) * jitter;
-                p.tz = t.z + (Math.random() - 0.5) * jitter;
+                const jitter = t.isLogo ? 0.05 : 0.1;
+                tgtX[i] = t.x + (Math.random() - 0.5) * jitter;
+                tgtY[i] = t.y + (Math.random() - 0.5) * jitter;
+                tgtZ[i] = t.z + (Math.random() - 0.5) * jitter;
 
-                p.sx = p.x;
-                p.sy = p.y;
-                p.sz = p.z;
+                startX[i] = posX[i];
+                startY[i] = posY[i];
+                startZ[i] = posZ[i];
 
-                const momentum = 120.0;
-                const spread = 40.0;
-                p.c1x = p.sx + (p.vx * momentum) + (Math.random() - 0.5) * spread;
-                p.c1y = p.sy + (p.vy * momentum) + (Math.random() - 0.5) * spread;
-                p.c1z = p.sz + (p.vz * momentum) + (Math.random() - 0.5) * spread;
+                ctrl1X[i] = startX[i] + (velX[i] * momentum) + (Math.random() - 0.5) * spread;
+                ctrl1Y[i] = startY[i] + (velY[i] * momentum) + (Math.random() - 0.5) * spread;
+                ctrl1Z[i] = startZ[i] + (velZ[i] * momentum) + (Math.random() - 0.5) * spread;
 
-                const approach = 50.0;
-                p.c2x = p.tx + (Math.random() - 0.5) * approach;
-                p.c2y = p.ty + (Math.random() - 0.5) * approach;
-                p.c2z = p.tz + (Math.random() - 0.5) * approach;
+                ctrl2X[i] = tgtX[i] + (Math.random() - 0.5) * approach;
+                ctrl2Y[i] = tgtY[i] + (Math.random() - 0.5) * approach;
+                ctrl2Z[i] = tgtZ[i] + (Math.random() - 0.5) * approach;
             }
         }
 
@@ -449,12 +450,18 @@ function render(timestamp) {
         camYaw = progress >= 1.0 ? targetYaw : baseYaw + yawCorrection * ease;
         camPitch = capturedPitch * (1.0 - ease);
 
-        let t = progress;
+        // Bezier basis functions are shared by every particle this frame
+        const t = progress;
+        const u = 1 - t;
+        const b0 = u * u * u;
+        const b1 = 3 * u * u * t;
+        const b2 = 3 * u * t * t;
+        const b3 = t * t * t;
 
-        for (let p of particles) {
-            p.x = cubicBezier(t, p.sx, p.c1x, p.c2x, p.tx);
-            p.y = cubicBezier(t, p.sy, p.c1y, p.c2y, p.ty);
-            p.z = cubicBezier(t, p.sz, p.c1z, p.c2z, p.tz);
+        for (let i = 0; i < NUM_POINTS; i++) {
+            posX[i] = b0 * startX[i] + b1 * ctrl1X[i] + b2 * ctrl2X[i] + b3 * tgtX[i];
+            posY[i] = b0 * startY[i] + b1 * ctrl1Y[i] + b2 * ctrl2Y[i] + b3 * tgtY[i];
+            posZ[i] = b0 * startZ[i] + b1 * ctrl1Z[i] + b2 * ctrl2Z[i] + b3 * tgtZ[i];
         }
     }
 
@@ -477,49 +484,66 @@ function render(timestamp) {
 
     const cosA = Math.cos(camPitch), sinA = Math.sin(camPitch);
     const cosB = Math.cos(camYaw), sinB = Math.sin(camYaw);
+    const halfWidth = width / 2;
+    const halfHeight = height / 2;
+    const nearClip = -currentViewDist + 1;
+    const invDepthRange = 1.0 / (SPHERE_RADIUS * 4.0);
 
     for (let i = 0; i < NUM_POINTS; i++) {
-        let p = particles[i];
+        const y1 = posY[i] * cosA - posZ[i] * sinA;
+        const z2 = posY[i] * sinA + posZ[i] * cosA;
+        const x1 = posX[i];
 
-        let y1 = p.y * cosA - p.z * sinA;
-        let z1 = p.y * sinA + p.z * cosA;
-        let x1 = p.x;
+        const x2 = x1 * cosB - y1 * sinB;
+        const y2 = x1 * sinB + y1 * cosB;
 
-        let x2 = x1 * cosB - y1 * sinB;
-        let y2 = x1 * sinB + y1 * cosB;
-        let z2 = z1;
+        if (z2 <= nearClip) continue;
 
-        if (z2 > -currentViewDist + 1) {
-            let ooz = 1.0 / (currentViewDist + z2 / 4.0);
+        const ooz = 1.0 / (currentViewDist + z2 / 4.0);
+        const xp = Math.floor(halfWidth + K1 * ooz * x2 * aspectCorrection);
+        const yp = Math.floor(halfHeight - K1 * ooz * y2);
 
-            // Aspect ratio correction: (charHeight / charWidth) instead of 2.0
-            let xp = Math.floor(width / 2 + K1 * ooz * x2 * aspectCorrection);
-            let yp = Math.floor(height / 2 - K1 * ooz * y2);
+        if (xp < 0 || xp >= width || yp < 0 || yp >= height) continue;
 
-            if (xp >= 0 && xp < width && yp >= 0 && yp < height) {
-                let idx = xp + yp * width;
-                if (ooz > zbuffer[idx]) {
-                    zbuffer[idx] = ooz;
+        const idx = xp + yp * width;
+        if (ooz <= zbuffer[idx]) continue;
+        zbuffer[idx] = ooz;
 
-                    // 1. Calculate Standard Light Shade
-                    let bBlob = (x2 * -0.5 + y2 * -0.5 + z2 * -1.0) / SPHERE_RADIUS + 0.3;
-                    if (bBlob < 0) bBlob = 0; if (bBlob > 1) bBlob = 1;
-                    let shadeCharCode = sampleRampCode(SHADE_CHAR_CODES, bBlob, xp, yp, SHADE_DITHER);
+        // Rotate the surface normal through the same camera transform.
+        // dir* stays a unit sphere normal through blob and explode phases.
+        const ny1 = dirY[i] * cosA - dirZ[i] * sinA;
+        const nz2 = dirY[i] * sinA + dirZ[i] * cosA;
+        const nx2 = dirX[i] * cosB - ny1 * sinB;
+        const ny2 = dirX[i] * sinB + ny1 * cosB;
 
-                    // 2. Determine Final Char
-                    let finalCharCode = shadeCharCode;
+        // Lambert diffuse + Blinn specular (^16 via repeated squaring)
+        let diff = nx2 * LX + ny2 * LY + nz2 * LZ;
+        if (diff < 0) diff = 0;
+        let spec = nx2 * HX + ny2 * HY + nz2 * HZ;
+        if (spec < 0) spec = 0;
+        spec *= spec; spec *= spec; spec *= spec; spec *= spec;
 
-                    if (stateTimer > TIME_TEXT_START && p.tCharCode !== SPACE_CODE) {
-                        // Deterministic reveal prevents noisy frame-to-frame flicker while preserving the morph.
-                        if (morphToText >= p.revealThreshold) {
-                            finalCharCode = p.tCharCode;
-                        }
-                    }
+        // Faint bounce fill from below keeps the dark side from going black
+        const bounce = ny2 < 0 ? -ny2 * 0.16 : 0;
+        let brightness = 0.1 + diff * 0.85 + spec * 0.6 + bounce;
 
-                    output[idx] = finalCharCode;
-                }
-            }
+        // Depth cue: pull the far side down slightly
+        let fade = 0.88 - z2 * invDepthRange * 0.5;
+        if (fade < 0.55) fade = 0.55; else if (fade > 1.0) fade = 1.0;
+        brightness *= fade;
+
+        // As the text forms, flatten lighting so the glyphs read evenly
+        if (morphToText > 0) brightness += (0.62 - brightness) * morphToText;
+        if (brightness > 1) brightness = 1;
+
+        let code = sampleRampCode(SHADE_CHAR_CODES, brightness, xp, yp, SHADE_DITHER);
+
+        if (morphToText > 0 && tgtChar[i] !== SPACE_CODE && morphToText >= reveal[i]) {
+            // Deterministic reveal prevents noisy frame-to-frame flicker while preserving the morph.
+            code = tgtChar[i];
         }
+
+        output[idx] = code;
     }
 
     surface.presentText(screenElement);

@@ -15,8 +15,8 @@ html {
     font-size: var(--base-font-size);
     overflow-x: hidden;
     width: 100vw;
-    /* Two snap points: hero top and content top. Scrolling past the hero
-       settles on the content; the tall content area scrolls freely. */
+    /* Snap points at the hero and at every content section, so the page
+       catches on each section as you scroll between them. */
     scroll-snap-type: y mandatory;
 }
 
@@ -67,7 +67,6 @@ body {
 /* New Layout Styles */
 .content-container {
     width: 90vw;
-    scroll-snap-align: start;
     /* Removed max-width to allow infinite scaling */
     display: flex;
     flex-direction: row;
@@ -180,6 +179,10 @@ body {
 }
 
 .scroll-section {
+    /* Each section is a snap point: scrolling catches on one section at a
+       time instead of gliding through the whole column. */
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
     opacity: 0;
     transform: translateY(30px);
     transition: opacity 0.8s ease-out, transform 0.8s ease-out;

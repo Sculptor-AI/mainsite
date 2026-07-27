@@ -15,8 +15,9 @@ html {
     font-size: var(--base-font-size);
     overflow-x: hidden;
     width: 100vw;
-    /* Two snap points: hero top and content top. Scrolling past the hero
-       settles on the content; the tall content area scrolls freely. */
+    /* The hero and every content section are snap points, so scrolling
+       always settles with one subject centered instead of drifting between
+       two of them. */
     scroll-snap-type: y mandatory;
 }
 
@@ -67,7 +68,6 @@ body {
 /* New Layout Styles */
 .content-container {
     width: 90vw;
-    scroll-snap-align: start;
     /* Removed max-width to allow infinite scaling */
     display: flex;
     flex-direction: row;
@@ -166,7 +166,9 @@ body {
     gap: 40vh;
     /* Large gap for scrolling effect */
     padding-top: 25vh;
-    padding-bottom: 5vh;
+    /* Enough runway below the last section that it can still reach the
+       center snap position */
+    padding-bottom: 40vh;
     max-width: none;
     /* Let it scale */
     width: 45vw;
@@ -180,6 +182,9 @@ body {
 }
 
 .scroll-section {
+    /* Each section catches at the middle of the viewport, which is also the
+       band the model's state observers watch */
+    scroll-snap-align: center;
     opacity: 0;
     transform: translateY(30px);
     transition: opacity 0.8s ease-out, transform 0.8s ease-out;

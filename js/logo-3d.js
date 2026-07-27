@@ -11,6 +11,7 @@
         clamp01,
         createTextSurface,
         createVisibilityController,
+        hash01,
         packColor,
         toCharCodes,
         computeShapeVectors,
@@ -60,6 +61,32 @@
     const CK_BODY = 0, CK_WHEEL = 1, CK_ROAD = 2, CK_DASH = 3,
         CK_EDGE = 4, CK_RIM = 5, CK_GLASS = 6;
 
+    // --- Sunfish configuration (Mola mola) ---
+    const FK_BODY = 0, FK_FIN = 1, FK_CLAVUS = 2, FK_PECT = 3,
+        FK_EYE = 4, FK_MOUTH = 5, FK_GILL = 6;
+
+    // Body outline: a superellipse whose rear exponent squares off the profile
+    // into the truncated shape a mola has in place of a tail.
+    const FISH_A_FRONT = 15.5, FISH_A_REAR = 13.5;
+    const FISH_B_TOP = 12.0, FISH_B_BOT = 11.5;
+    const FISH_N_FRONT = 2.05, FISH_N_REAR = 3.3;
+    const FISH_T = 5.0;            // half-thickness at the center of the disc
+    const FISH_FLAP_AMP = 3.6;     // how far the fin tips scull out of plane
+    const FISH_FLAP_SPEED = 1.05;
+    const FISH_SWAY = 0.5;         // lazy yaw oscillation around the profile view
+
+    // --- Microscope configuration (research section) ---
+    const MK_BASE = 0, MK_ARM = 1, MK_STAGE = 2, MK_SLIDE = 3, MK_TUBE = 4,
+        MK_TURRET = 5, MK_OBJ = 6, MK_KNOB = 7, MK_LAMP = 8, MK_LENS = 9, MK_BEAM = 10;
+
+    const SCOPE_SCALE = 1.22;
+    const SCOPE_LIFT = 5.4;
+    const SCOPE_TURRET_X = 0.5, SCOPE_TURRET_Z = 0.0;
+    const SCOPE_OBJ_RADIUS = 2.5;
+    const SCOPE_PIVOT_X = SCOPE_TURRET_X * SCOPE_SCALE;
+    const SCOPE_PIVOT_Z = SCOPE_TURRET_Z * SCOPE_SCALE;
+    const SCOPE_TURRET_DWELL = 4.5; // seconds between nosepiece clicks
+
     // A long gradient used as a fallback ramp
     const SHADE_CHARS = " `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@";
     const SHADE_CHAR_CODES = toCharCodes(SHADE_CHARS);
@@ -89,28 +116,6 @@
                                          =+=-.
 `;
 
-    const FISH_ART = `
-                           .
-                         .\` \`.
-                       .\`     \`.
-                 _....:._       .                        .
-              .-\`        \`\`-._   \`.                   .-\` .
-           .-\`                \`-..:_               .-\`    .
-        .-\`                         \`-.          .\`       .
-     .-\`                               \`-.__...-\`       .\`
-   .\`                                                  .
- .\`   ()     .                                        .
- \`.          .                                         .
-   \`.        .  .'''.                   _....._         \`.
-     \`-.    .   '....'               ..'.      \`-.        .
-        \`-..._                    _.\`    '        \`-.     .
-              \`-.................'.    .'            \`-.__. 
-                   \`.         :    '. '
-                     \`.       :      '
-                       \`._.  .'
-                          \`.\`
-`;
-
     const GRID_X = 1.35;
     const GRID_Y = 2.6;
 
@@ -126,6 +131,8 @@
     const DWARF_RIM_COLOR = { r: 255, g: 232, b: 180 };
 
     function lerp(start, end, t) { return start * (1 - t) + end * t; }
+
+    function easeInOutQuad(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
 
     function lerpColor(c1, c2, t) {
         return {
@@ -192,41 +199,354 @@
         return targets;
     }
 
-    function generateFishTargets() {
+    // --- Ocean sunfish geometry ---
+    // A mola is a laterally compressed disc: a tall, rear-truncated body with a
+    // long dorsal fin, a mirrored anal fin, a scalloped clavus where a tail
+    // would be, and small pectorals. The body is built as a lens surface — the
+    // half-thickness falls to zero at the outline, so the two faces close on
+    // each other and the rim needs no separate seam pass.
+
+    function fishProfileD(x, y) {
+        const rx = x >= 0 ? FISH_A_FRONT : FISH_A_REAR;
+        const ry = y >= 0 ? FISH_B_TOP : FISH_B_BOT;
+        const n = x >= 0 ? FISH_N_FRONT : FISH_N_REAR;
+        const u = Math.abs(x) / rx, v = Math.abs(y) / ry;
+        return Math.pow(Math.pow(u, n) + Math.pow(v, n), 1 / n);
+    }
+
+    function fishThickness(x, y) {
+        const d = fishProfileD(x, y);
+        if (d >= 1) return 0;
+        // Full through the middle, rolling off sharply into a thin rim
+        const bulk = Math.pow(1 - d * d, 0.62);
+        // The head end carries more bulk than the tapering rear
+        const fore = 0.84 + 0.16 * clamp01((x + 8) / 20);
+        return FISH_T * bulk * fore;
+    }
+
+    // Rear edge of the body at a given height, used to hang the clavus off it
+    function fishRearEdge(y) {
+        const ry = y >= 0 ? FISH_B_TOP : FISH_B_BOT;
+        const k = Math.pow(Math.abs(y) / ry, FISH_N_REAR);
+        if (k >= 1) return null;
+        return -FISH_A_REAR * Math.pow(1 - k, 1 / FISH_N_REAR);
+    }
+
+    // Pale blotches plus the skin folds that radiate out from behind the
+    // pectoral fin — the two things that make mola hide read as mola hide.
+    function fishSkin(x, y) {
+        const blotch = hash01(Math.floor(x * 1.4) * 37.1 + Math.floor(y * 1.4) * 91.7);
+        const ang = Math.atan2(y - 1.0, x - 4.0);
+        const rad = Math.hypot(x - 4.0, y - 1.0);
+        const fold = Math.sin(ang * 11.0 + rad * 0.35);
+        return (blotch > 0.84 ? 0.9 : 0) + fold * 0.5;
+    }
+
+    function pushFishBody(targets, count, rimBand) {
+        const eps = 0.14;
+        let added = 0, guard = count * 40;
+        while (added < count && guard-- > 0) {
+            let x, y;
+            if (rimBand) {
+                // fishProfileD is homogeneous, so a unit direction gives the
+                // radius that lands on any chosen iso-contour directly
+                const ang = Math.random() * Math.PI * 2;
+                const ca = Math.cos(ang), sa = Math.sin(ang);
+                const unit = fishProfileD(ca, sa) || 1;
+                const dd = 0.9 + Math.random() * 0.0995;
+                x = ca * dd / unit;
+                y = sa * dd / unit;
+            } else {
+                x = -FISH_A_REAR + Math.random() * (FISH_A_REAR + FISH_A_FRONT);
+                y = -FISH_B_BOT + Math.random() * (FISH_B_BOT + FISH_B_TOP);
+                if (fishProfileD(x, y) >= 0.93) continue;
+            }
+
+            const t = fishThickness(x, y);
+            if (t <= 0.001) continue;
+
+            const tx = (fishThickness(x + eps, y) - fishThickness(x - eps, y)) / (2 * eps);
+            const ty = (fishThickness(x, y + eps) - fishThickness(x, y - eps)) / (2 * eps);
+            const side = Math.random() < 0.5 ? 1 : -1;
+            let nx = -side * tx, ny = -side * ty, nz = side;
+            const nl = Math.hypot(nx, ny, nz) || 1;
+
+            targets.push({
+                x, y, z: side * t,
+                nx: nx / nl, ny: ny / nl, nz: nz / nl,
+                kind: FK_BODY, flap: 0, tex: fishSkin(x, y), a: 0
+            });
+            added++;
+        }
+    }
+
+    // Fins are sheets swept from a base segment to a tip, bowed along the
+    // leading edge and thinning to nothing at every free edge.
+    function pushFishFin(targets, count, baseFront, baseRear, tip, thick, curve) {
+        const cx = (baseFront[0] + baseRear[0] + tip[0]) / 3;
+        const cy = (baseFront[1] + baseRear[1] + tip[1]) / 3;
+        for (let i = 0; i < count; i++) {
+            // Area-uniform toward the tip: density falls off as (1 - h)
+            const h = 1 - Math.sqrt(1 - Math.random());
+            const s = Math.random();
+            const bx = baseFront[0] + (baseRear[0] - baseFront[0]) * s;
+            const by = baseFront[1] + (baseRear[1] - baseFront[1]) * s;
+            const x = bx + (tip[0] - bx) * h + Math.sin(Math.PI * h) * curve * (1 - s);
+            const y = by + (tip[1] - by) * h;
+
+            const edge = Math.sqrt(clamp01(3.2 * Math.min(s, 1 - s))) *
+                Math.sqrt(clamp01(2.6 * (1 - h)));
+            const t = thick * (0.4 + 0.6 * (1 - h)) * edge;
+            if (t < 0.03) continue;
+
+            const side = Math.random() < 0.5 ? 1 : -1;
+            // Roll the normal outward near the edges so the fin isn't cardboard
+            const roll = (1 - edge) * 0.9;
+            let nx = (x - cx) * 0.04 * roll, ny = (y - cy) * 0.04 * roll, nz = side;
+            const nl = Math.hypot(nx, ny, nz) || 1;
+
+            targets.push({
+                x, y, z: side * t,
+                nx: nx / nl, ny: ny / nl, nz: nz / nl,
+                kind: FK_FIN, flap: Math.pow(h, 1.7), tex: 0, a: 0
+            });
+        }
+    }
+
+    function pushFishClavus(targets, count) {
+        for (let i = 0; i < count; i++) {
+            const y = (Math.random() * 2 - 1) * 10.6;
+            const xb = fishRearEdge(y);
+            if (xb === null) continue;
+
+            // Scalloped trailing edge — the clavus is a row of soft lobes
+            const reach = 4.6 + Math.sin(y * 1.15) * 1.3;
+            const u = Math.random();
+            const x = xb - u * reach;
+            const taper = Math.sqrt(clamp01(1 - Math.pow(Math.abs(y) / 10.6, 6)));
+            const t = 1.2 * (1 - u * 0.75) * taper;
+            if (t < 0.03) continue;
+
+            const side = Math.random() < 0.5 ? 1 : -1;
+            targets.push({
+                x, y, z: side * t,
+                nx: -0.18 * u, ny: 0, nz: side * 0.98,
+                kind: FK_CLAVUS, flap: Math.pow(u, 1.4) * 0.45, tex: 0, a: 0
+            });
+        }
+    }
+
+    function pushFishPectoral(targets, count) {
+        const cx = 3.0, cy = 1.4;
+        for (let i = 0; i < count; i++) {
+            const ang = Math.random() * Math.PI * 2;
+            const rr = Math.sqrt(Math.random());
+            const ex = Math.cos(ang) * rr * 3.4, ey = Math.sin(ang) * rr * 2.5;
+            const x = cx + ex * 0.95 - ey * 0.22;
+            const y = cy + ey + ex * 0.16;
+            const side = Math.random() < 0.5 ? 1 : -1;
+            // Sits just proud of the flank it grows out of
+            const t = fishThickness(x, y) + 0.55 * Math.sqrt(clamp01(1 - rr * rr));
+            targets.push({
+                x, y, z: side * t,
+                nx: ex * 0.05, ny: ey * 0.05, nz: side,
+                kind: FK_PECT, flap: 0, tex: rr, a: rr
+            });
+        }
+    }
+
+    // Small features that live on the flank: eye, beak, gill opening.
+    function pushFishPatch(targets, count, cx, cy, rx, ry, kind, lift) {
+        for (let i = 0; i < count; i++) {
+            const ang = Math.random() * Math.PI * 2;
+            const rr = Math.sqrt(Math.random());
+            const x = cx + Math.cos(ang) * rr * rx;
+            const y = cy + Math.sin(ang) * rr * ry;
+            const t = fishThickness(x, y);
+            if (t <= 0) continue;
+            const side = Math.random() < 0.5 ? 1 : -1;
+            targets.push({
+                x, y, z: side * (t + lift),
+                nx: 0, ny: 0, nz: side,
+                kind, flap: 0, tex: 0, a: rr
+            });
+        }
+    }
+
+    function pushFishGill(targets, count) {
+        for (let i = 0; i < count; i++) {
+            const a = -1.0 + Math.random() * 2.0;
+            const r = 2.3 + (Math.random() - 0.5) * 0.55;
+            const x = 7.4 - Math.cos(a) * r * 0.42;
+            const y = -0.6 + Math.sin(a) * r;
+            const t = fishThickness(x, y);
+            if (t <= 0) continue;
+            const side = Math.random() < 0.5 ? 1 : -1;
+            targets.push({
+                x, y, z: side * (t + 0.06),
+                nx: 0, ny: 0, nz: side,
+                kind: FK_GILL, flap: 0, tex: 0, a: 0
+            });
+        }
+    }
+
+    function generateFishTargets(count) {
         const targets = [];
-        const lines = FISH_ART.split('\n');
-        let minC = 9999, maxC = 0, minR = 9999, maxR = 0;
-        for (let r = 0; r < lines.length; r++) {
-            for (let c = 0; c < lines[r].length; c++) {
-                if (lines[r][c] !== ' ' && lines[r][c] !== '\n') {
-                    if (c < minC) minC = c; if (c > maxC) maxC = c;
-                    if (r < minR) minR = r; if (r > maxR) maxR = r;
-                }
+        const share = f => Math.max(1, Math.floor(count * f));
+
+        pushFishBody(targets, share(0.55), false);
+        pushFishBody(targets, share(0.12), true);
+        pushFishFin(targets, share(0.10), [2.5, 9.5], [-10.5, 7.5], [-11.0, 26.5], 1.6, 1.7);
+        pushFishFin(targets, share(0.09), [1.5, -9.5], [-10.5, -7.5], [-12.0, -25.0], 1.5, 1.5);
+        pushFishClavus(targets, share(0.07));
+        pushFishPectoral(targets, share(0.035));
+        pushFishPatch(targets, share(0.008), 11.5, 3.2, 1.15, 1.15, FK_EYE, 0.14);
+        pushFishPatch(targets, share(0.004), 14.1, -2.6, 1.0, 0.8, FK_MOUTH, 0.05);
+        pushFishGill(targets, share(0.006));
+
+        if (targets.length < count) pushFishBody(targets, count - targets.length, false);
+        return targets.slice(0, count);
+    }
+
+    // --- Surface samplers ---
+    // Scatter points over the skin of a primitive, area-weighted per face so
+    // density stays even. Each point carries its own normal, which is what the
+    // shading pass needs and what an SDF would have to re-derive.
+
+    function pushSurfaceBox(targets, count, cx, cy, cz, hx, hy, hz, kind) {
+        const faces = [
+            [hy * hz, 1, 0, 0], [hy * hz, -1, 0, 0],
+            [hx * hz, 0, 1, 0], [hx * hz, 0, -1, 0],
+            [hx * hy, 0, 0, 1], [hx * hy, 0, 0, -1]
+        ];
+        let total = 0;
+        for (const f of faces) total += f[0];
+
+        for (let i = 0; i < count; i++) {
+            let pick = Math.random() * total;
+            let face = faces[faces.length - 1];
+            for (const cand of faces) {
+                pick -= cand[0];
+                if (pick <= 0) { face = cand; break; }
             }
+            const nx = face[1], ny = face[2], nz = face[3];
+            const u = Math.random() * 2 - 1, v = Math.random() * 2 - 1;
+            targets.push({
+                x: cx + (nx ? nx * hx : u * hx),
+                y: cy + (ny ? ny * hy : (nx ? u * hy : v * hy)),
+                z: cz + (nz ? nz * hz : v * hz),
+                nx, ny, nz, kind, a: 0, s: 0, spin: 0
+            });
         }
-        const centerX = (minC + maxC) / 2;
-        const centerY = (minR + maxR) / 2;
-        for (let r = 0; r < lines.length; r++) {
-            for (let c = 0; c < lines[r].length; c++) {
-                let char = lines[r][c];
-                if (char && char !== ' ' && char !== '\n') {
-                    const baseX = (c - centerX) * GRID_X;
-                    const baseY = -(r - centerY) * GRID_Y;
-                    const weight = getCharWeight(char);
-                    const FISH_EXTRUSION = 4.0, FISH_SCALE = 0.5;
-                    for (let z = -FISH_EXTRUSION; z <= FISH_EXTRUSION; z += Z_STEP) {
-                        targets.push({
-                            x: (baseX + (Math.random() - 0.5) * XY_JITTER) * FISH_SCALE,
-                            y: (baseY + (Math.random() - 0.5) * XY_JITTER) * FISH_SCALE,
-                            z: z * FISH_SCALE,
-                            isFace: (z > FISH_EXTRUSION - 1.0 || z < -FISH_EXTRUSION + 1.0),
-                            weight: weight
-                        });
-                    }
-                }
+    }
+
+    function pushSurfaceCylinder(targets, count, x0, y0, z0, x1, y1, z1, radius, kind, opts) {
+        const o = opts || {};
+        let ax = x1 - x0, ay = y1 - y0, az = z1 - z0;
+        const len = Math.hypot(ax, ay, az) || 1;
+        ax /= len; ay /= len; az /= len;
+
+        // Any vector not parallel to the axis seeds the orthonormal basis
+        const hx = Math.abs(az) > 0.9 ? 1 : 0;
+        const hz = Math.abs(az) > 0.9 ? 0 : 1;
+        let ux = ay * hz, uy = az * hx - ax * hz, uz = -ay * hx;
+        const ul = Math.hypot(ux, uy, uz) || 1;
+        ux /= ul; uy /= ul; uz /= ul;
+        const vx = ay * uz - az * uy, vy = az * ux - ax * uz, vz = ax * uy - ay * ux;
+
+        const taper = o.taper || 1;
+        const capFar = o.capFar !== false, capNear = o.capNear !== false;
+        const lateral = 2 * Math.PI * radius * len;
+        const capArea = Math.PI * radius * radius;
+        const total = lateral + (capFar ? capArea : 0) + (capNear ? capArea : 0);
+
+        for (let i = 0; i < count; i++) {
+            let pick = Math.random() * total;
+            const ang = Math.random() * Math.PI * 2;
+            const ca = Math.cos(ang), sa = Math.sin(ang);
+
+            let along, r, nx, ny, nz;
+            if (pick < lateral || (!capFar && !capNear)) {
+                along = Math.random();
+                r = radius * (1 - (1 - taper) * along);
+                nx = ux * ca + vx * sa; ny = uy * ca + vy * sa; nz = uz * ca + vz * sa;
+            } else {
+                pick -= lateral;
+                const far = capFar && (pick < capArea || !capNear);
+                along = far ? 1 : 0;
+                r = radius * Math.sqrt(Math.random()) * (far ? taper : 1);
+                nx = far ? ax : -ax; ny = far ? ay : -ay; nz = far ? az : -az;
             }
+
+            targets.push({
+                x: x0 + ax * len * along + (ux * ca + vx * sa) * r,
+                y: y0 + ay * len * along + (uy * ca + vy * sa) * r,
+                z: z0 + az * len * along + (uz * ca + vz * sa) * r,
+                nx, ny, nz, kind,
+                a: o.phaseAngle ? ang : along,
+                s: 0, spin: o.spin || 0
+            });
         }
-        return targets;
+    }
+
+    // --- Microscope geometry ---
+    // Foot, arm, stage and head assembled from primitives. The nosepiece is
+    // marked `spin` so the render loop can revolve the objectives around the
+    // turret axis while the instrument itself turns.
+
+    function generateScopeTargets(count) {
+        const targets = [];
+        const share = f => Math.max(1, Math.floor(count * f));
+
+        // Heavy foot the whole instrument grows out of
+        pushSurfaceBox(targets, share(0.14), -1.5, -22.0, 0, 13.0, 2.2, 9.0, MK_BASE);
+
+        // Illuminator column, lamp, and the light climbing toward the stage
+        pushSurfaceCylinder(targets, share(0.035), 4, -19.8, 0, 4, -13.2, 0, 2.0, MK_TUBE, { capNear: false });
+        pushSurfaceCylinder(targets, share(0.012), 4, -13.2, 0, 4, -12.8, 0, 1.8, MK_LAMP, {});
+        pushSurfaceCylinder(targets, share(0.012), 4, -12.7, 0, 4, -11.9, 0, 1.0, MK_BEAM, { capFar: false, capNear: false });
+
+        // Stage and the specimen slide clipped to it
+        pushSurfaceBox(targets, share(0.10), 3, -11.0, 0, 10.0, 0.8, 7.5, MK_STAGE);
+        pushSurfaceBox(targets, share(0.02), 4, -10.0, 0, 4.5, 0.2, 2.2, MK_SLIDE);
+
+        // Arm: the spine at the back plus the elbow carrying the head
+        pushSurfaceBox(targets, share(0.17), -10.0, -6.5, 0, 3.2, 15.5, 4.0, MK_ARM);
+        pushSurfaceBox(targets, share(0.07), -5.5, 7.5, 0, 5.5, 2.6, 3.6, MK_ARM);
+
+        // Coarse and fine focus knobs, one stack per side
+        for (const side of [1, -1]) {
+            pushSurfaceCylinder(targets, share(0.035), -10, -4.0, side * 4.0, -10, -4.0, side * 5.4, 3.6, MK_KNOB, { phaseAngle: true });
+            pushSurfaceCylinder(targets, share(0.018), -10, -4.0, side * 5.4, -10, -4.0, side * 6.4, 2.1, MK_KNOB, { phaseAngle: true });
+        }
+
+        // Nosepiece turret and the three objectives that revolve beneath it
+        pushSurfaceCylinder(targets, share(0.05), SCOPE_TURRET_X, -3.4, 0, SCOPE_TURRET_X, -1.0, 0, 4.2, MK_TURRET, {});
+        const perObjective = Math.floor(share(0.05) / 3);
+        for (let k = 0; k < 3; k++) {
+            const a = (k / 3) * Math.PI * 2;
+            const ox = SCOPE_TURRET_X + Math.cos(a) * SCOPE_OBJ_RADIUS;
+            const oz = SCOPE_TURRET_Z + Math.sin(a) * SCOPE_OBJ_RADIUS;
+            const drop = 3.4 + k * 1.1; // three magnifications, three lengths
+            pushSurfaceCylinder(targets, perObjective, ox, -3.4, oz, ox, -3.4 - drop, oz, 1.25, MK_OBJ,
+                { taper: 0.55, spin: 1, capNear: false });
+        }
+
+        // Body tube, then the ocular tilting forward to the eyepiece
+        pushSurfaceCylinder(targets, share(0.09), SCOPE_TURRET_X, -1.4, 0, -2.0, 7.0, 0, 3.2, MK_TUBE, { capFar: false, capNear: false });
+        pushSurfaceCylinder(targets, share(0.09), -2.4, 6.4, 0, 5.5, 13.5, 0, 2.1, MK_TUBE, { capNear: false });
+        pushSurfaceCylinder(targets, share(0.02), 5.4, 13.4, 0, 5.7, 13.8, 0, 2.1, MK_LENS, {});
+
+        // Top up with foot points so every particle has somewhere to land
+        if (targets.length < count) {
+            pushSurfaceBox(targets, count - targets.length, -1.5, -22.0, 0, 13.0, 2.2, 9.0, MK_BASE);
+        }
+
+        for (const t of targets) {
+            t.y += SCOPE_LIFT;
+            t.x *= SCOPE_SCALE; t.y *= SCOPE_SCALE; t.z *= SCOPE_SCALE;
+        }
+        return targets.slice(0, count);
     }
 
     // --- Car diorama geometry ---
@@ -444,7 +764,11 @@
                             logoFaceSign: z >= 0 ? 1 : -1,
                             logoWeight: weight,
                             fishX: 0, fishY: 0, fishZ: 0,
-                            fishIsFace: false, fishFaceSign: 1, fishWeight: 0,
+                            fishNX: 0, fishNY: 0, fishNZ: 1,
+                            fishKind: FK_BODY, fishFlap: 0, fishTex: 0, fishPhase: 0,
+                            scopeX: 0, scopeY: 0, scopeZ: 0,
+                            scopeNX: 0, scopeNY: 1, scopeNZ: 0,
+                            scopeKind: MK_BASE, scopePhase: 0, scopeSpin: 0,
                             dwarfX: 0, dwarfY: 0, dwarfZ: 0,
                             dwarfNX: 0, dwarfNY: 0, dwarfNZ: 0,
                             dwarfBandPhase: 0, dwarfSwirlPhase: 0,
@@ -464,12 +788,14 @@
     initLogo();
 
     // Generate targets
-    const fishTargets = generateFishTargets();
+    const fishTargets = generateFishTargets(particles.length);
+    const scopeTargets = generateScopeTargets(particles.length);
     const dwarfTargets = generateDwarfTargets(particles.length);
     const carTargets = generateCarTargets(particles.length);
 
     const particleOrder = buildSortedIndices(particles.length, i => ({ x: particles[i].logoX, y: particles[i].logoY, z: particles[i].logoZ }));
     const fishOrder = buildSortedIndices(fishTargets.length, i => fishTargets[i]);
+    const scopeOrder = buildSortedIndices(scopeTargets.length, i => scopeTargets[i]);
     const dwarfOrder = buildSortedIndices(dwarfTargets.length, i => dwarfTargets[i]);
     const carOrder = buildSortedIndices(carTargets.length, i => carTargets[i]);
 
@@ -479,9 +805,20 @@
         if (k < fishTargets.length) {
             const tFish = fishTargets[fishOrder[k]];
             p.fishX = tFish.x; p.fishY = tFish.y; p.fishZ = tFish.z;
-            p.fishIsFace = tFish.isFace;
-            p.fishFaceSign = tFish.z >= 0 ? 1 : -1;
-            p.fishWeight = tFish.weight;
+            p.fishNX = tFish.nx; p.fishNY = tFish.ny; p.fishNZ = tFish.nz;
+            p.fishKind = tFish.kind;
+            p.fishFlap = tFish.flap;
+            p.fishTex = tFish.tex;
+            p.fishPhase = tFish.a;
+        }
+
+        if (k < scopeTargets.length) {
+            const tScope = scopeTargets[scopeOrder[k]];
+            p.scopeX = tScope.x; p.scopeY = tScope.y; p.scopeZ = tScope.z;
+            p.scopeNX = tScope.nx; p.scopeNY = tScope.ny; p.scopeNZ = tScope.nz;
+            p.scopeKind = tScope.kind;
+            p.scopePhase = tScope.a;
+            p.scopeSpin = tScope.spin;
         }
 
         const tDwarf = dwarfTargets[dwarfOrder[k]];
@@ -607,21 +944,19 @@
     window.addEventListener('touchend', handleDragEnd);
     window.addEventListener('touchcancel', handleDragEnd);
 
-    // State: 0 = Logo, 2 = Fish, 3 = Dwarf, 4 = Logo2, 5 = Car
+    // State: 0 = Logo, 1 = Microscope, 2 = Fish, 3 = Dwarf, 4 = Logo2, 5 = Car
+    const SHAPE_KEYS = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car'];
+    const STATE_SHAPE = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car'];
+
     let targetState = 0;
     let lastTimestamp = performance.now();
-    let currentWeights = { logo: 1, fish: 0, dwarf: 0, logo2: 0, car: 0 };
-    let targetWeights = { logo: 1, fish: 0, dwarf: 0, logo2: 0, car: 0 };
+    const currentWeights = { logo: 1, scope: 0, fish: 0, dwarf: 0, logo2: 0, car: 0 };
+    let targetWeights = getTargetWeightsForState(0);
 
     function getTargetWeightsForState(state) {
-        let w = { logo: 0, fish: 0, dwarf: 0, logo2: 0, car: 0 };
-        switch (state) {
-            case 0: w.logo = 1; break;
-            case 2: w.fish = 1; break;
-            case 3: w.dwarf = 1; break;
-            case 4: w.logo2 = 1; break;
-            case 5: w.car = 1; break;
-        }
+        const w = { logo: 0, scope: 0, fish: 0, dwarf: 0, logo2: 0, car: 0 };
+        const key = STATE_SHAPE[state];
+        if (key) w[key] = 1;
         return w;
     }
 
@@ -641,25 +976,23 @@
 
         // Morph weights
         const morphSpeed = dt / MORPH_DURATION * 2;
-        currentWeights.logo += (targetWeights.logo - currentWeights.logo) * morphSpeed;
-        currentWeights.fish += (targetWeights.fish - currentWeights.fish) * morphSpeed;
-        currentWeights.dwarf += (targetWeights.dwarf - currentWeights.dwarf) * morphSpeed;
-        currentWeights.logo2 += (targetWeights.logo2 - currentWeights.logo2) * morphSpeed;
-        currentWeights.car += (targetWeights.car - currentWeights.car) * morphSpeed;
-
-        let sum = currentWeights.logo + currentWeights.fish + currentWeights.dwarf + currentWeights.logo2 + currentWeights.car;
+        let sum = 0;
+        for (const key of SHAPE_KEYS) {
+            currentWeights[key] += (targetWeights[key] - currentWeights[key]) * morphSpeed;
+            sum += currentWeights[key];
+        }
         if (sum > 0.001) {
-            currentWeights.logo /= sum;
-            currentWeights.fish /= sum; currentWeights.dwarf /= sum;
-            currentWeights.logo2 /= sum; currentWeights.car /= sum;
+            for (const key of SHAPE_KEYS) currentWeights[key] /= sum;
         }
 
         let wLogo = currentWeights.logo < 0.001 ? 0 : currentWeights.logo;
+        let wScope = currentWeights.scope < 0.001 ? 0 : currentWeights.scope;
         let wFish = currentWeights.fish < 0.001 ? 0 : currentWeights.fish;
         let wDwarf = currentWeights.dwarf < 0.001 ? 0 : currentWeights.dwarf;
         let wLogo2 = currentWeights.logo2 < 0.001 ? 0 : currentWeights.logo2;
         let wCar = currentWeights.car < 0.001 ? 0 : currentWeights.car;
         const wLogoCombined = wLogo + wLogo2;
+        const hasScope = wScope > 0;
         const hasFish = wFish > 0;
         const hasDwarf = wDwarf > 0;
         const hasCar = wCar > 0;
@@ -677,6 +1010,19 @@
             band: time * 1.15, drift: time * 0.35,
             swirl: time * 1.7, storm: time * 0.6
         } : null;
+
+        // Sunfish: dorsal and anal fins scull in unison, the way a mola swims
+        const finSweep = hasFish ? Math.sin(time * FISH_FLAP_SPEED) * FISH_FLAP_AMP : 0;
+
+        // Microscope: the nosepiece dwells on an objective, then clicks 120°
+        // to the next one
+        const turretSeg = time / SCOPE_TURRET_DWELL;
+        const turretStep = Math.floor(turretSeg);
+        const turretAngle = (turretStep + easeInOutQuad(clamp01((turretSeg - turretStep) * 4.0)))
+            * (Math.PI * 2 / 3);
+        const turretCos = Math.cos(turretAngle), turretSin = Math.sin(turretAngle);
+        const scopeLampPulse = hasScope ? 0.82 + Math.sin(time * 2.3) * 0.14 : 0;
+        const scopeKnobSpin = time * 1.6;
 
         // Car animation clocks: dashes scroll backward, wheels spin to match
         const carRoadScroll = time * CAR_ROAD_SPEED;
@@ -704,7 +1050,21 @@
                 py += p.logoY * wLogoCombined;
                 pz += p.logoZ * wLogoCombined;
             }
-            if (hasFish) { px += p.fishX * wFish; py += p.fishY * wFish; pz += p.fishZ * wFish; }
+            if (hasFish) {
+                px += p.fishX * wFish;
+                py += p.fishY * wFish;
+                pz += (p.fishZ + finSweep * p.fishFlap) * wFish;
+            }
+            if (hasScope) {
+                let sx = p.scopeX, sz = p.scopeZ;
+                if (p.scopeSpin) {
+                    // Objectives orbit the turret axis instead of sitting still
+                    const dx = sx - SCOPE_PIVOT_X, dz = sz - SCOPE_PIVOT_Z;
+                    sx = SCOPE_PIVOT_X + dx * turretCos - dz * turretSin;
+                    sz = SCOPE_PIVOT_Z + dx * turretSin + dz * turretCos;
+                }
+                px += sx * wScope; py += p.scopeY * wScope; pz += sz * wScope;
+            }
             if (hasDwarf) { px += p.dwarfX * wDwarf; py += p.dwarfY * wDwarf; pz += p.dwarfZ * wDwarf; }
             if (hasCar) {
                 px += p.carX * wCar;
@@ -741,8 +1101,20 @@
                         let nx = nLogoX * wLogoCombined, ny = 0, nz = nLogoZ * wLogoCombined;
 
                         if (hasFish) {
-                            nx += (p.fishIsFace ? sinT * p.fishFaceSign : sideNormalX) * wFish;
-                            nz += (p.fishIsFace ? cosT * p.fishFaceSign : sideNormalZ) * wFish;
+                            nx += (p.fishNX * cosT - p.fishNZ * sinT) * wFish;
+                            ny += p.fishNY * wFish;
+                            nz += (p.fishNX * sinT + p.fishNZ * cosT) * wFish;
+                        }
+                        if (hasScope) {
+                            let snx = p.scopeNX, snz = p.scopeNZ;
+                            if (p.scopeSpin) {
+                                const rnx = snx * turretCos - snz * turretSin;
+                                snz = snx * turretSin + snz * turretCos;
+                                snx = rnx;
+                            }
+                            nx += (snx * cosT - snz * sinT) * wScope;
+                            ny += p.scopeNY * wScope;
+                            nz += (snx * sinT + snz * cosT) * wScope;
                         }
                         if (hasDwarf) {
                             nx += (p.dwarfNX * cosT - p.dwarfNZ * sinT) * wDwarf;
@@ -771,24 +1143,96 @@
                         if (wLogoCombined) {
                             brightness += (p.logoIsFace ? (diffuse * 0.4 + p.logoWeight * 0.8) : (diffuse * 0.7)) * wLogoCombined;
                         }
+                        // Solid-object shading terms shared by the modelled shapes:
+                        // how squarely the surface faces the camera, plus a
+                        // Blinn specular raised to ^16 by repeated squaring
+                        let facing = 0, spec = 0;
+                        if (hasFish || hasScope || hasCar) {
+                            facing = -nz;
+                            if (facing < 0) facing = 0;
+                            spec = nx * HX + ny * HY + nz * HZ;
+                            if (spec < 0) spec = 0;
+                            spec *= spec; spec *= spec; spec *= spec; spec *= spec;
+                        }
+
                         if (hasFish) {
-                            brightness += (p.fishIsFace ? (diffuse * 0.4 + p.fishWeight * 0.8) : (diffuse * 0.7)) * wFish;
+                            let fb;
+                            switch (p.fishKind) {
+                                case FK_BODY:
+                                    // Pale leathery flank: blotches and skin folds ride
+                                    // on top of the broad camera-facing gradient
+                                    fb = 0.14 + facing * 0.5 + diffuse * 0.26 + spec * 0.3
+                                        + p.fishTex * 0.07;
+                                    break;
+                                case FK_FIN:
+                                    // Dorsal and anal fins read much darker than the body
+                                    fb = 0.07 + facing * 0.26 + diffuse * 0.22;
+                                    break;
+                                case FK_CLAVUS:
+                                    fb = 0.09 + facing * 0.3 + diffuse * 0.22;
+                                    break;
+                                case FK_PECT:
+                                    // Catches more light than the flank behind it
+                                    fb = 0.2 + facing * 0.55 + diffuse * 0.25;
+                                    break;
+                                case FK_EYE:
+                                    // Dark pupil ringed by a pale iris
+                                    fb = p.fishPhase < 0.55 ? 0.0 : 0.85;
+                                    break;
+                                case FK_MOUTH: fb = 0.0; break;
+                                default: fb = 0.02; break; // gill slit
+                            }
+                            brightness += clamp01(fb) * wFish;
+                        }
+
+                        if (hasScope) {
+                            let sb;
+                            switch (p.scopeKind) {
+                                case MK_BASE:
+                                case MK_ARM:
+                                    // Cast metal: matte, with a soft sheen along the edges
+                                    sb = 0.14 + facing * 0.42 + diffuse * 0.28 + spec * 0.35;
+                                    break;
+                                case MK_TUBE:
+                                    sb = 0.18 + facing * 0.46 + diffuse * 0.26 + spec * 0.55;
+                                    break;
+                                case MK_TURRET:
+                                    sb = 0.1 + facing * 0.3 + diffuse * 0.22;
+                                    break;
+                                case MK_OBJ: {
+                                    // Knurled bands down the barrel, bright lens at the tip
+                                    const band = Math.sin(p.scopePhase * 26.0) > 0 ? 0.5 : 0.16;
+                                    sb = band + diffuse * 0.15 + (p.scopePhase > 0.93 ? 0.4 : 0);
+                                    break;
+                                }
+                                case MK_KNOB: {
+                                    // Ridges turning under the fingers
+                                    const ridge = Math.sin((p.scopePhase + scopeKnobSpin) * 9.0);
+                                    sb = 0.12 + (ridge > 0.2 ? 0.48 : 0.1) + diffuse * 0.18;
+                                    break;
+                                }
+                                case MK_STAGE:
+                                    sb = 0.06 + diffuse * 0.14 + spec * 0.2;
+                                    break;
+                                case MK_SLIDE:
+                                    // Lit from beneath by the illuminator
+                                    sb = 0.55 + scopeLampPulse * 0.3;
+                                    break;
+                                case MK_LAMP: sb = scopeLampPulse + 0.15; break;
+                                case MK_BEAM: sb = scopeLampPulse * 0.35; break;
+                                default: sb = 0.72 + spec * 0.3; break; // eyepiece lens
+                            }
+                            brightness += clamp01(sb) * wScope;
                         }
 
                         if (hasCar) {
                             let cb;
                             switch (p.carKind) {
-                                case CK_BODY: {
+                                case CK_BODY:
                                     // Product-shot lighting: camera-facing panels carry the
                                     // silhouette, roof stays quieter, plus a specular kick
-                                    let facing = -nz;
-                                    if (facing < 0) facing = 0;
-                                    let spec = nx * HX + ny * HY + nz * HZ;
-                                    if (spec < 0) spec = 0;
-                                    spec *= spec; spec *= spec; spec *= spec; spec *= spec;
                                     cb = 0.18 + facing * 0.7 + diffuse * 0.2 + spec * 0.5;
                                     break;
-                                }
                                 case CK_WHEEL: {
                                     if (p.carShade === 0) {
                                         // Tread: dark rubber
@@ -829,20 +1273,16 @@
                             brightness += clamp01(diffuse * 0.34 + pat * 0.46 + rim * 0.42) * wDwarf;
                         }
 
-                        // Depth fog — mostly cancelled for the car diorama, whose
-                        // platform is wide enough that full fog would crush the far half
+                        // Depth fog — pulled back for the modelled shapes, which
+                        // are wide enough that full fog would crush their far half
                         let fog = (z + 50) / 200.0;
-                        brightness -= fog * (1.0 - wCar * 0.65);
+                        brightness -= fog * (1.0 - wCar * 0.65 - wFish * 0.5 - wScope * 0.5);
                         brightness = clamp01(brightness);
 
                         brightnessBuffer[idx] = brightness;
 
                         // Sentinel: 0 = needs shape matching in Pass 2
                         textBuffer[idx] = 0;
-
-                        if (hasFish && wFish > 0.8 && p.fishWeight === 0) {
-                            textBuffer[idx] = SPACE_CODE;
-                        }
 
                         // Dwarf color
                         if (useColor && hasDwarf) {
@@ -907,7 +1347,7 @@
         }
 
         // --- Rotation & Speed ---
-        let speedMult = 1.0 * wLogoCombined + 3.0 * wFish + 0.8 * wDwarf;
+        let speedMult = 1.0 * wLogoCombined + 0.8 * wDwarf + 0.9 * wScope;
         let timeScale = dt * 60.0;
         let autoSpeed = BASE_ROTATION_SPEED * speedMult;
 
@@ -925,6 +1365,15 @@
                 const profileAngle = Math.round(angle / (Math.PI * 2)) * (Math.PI * 2);
                 const pull = 1.0 - Math.pow(0.96, timeScale);
                 angle += (profileAngle - angle) * pull * wCar;
+            }
+
+            // A mola is only a mola side-on — hold the profile, but let it
+            // turn lazily in place rather than freezing.
+            if (hasFish) {
+                const sway = Math.sin(time * 0.33) * FISH_SWAY;
+                const held = Math.round((angle - sway) / (Math.PI * 2)) * (Math.PI * 2) + sway;
+                const pull = 1.0 - Math.pow(0.965, timeScale);
+                angle += (held - angle) * pull * wFish;
             }
         }
 
@@ -949,7 +1398,7 @@
         else if (isAvResearchVisible) newTarget = 5;
         else if (isBrownDwarfVisible) newTarget = 3;
         else if (isSunfishVisible) newTarget = 2;
-        else if (isFutureProjectsVisible) newTarget = 0;
+        else if (isFutureProjectsVisible) newTarget = 1;
         else if (isAboutUsVisible) newTarget = 0;
 
         if (newTarget !== null && newTarget !== targetState) {

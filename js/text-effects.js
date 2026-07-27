@@ -1,15 +1,20 @@
 /*
  * Sculptor AI - Section text reveals
  *
- * Copy resolves a character at a time. The default is an Aperture-style
- * split-flap tick; project sections override it with a reveal that echoes
- * what the project does — denoising steps for the diffusion model, a
- * classifier settling on its argmax for the brown dwarfs, and a wipe that
- * follows the car in as it pulls up.
+ * Copy resolves as it scrolls into view. Each section gets a reveal built on
+ * a different mechanism rather than a different schedule, so they read as
+ * distinct at a glance:
  *
- * Every slot is measured before it animates and pinned to its final width,
- * and substitute glyphs are drawn from a width-matched pool, so a reveal
- * never reflows the copy underneath it.
+ *   tick     mechanical — an odometer roll through the alphabet, each slot
+ *            physically flapping down into place
+ *   diffuse  optical — the whole block sits blurred and churning, then
+ *            sharpens and snaps all at once
+ *   classify semantic — whole words swap between real candidate words until
+ *            the classifier settles on one
+ *   deliver  kinetic — characters slide in from the right in the car's wake
+ *
+ * Every slot is measured and pinned to its final width before it animates,
+ * and substitutes are width-matched, so a reveal never reflows the copy.
  */
 
 (function () {
@@ -17,22 +22,32 @@
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-    const TICK_SET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const ROLL_SET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     const DENSE_SET = '@#%&$WMB8OQ0';
     const MID_SET = '=+*?!ozcsxvnu';
     const LIGHT_SET = '.,:;-~\'`';
-    const MEASURED_SET = TICK_SET + DENSE_SET + MID_SET + LIGHT_SET;
+    const MEASURED_SET = ROLL_SET + DENSE_SET + MID_SET + LIGHT_SET;
 
-    const CLASSES = [
+    const CHAR_CLASSES = [
         'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
         'abcdefghijklmnopqrstuvwxyz',
         '0123456789',
         '.,:;-\'"!?()/@'
     ];
 
-    // --- Glyph metrics -------------------------------------------------
-    // Canvas measurement is only used to compare glyph widths inside one
-    // font; the authoritative slot width still comes from layout.
+    // Plausible wrong answers for the classifier to cycle through, pooled
+    // with the section's own words so most lengths have something to offer.
+    const CLASS_LABELS = [
+        'spectra', 'spectrum', 'dwarfs', 'brown', 'methane', 'ammonia',
+        'photometry', 'luminosity', 'effective', 'gravity', 'synthetic',
+        'catalogue', 'infrared', 'parallax', 'magnitude', 'candidate',
+        'anomalous', 'metallicity', 'atmosphere', 'temperature', 'radius',
+        'redshift', 'emission', 'absorption', 'confidence', 'posterior'
+    ];
+
+    // --- Glyph metrics ---------------------------------------------------
+    // Canvas measurement only compares glyph widths inside one font; the
+    // authoritative slot width still comes from layout.
 
     let measureCtx = null;
     const widthTables = new Map();
@@ -70,17 +85,30 @@
     }
 
     function sameClassPool(font, target) {
-        for (const group of CLASSES) {
+        for (const group of CHAR_CLASSES) {
             if (group.indexOf(target) !== -1) return similarPool(font, target, group);
         }
-        return similarPool(font, target, TICK_SET);
+        return similarPool(font, target, ROLL_SET);
+    }
+
+    // Width-matched glyphs from the target's own class, in order, so counting
+    // through them reads as an odometer landing rather than a scramble.
+    function rollPool(font, target) {
+        const pool = sameClassPool(font, target).slice().sort();
+        let index = pool.indexOf(target);
+        if (index === -1) {
+            pool.push(target);
+            pool.sort();
+            index = pool.indexOf(target);
+        }
+        return { pool, index };
     }
 
     function pick(pool) {
         return pool[(Math.random() * pool.length) | 0];
     }
 
-    // --- Slot construction ---------------------------------------------
+    // --- Slot construction ------------------------------------------------
 
     const pristine = new WeakMap();
 
@@ -90,6 +118,7 @@
         for (let node = walker.nextNode(); node; node = walker.nextNode()) textNodes.push(node);
 
         const slots = [];
+        const words = [];
         const fonts = new Map();
 
         for (const node of textNodes) {
@@ -113,16 +142,20 @@
                     frag.appendChild(document.createTextNode(part));
                     continue;
                 }
-                const word = document.createElement('span');
-                word.className = 'fx-word';
+                const wordEl = document.createElement('span');
+                wordEl.className = 'fx-word';
+                const wordSlots = [];
                 for (const ch of part) {
                     const el = document.createElement('span');
                     el.className = 'fx-char';
                     el.textContent = ch;
-                    word.appendChild(el);
-                    slots.push({ el, target: ch, font, shown: ch, done: false, mark: -1 });
+                    wordEl.appendChild(el);
+                    const slot = { el, target: ch, font, shown: ch, cls: '', done: false, mark: -1 };
+                    slots.push(slot);
+                    wordSlots.push(slot);
                 }
-                frag.appendChild(word);
+                words.push({ text: part, slots: wordSlots, font });
+                frag.appendChild(wordEl);
             }
             node.parentNode.replaceChild(frag, node);
         }
@@ -136,7 +169,7 @@
         }
         for (const slot of slots) slot.el.style.width = slot.w.toFixed(2) + 'px';
 
-        return slots;
+        return { slots, words };
     }
 
     function show(slot, ch, className) {
@@ -152,28 +185,36 @@
 
     function lock(slot) {
         show(slot, slot.target, '');
+        if (slot.moved) {
+            slot.el.style.transform = '';
+            slot.el.style.opacity = '';
+            slot.moved = false;
+        }
         slot.done = true;
     }
 
-    // --- Effects ---------------------------------------------------------
-    // Each returns a stepper called with elapsed milliseconds; it reports
-    // true once every slot has settled.
+    function easeOutCubic(x) { return 1 - Math.pow(1 - x, 3); }
 
-    function easeInOutCubic(x) {
-        return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
-    }
+    // --- Effects -----------------------------------------------------------
+    // Each builder returns a stepper called with elapsed milliseconds; it
+    // reports true once every slot has settled.
 
-    // Split-flap board: slots stay blank until the wave reaches them, then
-    // roll through glyphs and land on the letter.
-    function tickEffect(slots, opts) {
-        const duration = opts.duration || 1500;
-        const flip = 55;
+    // MECHANICAL. Slots stay blank until the wave reaches them, then count up
+    // through the alphabet — in order, like an odometer — while each flap
+    // physically drops into its frame. Lands on the letter rather than
+    // stopping at a random one.
+    const FLAP_MS = 105;
+
+    function tickEffect(root, slots, words, opts) {
+        const duration = opts.duration || 2000;
 
         for (let i = 0; i < slots.length; i++) {
             const slot = slots[i];
-            slot.start = (i / slots.length) * 0.62 + Math.random() * 0.06;
-            slot.span = 0.13 + Math.random() * 0.1;
-            slot.pool = similarPool(slot.font, slot.target, TICK_SET);
+            slot.start = (i / slots.length) * 0.58 + Math.random() * 0.05;
+            slot.rolls = 5 + ((Math.random() * 4) | 0);
+            const roll = rollPool(slot.font, slot.target);
+            slot.pool = roll.pool;
+            slot.landing = roll.index;
             show(slot, ' ', 'fx-pending');
         }
 
@@ -183,24 +224,31 @@
             for (const slot of slots) {
                 if (slot.done) continue;
                 if (u < slot.start) { remaining++; continue; }
-                if (u >= slot.start + slot.span) { lock(slot); continue; }
+
+                const k = ((elapsed - slot.start * duration) / FLAP_MS) | 0;
+                if (k >= slot.rolls) { lock(slot); continue; }
                 remaining++;
-                const k = ((u - slot.start) * duration / flip) | 0;
-                if (k !== slot.mark) {
-                    slot.mark = k;
-                    show(slot, pick(slot.pool), 'fx-tick');
-                }
+                if (k === slot.mark) continue;
+                slot.mark = k;
+
+                // Count up so the last few flaps approach the answer
+                const n = slot.pool.length;
+                const at = (((slot.landing - (slot.rolls - k)) % n) + n) % n;
+                show(slot, slot.pool[at], 'fx-flap');
             }
             return remaining === 0;
         };
     }
 
-    // Denoising schedule: the whole block starts as noise and slots lock in
-    // random order, a few more each step, while the noise anneals from dense
-    // glyphs down to faint ones.
-    function diffuseEffect(slots, opts) {
-        const duration = opts.duration || 1900;
-        const steps = 15;
+    // OPTICAL. The whole block is present from the first frame but blurred
+    // past reading and churning everywhere at once. It sharpens as the noise
+    // anneals, and the text snaps in over the last stretch — a denoiser
+    // resolving globally, not a wipe crossing the paragraph.
+    function diffuseEffect(root, slots, words, opts) {
+        const duration = opts.duration || 2400;
+        const hold = 0.5;          // fraction spent as pure noise
+        const maxBlur = 5.0;
+
         const order = slots.map((_, i) => i);
         for (let i = order.length - 1; i > 0; i--) {
             const j = (Math.random() * (i + 1)) | 0;
@@ -215,84 +263,116 @@
         }
 
         let settled = 0;
-        let lastStep = -1;
+        let lastBlur = -1;
+        let lastChurn = -1;
 
         return function step(elapsed) {
-            const k = Math.min(steps, (elapsed / (duration / steps)) | 0);
-            if (k === lastStep) return settled >= slots.length;
-            lastStep = k;
+            const u = Math.min(1, elapsed / duration);
 
-            const want = Math.round(slots.length * easeInOutCubic(k / steps));
-            while (settled < want) lock(slots[order[settled++]]);
-            if (settled >= slots.length) return true;
+            // Quantized so the blurred layer only re-rasterizes when it moves
+            const blur = Math.round(maxBlur * (1 - u) * (1 - u) * 4) / 4;
+            if (blur !== lastBlur) {
+                lastBlur = blur;
+                root.style.filter = blur > 0.01 ? `blur(${blur}px)` : '';
+            }
 
-            // Late steps sample closer to the answer, the way a denoiser does
-            const anneal = k / steps;
-            for (const slot of slots) {
-                if (slot.done || Math.random() > 0.62) continue;
-                const pool = Math.random() < anneal ? slot.near
-                    : (Math.random() < anneal + 0.35 ? slot.faint : slot.dense);
-                show(slot, pick(pool), 'fx-noise');
+            if (u > hold) {
+                const want = Math.round(slots.length * Math.min(1, (u - hold) / (1 - hold)));
+                while (settled < want) lock(slots[order[settled++]]);
+            }
+            if (settled >= slots.length) {
+                root.style.filter = '';
+                return true;
+            }
+
+            // Every unsettled slot keeps moving, sampling closer to the
+            // answer as the schedule anneals
+            const churn = (elapsed / 70) | 0;
+            if (churn !== lastChurn) {
+                lastChurn = churn;
+                for (const slot of slots) {
+                    if (slot.done || Math.random() > 0.55) continue;
+                    const pool = Math.random() < u ? slot.near
+                        : (Math.random() < u + 0.4 ? slot.faint : slot.dense);
+                    show(slot, pick(pool), 'fx-noise');
+                }
             }
             return false;
         };
     }
 
-    // A scan head sweeps the block: unread slots sit dim, slots under the
-    // head flicker between candidate classes, and each one locks on the
-    // winner as the head moves past.
-    function classifyEffect(slots, opts) {
-        const duration = opts.duration || 1800;
-        const window_ = 0.26;
-        const flicker = 48;
+    // SEMANTIC. Whole words swap between real candidate words of the same
+    // length — drawn from the copy itself plus a pool of plausible wrong
+    // answers — until the classifier commits. Nothing else on the page
+    // shuffles at word granularity.
+    function classifyEffect(root, slots, words, opts) {
+        const duration = opts.duration || 2200;
+        const swap = 135;
 
-        for (const slot of slots) {
-            slot.near = sameClassPool(slot.font, slot.target);
-            slot.faint = similarPool(slot.font, slot.target, LIGHT_SET + MID_SET);
-            show(slot, pick(slot.faint), 'fx-noise');
+        // Bucket every candidate by length so a swap can never change a width
+        const byLength = new Map();
+        const addCandidate = (text) => {
+            const key = text.length;
+            if (!byLength.has(key)) byLength.set(key, []);
+            byLength.get(key).push(text);
+        };
+        for (const word of words) addCandidate(word.text);
+        for (const label of CLASS_LABELS) addCandidate(label);
+
+        for (let i = 0; i < words.length; i++) {
+            const word = words[i];
+            word.start = (i / words.length) * 0.68;
+            word.cycles = 3 + ((Math.random() * 3) | 0);
+            word.candidates = (byLength.get(word.text.length) || [])
+                .filter(text => text !== word.text);
+            if (!word.candidates.length) {
+                // Nothing the same length: fabricate one from the same
+                // character classes so the word still cycles
+                word.candidates = [word.slots.map(s => pick(sameClassPool(s.font, s.target))).join('')];
+            }
+            for (const slot of word.slots) show(slot, ' ', 'fx-pending');
         }
 
         return function step(elapsed) {
-            const head = (elapsed / duration) * (1 + window_);
+            const u = elapsed / duration;
             let remaining = 0;
-            for (let i = 0; i < slots.length; i++) {
-                const slot = slots[i];
-                if (slot.done) continue;
-                const p = i / slots.length;
-                if (p > head) {
-                    remaining++;
-                    if ((elapsed / 140 | 0) !== slot.mark) {
-                        slot.mark = elapsed / 140 | 0;
-                        show(slot, pick(slot.faint), 'fx-noise');
-                    }
+            for (const word of words) {
+                if (word.done) continue;
+                if (u < word.start) { remaining++; continue; }
+
+                const k = ((elapsed - word.start * duration) / swap) | 0;
+                if (k >= word.cycles) {
+                    for (const slot of word.slots) lock(slot);
+                    word.done = true;
                     continue;
                 }
-                if (p <= head - window_) { lock(slot); continue; }
                 remaining++;
-                const k = (elapsed / flicker) | 0;
-                if (k !== slot.mark) {
-                    slot.mark = k;
-                    // Confidence climbs as the head passes over the slot
-                    const conf = (head - p) / window_;
-                    show(slot, Math.random() < conf * conf ? slot.target : pick(slot.near), 'fx-scan');
+                if (k === word.mark) continue;
+                word.mark = k;
+
+                const guess = word.candidates[k % word.candidates.length];
+                for (let c = 0; c < word.slots.length; c++) {
+                    show(word.slots[c], guess[c] || ' ', 'fx-candidate');
                 }
             }
             return remaining === 0;
         };
     }
 
-    // Right-to-left wipe: slots settle in the order the car passes them, so
-    // the copy looks dropped off in its wake.
-    function deliverEffect(slots, opts) {
-        const duration = opts.duration || 1900;
-        const order = slots.map((_, i) => i).sort((a, b) => slots[b].x - slots[a].x);
+    // KINETIC. Characters are carried in from the right and set down in the
+    // order the car passes them. The signature is horizontal motion — nothing
+    // else on the page travels.
+    function deliverEffect(root, slots, words, opts) {
+        const duration = opts.duration || 2000;
+        const flight = 0.22;
+        const travel = 34;
 
+        const order = slots.map((_, i) => i).sort((a, b) => slots[b].x - slots[a].x);
         for (let rank = 0; rank < order.length; rank++) {
             const slot = slots[order[rank]];
-            slot.start = (rank / order.length) * 0.78;
-            slot.dense = similarPool(slot.font, slot.target, DENSE_SET + MID_SET);
+            slot.start = (rank / order.length) * 0.74;
             slot.near = sameClassPool(slot.font, slot.target);
-            show(slot, pick(slot.dense), 'fx-noise');
+            show(slot, pick(slot.near), 'fx-pending');
         }
 
         return function step(elapsed) {
@@ -300,14 +380,22 @@
             let remaining = 0;
             for (const slot of slots) {
                 if (slot.done) continue;
-                if (u >= slot.start + 0.14) { lock(slot); continue; }
+                const p = (u - slot.start) / flight;
+                if (p >= 1) { lock(slot); continue; }
                 remaining++;
-                const k = (elapsed / 62) | 0;
-                if (k === slot.mark || Math.random() > 0.7) continue;
-                slot.mark = k;
-                // Slots just behind the wavefront are already close to right
-                const settle = u > slot.start;
-                show(slot, pick(settle ? slot.near : slot.dense), settle ? 'fx-scan' : 'fx-noise');
+                if (p <= 0) continue;
+
+                const eased = easeOutCubic(p);
+                slot.el.style.transform = `translateX(${((1 - eased) * travel).toFixed(2)}px)`;
+                slot.el.style.opacity = (0.1 + 0.9 * eased).toFixed(2);
+                slot.moved = true;
+
+                // Settles onto the right character just before it lands
+                const k = (elapsed / 60) | 0;
+                if (k !== slot.mark) {
+                    slot.mark = k;
+                    show(slot, p > 0.55 ? slot.target : pick(slot.near), 'fx-flight');
+                }
             }
             return remaining === 0;
         };
@@ -320,12 +408,13 @@
         deliver: deliverEffect
     };
 
-    // --- Runner -----------------------------------------------------------
+    // --- Runner -------------------------------------------------------------
 
     const running = new Map();
     let looping = false;
 
     function restore(el) {
+        el.style.filter = '';
         const html = pristine.get(el);
         if (html !== undefined) el.innerHTML = html;
     }
@@ -358,11 +447,14 @@
         if (!pristine.has(el)) pristine.set(el, el.innerHTML);
         else el.innerHTML = pristine.get(el);
 
-        const slots = buildSlots(el);
-        if (!slots.length) { restore(el); return; }
+        const built = buildSlots(el);
+        if (!built.slots.length) { restore(el); return; }
 
         const build = EFFECTS[name] || EFFECTS.tick;
-        running.set(el, { step: build(slots, opts || {}), startedAt: performance.now() });
+        running.set(el, {
+            step: build(el, built.slots, built.words, opts || {}),
+            startedAt: performance.now()
+        });
 
         if (!looping) {
             looping = true;
@@ -370,14 +462,12 @@
         }
     }
 
-    // --- Triggers ---------------------------------------------------------
+    // --- Triggers -------------------------------------------------------------
     // Sections replay whenever they come back around, so a reveal always
     // accompanies the shape morphing in beside it.
 
     const CAR_SECTION = 'av-research';
     let carPending = null;
-
-    const sections = document.querySelectorAll('.scroll-section[data-fx]');
 
     const observer = new IntersectionObserver((entries) => {
         for (const entry of entries) {
@@ -406,15 +496,14 @@
         }
     }, { threshold: 0.2 });
 
-    sections.forEach(section => observer.observe(section));
+    document.querySelectorAll('.scroll-section[data-fx]').forEach(s => observer.observe(s));
 
     window.TextFX = { play, stop, effects: Object.keys(EFFECTS) };
 
     window.addEventListener('sculptor:car-arriving', (event) => {
         clearTimeout(carPending);
         carPending = null;
-        const el = document.getElementById(CAR_SECTION);
         const duration = (event.detail && event.detail.duration) || 1900;
-        play(el, 'deliver', { duration: duration + 250 });
+        play(document.getElementById(CAR_SECTION), 'deliver', { duration: duration + 400 });
     });
 })();

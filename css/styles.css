@@ -239,20 +239,47 @@ body {
     opacity: 0;
 }
 
-/* Warm phosphor on the flaps mid-roll */
-.fx-char.fx-tick {
+/* Mechanical: each flap drops into its frame on a loop while the slot rolls
+   through the alphabet, so the motion reads as a split-flap board. */
+.fx-char.fx-flap {
     color: #e8b57a;
     -webkit-text-fill-color: #e8b57a;
+    animation: fx-flap 105ms linear infinite;
 }
 
+@keyframes fx-flap {
+    0% {
+        transform: translateY(-0.45em) scaleY(0.4);
+        opacity: 0.35;
+    }
+
+    45% {
+        transform: none;
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(0.12em) scaleY(0.9);
+        opacity: 0.72;
+    }
+}
+
+/* Optical: the block itself carries the blur, these just sit under it */
 .fx-char.fx-noise {
-    opacity: 0.4;
+    opacity: 0.55;
 }
 
-.fx-char.fx-scan {
+/* Semantic: candidate words the classifier has not committed to */
+.fx-char.fx-candidate {
+    color: #8fb9d6;
+    -webkit-text-fill-color: #8fb9d6;
+    opacity: 0.75;
+}
+
+/* Kinetic: in transit, opacity written per frame alongside the transform */
+.fx-char.fx-flight {
     color: #fff;
     -webkit-text-fill-color: #fff;
-    opacity: 0.85;
 }
 
 .project-card {

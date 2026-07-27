@@ -53,6 +53,8 @@
     const CAR_ARCH_R = 4.8;        // wheel-arch cutout radius
     const CAR_AXLE_Y = CAR_ROAD_Y + CAR_WHEEL_R;
     const CAR_ROAD_SPEED = 26.0;   // world units per second the road scrolls
+    const CAR_ENTRY_DISTANCE = 82.0; // how far off-frame the car starts, to the right
+    const CAR_ENTRY_TIME = 1.7;      // seconds to pull up and stop
     const CAR_DASH_PERIOD = 14.0;
     const CAR_DASH_LEN = 7.0;
     const CAR_SPOKES = 4;
@@ -714,8 +716,12 @@
         pushCarSkirt(targets, Math.floor(count * 0.08));
         // Pad any rounding shortfall with extra road points
         pushCarRoad(targets, count - targets.length);
-        // Lift the whole diorama so it sits centered in frame
-        for (const t of targets) t.y += 9.0;
+        for (const t of targets) {
+            // Lift the whole diorama so it sits centered in frame
+            t.y += 9.0;
+            // Only the vehicle drives in; the road it arrives on stays put
+            t.drive = (t.kind === CK_BODY || t.kind === CK_GLASS || t.kind === CK_WHEEL) ? 1 : 0;
+        }
         return targets.slice(0, count);
     }
 
@@ -777,7 +783,7 @@
                             carX: 0, carY: 0, carZ: 0,
                             carNX: 0, carNY: 0, carNZ: 0,
                             carKind: CK_ROAD, carPhase: 0,
-                            carShade: 0, carBob: 0
+                            carShade: 0, carBob: 0, carDrive: 0
                         });
                     }
                 }
@@ -839,6 +845,7 @@
             p.carPhase = tCar.a;
             p.carShade = tCar.s;
             p.carBob = tCar.bob;
+            p.carDrive = tCar.drive;
         }
 
         p.logo2X = p.logoX; p.logo2Y = p.logoY; p.logo2Z = p.logoZ;
@@ -949,6 +956,7 @@
     const STATE_SHAPE = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car'];
 
     let targetState = 0;
+    let carEntry = 1.0; // 0 = still off-frame to the right, 1 = parked
     let lastTimestamp = performance.now();
     const currentWeights = { logo: 1, scope: 0, fish: 0, dwarf: 0, logo2: 0, car: 0 };
     let targetWeights = getTargetWeightsForState(0);
@@ -1025,8 +1033,13 @@
         const scopeKnobSpin = time * 1.6;
 
         // Car animation clocks: dashes scroll backward, wheels spin to match
+        if (hasCar && carEntry < 1) carEntry = Math.min(1, carEntry + dt / CAR_ENTRY_TIME);
+        const carEntryEase = 1 - Math.pow(1 - carEntry, 3);
+        const carEntryOffset = (1 - carEntryEase) * CAR_ENTRY_DISTANCE;
         const carRoadScroll = time * CAR_ROAD_SPEED;
-        const carWheelSpin = time * (CAR_ROAD_SPEED / CAR_WHEEL_R);
+        // Ground speed during the approach is road scroll plus the distance
+        // the car is covering itself, so the wheels stay glued to the tarmac
+        const carWheelSpin = (time * CAR_ROAD_SPEED + carEntryEase * CAR_ENTRY_DISTANCE) / CAR_WHEEL_R;
         const carBobOffset = hasCar ? Math.sin(time * 5.0) * 0.25 : 0;
         // Camera tilts down for the diorama; pulling back while lengthening the
         // focal length flattens perspective so the scene reads like a model
@@ -1067,7 +1080,7 @@
             }
             if (hasDwarf) { px += p.dwarfX * wDwarf; py += p.dwarfY * wDwarf; pz += p.dwarfZ * wDwarf; }
             if (hasCar) {
-                px += p.carX * wCar;
+                px += (p.carX + carEntryOffset * p.carDrive) * wCar;
                 py += (p.carY + carBobOffset * p.carBob) * wCar;
                 pz += p.carZ * wCar;
             }
@@ -1404,6 +1417,15 @@
         if (newTarget !== null && newTarget !== targetState) {
             targetState = newTarget;
             targetWeights = getTargetWeightsForState(newTarget);
+
+            if (newTarget === 5) {
+                // Send the car back off-frame so it drives in again, and cue
+                // the section copy to resolve in its wake
+                carEntry = 0;
+                window.dispatchEvent(new CustomEvent('sculptor:car-arriving', {
+                    detail: { duration: CAR_ENTRY_TIME * 1000 }
+                }));
+            }
         }
     }
 

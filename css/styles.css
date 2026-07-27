@@ -221,6 +221,40 @@ body {
     margin-bottom: 1rem;
 }
 
+/* Text reveal slots.
+   Words are inline-blocks so a reveal can never break one across lines, and
+   each character is pinned to its final width so substituted glyphs don't
+   shift the copy around them. Present only while an effect is running. */
+.fx-word {
+    display: inline-block;
+    white-space: pre;
+}
+
+.fx-char {
+    display: inline-block;
+    text-align: center;
+}
+
+.fx-char.fx-pending {
+    opacity: 0;
+}
+
+/* Warm phosphor on the flaps mid-roll */
+.fx-char.fx-tick {
+    color: #e8b57a;
+    -webkit-text-fill-color: #e8b57a;
+}
+
+.fx-char.fx-noise {
+    opacity: 0.4;
+}
+
+.fx-char.fx-scan {
+    color: #fff;
+    -webkit-text-fill-color: #fff;
+    opacity: 0.85;
+}
+
 .project-card {
     background: transparent;
     border: none;

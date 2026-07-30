@@ -1246,20 +1246,40 @@
     window.addEventListener('mousemove', (e) => handleDragMove(e.clientX));
     window.addEventListener('mouseup', handleDragEnd);
 
-    // Touch events
+    // Touch events. On mobile the graphic covers the top of the screen, so
+    // swiping over it is how people scroll the page. Claiming the gesture on
+    // touchstart trapped them; instead the first bit of movement decides, and
+    // only a clearly horizontal drag spins the model.
+    let touchTracking = false, touchIntent = 0; // 0 undecided, 1 spin, -1 scroll
+    let touchStartX = 0, touchStartY = 0;
+
     asciiColumn.addEventListener('touchstart', (e) => {
         if (e.touches.length === 1) {
-            e.preventDefault();
-            handleDragStart(e.touches[0].clientX);
+            touchTracking = true;
+            touchIntent = 0;
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
         }
-    }, { passive: false });
+    }, { passive: true });
+
     window.addEventListener('touchmove', (e) => {
-        if (isDragging && e.touches.length === 1) {
-            handleDragMove(e.touches[0].clientX);
+        if (!touchTracking || e.touches.length !== 1) return;
+        const t = e.touches[0];
+        if (touchIntent === 0) {
+            const dx = t.clientX - touchStartX, dy = t.clientY - touchStartY;
+            if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+            // Ties go to scrolling, which matters more than spinning
+            touchIntent = Math.abs(dx) > Math.abs(dy) ? 1 : -1;
+            if (touchIntent === 1) handleDragStart(touchStartX);
+            else { touchTracking = false; return; }
         }
-    });
-    window.addEventListener('touchend', handleDragEnd);
-    window.addEventListener('touchcancel', handleDragEnd);
+        e.preventDefault();
+        handleDragMove(t.clientX);
+    }, { passive: false });
+
+    const endTouch = () => { touchTracking = false; touchIntent = 0; handleDragEnd(); };
+    window.addEventListener('touchend', endTouch);
+    window.addEventListener('touchcancel', endTouch);
 
     // State: 0 = Logo, 1 = Microscope, 2 = Fish, 3 = Dwarf, 4 = Logo2, 5 = Car,
     //        6 = Rocket, 7 = Portal
@@ -1966,18 +1986,101 @@
         if (newTarget !== null && newTarget !== targetState) {
             targetState = newTarget;
             targetWeights = getTargetWeightsForState(newTarget);
+            // Resized as the morph starts, so the change of scale is carried by
+            // the same motion that rebuilds the shape
+            fitShapeToPanel(newTarget);
         }
     }
 
+    const narrowLayout = window.matchMedia('(max-width: 768px)').matches;
     const obsOptions = { threshold: 0.1, rootMargin: '-40% 0px -40% 0px' };
-    if (aboutUs) new IntersectionObserver((e) => { e.forEach(x => { isAboutUsVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(aboutUs);
-    if (futureProjects) new IntersectionObserver((e) => { e.forEach(x => { isFutureProjectsVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(futureProjects);
-    if (sunfish) new IntersectionObserver((e) => { e.forEach(x => { isSunfishVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(sunfish);
-    if (brownDwarf) new IntersectionObserver((e) => { e.forEach(x => { isBrownDwarfVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(brownDwarf);
-    if (avResearch) new IntersectionObserver((e) => { e.forEach(x => { isAvResearchVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(avResearch);
-    if (products) new IntersectionObserver((e) => { e.forEach(x => { isProductsVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(products);
-    if (constellation) new IntersectionObserver((e) => { e.forEach(x => { isConstellationVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(constellation);
-    if (sourceCode) new IntersectionObserver((e) => { e.forEach(x => { isSourceCodeVisible = x.isIntersecting; updateState(); }); }, { threshold: 0.1, rootMargin: '-30% 0px -50% 0px' }).observe(sourceCode);
+    const connectObsOptions = { threshold: 0.1, rootMargin: '-30% 0px -50% 0px' };
+
+    // Roughly how many cells each shape covers, padded a little for the ones
+    // that spin. The footprints are wildly different, so on mobile one font
+    // size cannot serve them all: sized to fit the 116 column road diorama, the
+    // 48 column portal ends up a third of the panel and looks like an
+    // afterthought. Each state gets the size that fills the panel instead.
+    const STATE_EXTENT = [
+        { cols: 70, rows: 46 },   // 0 logo
+        { cols: 48, rows: 46 },   // 1 microscope
+        { cols: 46, rows: 42 },   // 2 sunfish
+        { cols: 58, rows: 36 },   // 3 brown dwarf
+        { cols: 70, rows: 46 },   // 4 logo again
+        { cols: 116, rows: 28 },  // 5 road diorama
+        { cols: 102, rows: 54 },  // 6 rocket
+        { cols: 48, rows: 40 }    // 7 portal
+    ];
+    const CHAR_ASPECT = 0.6;      // Courier advance width, as a fraction of em
+
+    function fitShapeToPanel(state) {
+        if (!narrowLayout) return;
+        const ext = STATE_EXTENT[state] || STATE_EXTENT[0];
+        const box = asciiColumn.getBoundingClientRect();
+        if (box.width < 1 || box.height < 1) return;
+        // line-height is kept equal to font-size, so a row is one em tall
+        const byWidth = (box.width * 0.92) / (ext.cols * CHAR_ASPECT);
+        const byHeight = (box.height * 0.92) / ext.rows;
+        const size = Math.max(3, Math.min(byWidth, byHeight));
+        screenElement.style.fontSize = size.toFixed(2) + 'px';
+        screenElement.style.lineHeight = size.toFixed(2) + 'px';
+    }
+    if (narrowLayout) {
+        // Mobile picks the shape geometrically: whichever section sits nearest
+        // below the bottom edge of the graphic panel owns it.
+        //
+        // The observer bands below cannot do this job here. They are expressed
+        // as percentages of the viewport, and would have to be tuned against a
+        // CSS offset given in vh, but the two do not agree on a phone: vh is
+        // fixed to the large viewport while the intersection root tracks the
+        // small one, so the band drifts by the height of the URL bar every time
+        // it collapses. Measuring the panel edge from the DOM has no such
+        // coupling, and it also resolves ties without a priority order.
+        const tracked = [
+            [aboutUs, 0], [futureProjects, 1], [sunfish, 2], [brownDwarf, 3],
+            [avResearch, 5], [products, 6], [constellation, 7], [sourceCode, 4]
+        ].filter(([el]) => el);
+
+        let queued = false;
+        const pickShape = () => {
+            queued = false;
+            const line = asciiColumn.getBoundingClientRect().bottom;
+            let bestState = null, bestDist = Infinity;
+            for (const [el, state] of tracked) {
+                const r = el.getBoundingClientRect();
+                let d;
+                if (r.top > line) d = r.top - line;            // still coming up
+                else if (r.bottom < line) d = (line - r.bottom) * 1.8; // gone by
+                else d = 0;                                     // across the edge
+                if (d < bestDist) { bestDist = d; bestState = state; }
+            }
+            if (bestState !== null && bestState !== targetState) {
+                targetState = bestState;
+                targetWeights = getTargetWeightsForState(bestState);
+                fitShapeToPanel(bestState);
+            }
+        };
+        const onScroll = () => {
+            if (!queued) { queued = true; requestAnimationFrame(pickShape); }
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('resize', onScroll);
+        window.addEventListener('orientationchange', onScroll);
+        pickShape();
+    } else {
+        if (aboutUs) new IntersectionObserver((e) => { e.forEach(x => { isAboutUsVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(aboutUs);
+        if (futureProjects) new IntersectionObserver((e) => { e.forEach(x => { isFutureProjectsVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(futureProjects);
+        if (sunfish) new IntersectionObserver((e) => { e.forEach(x => { isSunfishVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(sunfish);
+        if (brownDwarf) new IntersectionObserver((e) => { e.forEach(x => { isBrownDwarfVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(brownDwarf);
+        if (avResearch) new IntersectionObserver((e) => { e.forEach(x => { isAvResearchVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(avResearch);
+        if (products) new IntersectionObserver((e) => { e.forEach(x => { isProductsVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(products);
+        if (constellation) new IntersectionObserver((e) => { e.forEach(x => { isConstellationVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(constellation);
+        if (sourceCode) new IntersectionObserver((e) => { e.forEach(x => { isSourceCodeVisible = x.isIntersecting; updateState(); }); }, connectObsOptions).observe(sourceCode);
+    }
+
+    fitShapeToPanel(targetState);
+    window.addEventListener('resize', () => fitShapeToPanel(targetState));
+    window.addEventListener('orientationchange', () => fitShapeToPanel(targetState));
 
     requestAnimationFrame(render);
 })();

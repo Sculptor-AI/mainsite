@@ -79,25 +79,6 @@ body {
     position: relative;
 }
 
-@media (max-width: 768px) {
-    .content-container {
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .ascii-column {
-        position: relative !important;
-        top: auto !important;
-        height: auto !important;
-        margin-bottom: 4rem;
-    }
-}
-
-@media (max-width: 768px) and (orientation: portrait) {
-    .ascii-column {
-        display: none !important;
-    }
-}
 
 /* Left Column: Sticky Spinning ASCII */
 .ascii-column {
@@ -175,11 +156,6 @@ body {
     /* Fixed width relative to screen to match half screen feel */
 }
 
-@media (max-width: 768px) {
-    .text-column {
-        width: 90vw;
-    }
-}
 
 .scroll-section {
     /* Each section catches at the middle of the viewport, which is also the
@@ -287,4 +263,85 @@ body {
 
 .repo-pill-mark {
     flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Mobile layout
+   Graphic holds the top of the screen, text scrolls up underneath it. The
+   column used to be display:none in portrait, which left phone visitors with
+   nothing but text on black.
+
+   This block lives at the end of the file on purpose: media queries add no
+   specificity, so it has to come after the base .ascii-column and
+   #solid-logo-canvas rules to win the cascade.
+   --------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .content-container {
+        flex-direction: column;
+        align-items: center;
+        gap: 0;
+        width: 100vw;
+        margin-bottom: 0;
+    }
+
+    .ascii-column {
+        position: -webkit-sticky;
+        position: sticky;
+        top: 0;
+        height: 48vh;
+        width: 100vw;
+        flex: none;
+        margin-bottom: 0;
+        /* Opaque, and above the text, so sections pass cleanly behind it */
+        background: #050505;
+        z-index: 2;
+    }
+
+    /* Fades text in as it rises into the panel instead of clipping it */
+    .ascii-column::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 100%;
+        height: 2.5rem;
+        background: linear-gradient(to bottom, #050505, rgba(5, 5, 5, 0));
+        pointer-events: none;
+    }
+
+    /* Starting size only. The shapes differ hugely in footprint, from a 116
+       column road diorama to a 48 column portal, so logo-3d.js overrides this
+       per shape to make each one fill the panel. */
+    #solid-logo-canvas {
+        font-size: clamp(3.5px, 1.4vw, 8px);
+        line-height: clamp(3.5px, 1.4vw, 8px);
+    }
+
+    .text-column {
+        /* Lower stacking slot than the graphic, and a tighter rhythm than the
+           desktop 40vh gaps */
+        position: relative;
+        z-index: 1;
+        width: 86vw;
+        /* Sets the minimum spacing between section tops, which has to stay
+           wider than the observer band so only one section can claim the
+           graphic at a time */
+        gap: 18vh;
+        padding-top: 4vh;
+        /* Runway for the last section to reach its snap position */
+        padding-bottom: 50vh;
+    }
+
+    /* Align section tops rather than centres. Centring put the text in a
+       different place for every section, since the gap above it depended on how
+       tall that section happened to be.
+
+       The offset is scroll-margin on the sections, not scroll-padding on the
+       scroller: scroll-padding applies to every snap target, so it dragged the
+       hero's snap position down by the same amount and left a band of black
+       above it. */
+    .scroll-section {
+        scroll-snap-align: start;
+        scroll-margin-top: 52vh;
+    }
 }

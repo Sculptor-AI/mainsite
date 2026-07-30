@@ -1168,7 +1168,11 @@
     const screenElement = document.getElementById('solid-logo-canvas');
     const asciiColumn = screenElement.closest('.ascii-column') || screenElement;
     const logoLoop = createVisibilityController(asciiColumn);
-    const surface = createTextSurface(128, 128);
+    // The tallest shape is the rocket at 54 rows, so on a phone the bottom half
+    // of a square grid is guaranteed empty. Trimming it is a third off the
+    // string this rebuilds every frame, which is the expensive part here.
+    const NARROW = window.matchMedia('(max-width: 768px)');
+    const surface = createTextSurface(128, NARROW.matches ? 84 : 128);
     const width = surface.width;
     const height = surface.height;
     const zbuffer = surface.zBuffer;
@@ -1992,7 +1996,7 @@
         }
     }
 
-    const narrowLayout = window.matchMedia('(max-width: 768px)').matches;
+    const narrowLayout = NARROW.matches;
     const obsOptions = { threshold: 0.1, rootMargin: '-40% 0px -40% 0px' };
     const connectObsOptions = { threshold: 0.1, rootMargin: '-30% 0px -50% 0px' };
 
@@ -2014,13 +2018,23 @@
     const CHAR_ASPECT = 0.6;      // Courier advance width, as a fraction of em
 
     function fitShapeToPanel(state) {
-        if (!narrowLayout) return;
+        // Re-read the query rather than trusting the value from load: rotating a
+        // phone into landscape hands the layout back to the desktop rules, and a
+        // font size measured against the portrait band would be left behind.
+        if (!NARROW.matches) {
+            screenElement.style.fontSize = '';
+            screenElement.style.lineHeight = '';
+            return;
+        }
         const ext = STATE_EXTENT[state] || STATE_EXTENT[0];
         const box = asciiColumn.getBoundingClientRect();
         if (box.width < 1 || box.height < 1) return;
-        // line-height is kept equal to font-size, so a row is one em tall
-        const byWidth = (box.width * 0.92) / (ext.cols * CHAR_ASPECT);
-        const byHeight = (box.height * 0.92) / ext.rows;
+        // line-height is kept equal to font-size, so a row is one em tall.
+        // Deliberately short of the band on both axes: filling it edge to edge
+        // put the top of the shape against the top of the screen, where it read
+        // as cropped rather than as placed.
+        const byWidth = (box.width * 0.86) / (ext.cols * CHAR_ASPECT);
+        const byHeight = (box.height * 0.84) / ext.rows;
         const size = Math.max(3, Math.min(byWidth, byHeight));
         screenElement.style.fontSize = size.toFixed(2) + 'px';
         screenElement.style.lineHeight = size.toFixed(2) + 'px';
@@ -2041,20 +2055,65 @@
             [avResearch, 5], [products, 6], [constellation, 7], [sourceCode, 4]
         ].filter(([el]) => el);
 
+        // One dot per panel. Built from the same list the picker walks, so the
+        // marker cannot drift out of step with the graphic.
+        const rail = document.getElementById('section-rail');
+        const dots = tracked.map(() => {
+            const dot = document.createElement('i');
+            if (rail) rail.appendChild(dot);
+            return dot;
+        });
+
+        let currentIndex = -1;
+        let pastHero = null;
+
         let queued = false;
         const pickShape = () => {
             queued = false;
             const line = asciiColumn.getBoundingClientRect().bottom;
-            let bestState = null, bestDist = Infinity;
-            for (const [el, state] of tracked) {
-                const r = el.getBoundingClientRect();
-                let d;
-                if (r.top > line) d = r.top - line;            // still coming up
-                else if (r.bottom < line) d = (line - r.bottom) * 1.8; // gone by
-                else d = 0;                                     // across the edge
-                if (d < bestDist) { bestDist = d; bestState = state; }
+            let bestIndex = -1, bestDist = Infinity;
+            for (let i = 0; i < tracked.length; i++) {
+                // How far the top of the panel sits from the top of the text
+                // band, which is where a panel comes to rest. Panels on their way
+                // out are scored a little harder than ones on their way in, so
+                // the morph starts just before you land rather than after.
+                //
+                // Scored off one edge rather than the whole box on purpose. An
+                // earlier version measured the nearest edge, which made the
+                // outgoing panel's bottom and the incoming panel's top both land
+                // exactly on the line at every snap position: a dead tie, always
+                // won by whichever came first in the list, so the graphic sat one
+                // panel behind the copy the whole way down.
+                const top = tracked[i][0].getBoundingClientRect().top;
+                const d = top >= line ? top - line : (line - top) * 1.25;
+                if (d < bestDist) { bestDist = d; bestIndex = i; }
             }
-            if (bestState !== null && bestState !== targetState) {
+
+            // The graphic is only pinned once the hero has gone by, and the rail
+            // has nothing to mark until then. Measured off the top of the band
+            // rather than the bottom edge the picker uses: the bottom edge is
+            // below the fold for the whole of the hero, so it never reads as
+            // being behind you.
+            const nowPastHero = asciiColumn.getBoundingClientRect().top <= 1;
+            if (nowPastHero !== pastHero) {
+                pastHero = nowPastHero;
+                document.body.classList.toggle('past-hero', nowPastHero);
+            }
+
+            if (bestIndex < 0 || bestIndex === currentIndex) return;
+
+            // Copy and graphic are handed over together, which is the whole
+            // point of picking both from one measurement
+            if (currentIndex >= 0) {
+                tracked[currentIndex][0].classList.remove('is-current');
+                dots[currentIndex].classList.remove('on');
+            }
+            currentIndex = bestIndex;
+            tracked[currentIndex][0].classList.add('is-current');
+            dots[currentIndex].classList.add('on');
+
+            const bestState = tracked[bestIndex][1];
+            if (bestState !== targetState) {
                 targetState = bestState;
                 targetWeights = getTargetWeightsForState(bestState);
                 fitShapeToPanel(bestState);

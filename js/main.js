@@ -16,14 +16,21 @@ const {
 } = window.ASCIIUtils;
 
 // --- Configuration ---
-const isMobilePortrait = window.innerWidth < 768 && window.innerHeight > window.innerWidth;
+// Matched with matchMedia rather than innerWidth so this agrees with the
+// breakpoint in styles.css. The two can disagree otherwise: innerWidth is in
+// layout pixels, which a zoomed-out mobile viewport scales away from the CSS
+// pixels the media query is resolved in.
+const isMobilePortrait = window.matchMedia('(max-width: 768px) and (orientation: portrait)').matches;
 
 const SPHERE_RADIUS = 25.0;
 const NUM_POINTS = isMobilePortrait ? 12000 : 32000; // Reduced particles for mobile performance
 
 // --- Zoom Configuration ---
 const VIEW_DISTANCE_START = 110.0;
-const VIEW_DISTANCE_END = 210.0;
+// Landscape pulls back to make room for the wordmark alongside the mark.
+// Portrait drops the wordmark, so the camera has nothing to make room for and
+// stops much nearer, landing the mark at about three fifths of the screen.
+const VIEW_DISTANCE_END = isMobilePortrait ? 96.0 : 210.0;
 
 const SHADE_CHARS = " .,:;-~=+*ox#X%@";
 const SHADE_CHAR_CODES = toCharCodes(SHADE_CHARS);
@@ -207,6 +214,14 @@ function generateLogoTargets() {
     const logoHeightOffset = lines.length / 2;
     let maxX = 0;
 
+    // Portrait stops the camera much nearer, which spreads one source pixel over
+    // about one and a half cells in each direction and opens gaps between them.
+    // Samples taken across the pixel close those; the z extrusion thins out to
+    // pay for them, since depth is the one thing a head-on view does not show.
+    const subX = isMobilePortrait ? [-0.7, 0.0, 0.7] : [0.0];
+    const subY = isMobilePortrait ? [-1.33, 0.0, 1.33] : [0.0];
+    const zStep = isMobilePortrait ? 2.0 : 1.0;
+
     for (let r = 0; r < lines.length; r++) {
         let line = lines[r];
         for (let c = 0; c < line.length; c++) {
@@ -216,12 +231,16 @@ function generateLogoTargets() {
 
                 if (x > maxX) maxX = x;
 
-                for (let z = -2.0; z <= 2.0; z += 1.0) {
-                    targets.push({
-                        x: x, y: y, z: z,
-                        isLogo: true,
-                        char: '@' // Force logo to be @
-                    });
+                for (let ox of subX) {
+                    for (let oy of subY) {
+                        for (let z = -2.0; z <= 2.0; z += zStep) {
+                            targets.push({
+                                x: x + ox, y: y + oy, z: z,
+                                isLogo: true,
+                                char: '@' // Force logo to be @
+                            });
+                        }
+                    }
                 }
             }
         }
@@ -270,10 +289,14 @@ if (!isMobilePortrait) {
     }
 }
 
-// Precompute the target layout once so the phase change doesn't hitch
+// Precompute the target layout once so the phase change doesn't hitch.
+// Strided rather than wrapped with a modulo: once the targets outnumber the
+// particles, wrapping hands out the front of the list and stops, which would
+// draw the top of the mark and leave the rest of it unbuilt. Striding thins the
+// whole list evenly instead.
 const sortedTargets = new Array(NUM_POINTS);
 for (let i = 0; i < NUM_POINTS; i++) {
-    sortedTargets[i] = possibleTargets[i % possibleTargets.length];
+    sortedTargets[i] = possibleTargets[Math.floor(i * possibleTargets.length / NUM_POINTS)];
 }
 sortedTargets.sort((a, b) => a.x - b.x);
 
@@ -283,9 +306,20 @@ const particleOrder = Array.from({ length: NUM_POINTS }, (_, i) => i)
 
 const screenElement = document.getElementById('canvas');
 const heroLoop = createVisibilityController(document.getElementById('hero'));
-const FRAME_WIDTH = 160;
-const FRAME_HEIGHT = 80;
+// A 160 column frame is about 770px wide at the smallest legible glyph size,
+// so on a phone the landscape grid hung a third of itself off each edge and
+// sheared the blob into a band. Portrait gets a frame shaped like the screen.
+const FRAME_WIDTH = isMobilePortrait ? 88 : 160;
+const FRAME_HEIGHT = isMobilePortrait ? 56 : 80;
 const surface = createTextSurface(FRAME_WIDTH, FRAME_HEIGHT);
+
+// Focal length. Both values are set by the widest moment of the animation
+// rather than the final pose: the explosion throws particles about 73 units out
+// while the camera is still at VIEW_DISTANCE_START, and anything past the frame
+// edge is clipped against an invisible box in the middle of the screen.
+const PROJECTION_K1 = isMobilePortrait
+    ? FRAME_WIDTH * 0.45
+    : Math.min(FRAME_WIDTH, FRAME_HEIGHT) * 0.7;
 
 // Measure character size dynamically to handle responsive scaling
 let charWidth = 6;
@@ -353,7 +387,7 @@ function render(timestamp) {
     const zbuffer = surface.zBuffer;
     const output = surface.charBuffer;
 
-    const K1 = Math.min(width, height) * 0.7;
+    const K1 = PROJECTION_K1;
     const aspectCorrection = (charHeight / charWidth);
 
     stateTimer += timeScale;

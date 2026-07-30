@@ -15,10 +15,16 @@ html {
     font-size: var(--base-font-size);
     overflow-x: hidden;
     width: 100vw;
-    /* The hero and every content section are snap points, so scrolling
-       always settles with one subject centered instead of drifting between
-       two of them. */
-    scroll-snap-type: y mandatory;
+    /* The hero and every content section are snap points, so scrolling settles
+       with one subject in place instead of drifting between two of them.
+
+       Proximity rather than mandatory. Mandatory has no notion of a scroll being
+       too small: anything short of halfway to the next section is resolved by
+       dragging you back to the one you started on, which on a wheel or trackpad
+       means most of a section's worth of scrolling reads as the page shoving you
+       backwards. Proximity leaves short scrolls alone and still pulls the
+       section into place once you are most of the way there. */
+    scroll-snap-type: y proximity;
 }
 
 body {
@@ -265,22 +271,59 @@ body {
     flex-shrink: 0;
 }
 
+/* A portrait affordance. Hidden here rather than only shown in the media query,
+   so nothing leaks into the desktop layout. */
+#section-rail {
+    display: none;
+}
+
 /* ---------------------------------------------------------------------------
-   Mobile layout
-   Graphic holds the top of the screen, text scrolls up underneath it. The
-   column used to be display:none in portrait, which left phone visitors with
-   nothing but text on black.
+   Portrait layout
+
+   Two fixed bands rather than a squeezed version of the desktop columns: the
+   graphic holds the top of the screen and exactly one text panel fills the rest,
+   so a swipe advances the pair together instead of drifting through a column of
+   text with a picture stuck to it.
+
+   Heights are driven off --vp-h, which resolves to the small viewport where
+   that unit exists. vh is the large viewport, which on a phone is taller than
+   what you can actually see until the URL bar collapses, so a band sized in vh
+   hides its own bottom edge until you scroll.
 
    This block lives at the end of the file on purpose: media queries add no
-   specificity, so it has to come after the base .ascii-column and
-   #solid-logo-canvas rules to win the cascade.
+   specificity, so it has to come after the base rules to win the cascade.
    --------------------------------------------------------------------------- */
 @media (max-width: 768px) {
+    :root {
+        --vp-h: 100vh;
+        --art-h: 52vh;
+        --band-h: 48vh;
+    }
+
+    @supports (height: 100svh) {
+        :root {
+            --vp-h: 100svh;
+            --art-h: 52svh;
+            --band-h: 48svh;
+        }
+    }
+
+    #hero {
+        height: var(--vp-h);
+    }
+
+    /* Sized for the 88x56 portrait frame main.js builds: fill the width, then
+       let height take over on a short screen so the frame cannot outgrow it */
+    #canvas {
+        font-size: min(1.78vw, 1.53vh);
+        line-height: min(1.78vw, 1.53vh);
+    }
+
     .content-container {
         flex-direction: column;
         align-items: center;
         gap: 0;
-        width: 100vw;
+        width: 100%;
         margin-bottom: 0;
     }
 
@@ -288,13 +331,18 @@ body {
         position: -webkit-sticky;
         position: sticky;
         top: 0;
-        height: 48vh;
-        width: 100vw;
+        height: var(--art-h);
+        width: 100%;
         flex: none;
         margin-bottom: 0;
         /* Opaque, and above the text, so sections pass cleanly behind it */
         background: #050505;
         z-index: 2;
+        /* The frame is a fixed 128 cell grid, which at the sizes below is a
+           couple of hundred pixels taller and wider than this band. Without
+           this the empty margins of the grid still take up layout space and the
+           shape spills over the hero and the text. */
+        overflow: hidden;
     }
 
     /* Fades text in as it rises into the panel instead of clipping it */
@@ -309,39 +357,122 @@ body {
         pointer-events: none;
     }
 
-    /* Starting size only. The shapes differ hugely in footprint, from a 116
-       column road diorama to a 48 column portal, so logo-3d.js overrides this
-       per shape to make each one fill the panel. */
+    /* Centred on the band rather than laid out in it, so the oversized grid
+       overflows evenly in all four directions and gets clipped away.
+       Size is a starting value only: the shapes differ hugely in footprint,
+       from a 116 column road diorama to a 48 column portal, so logo-3d.js
+       overrides it per shape to make each one fill the band. */
     #solid-logo-canvas {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
         font-size: clamp(3.5px, 1.4vw, 8px);
         line-height: clamp(3.5px, 1.4vw, 8px);
     }
 
     .text-column {
-        /* Lower stacking slot than the graphic, and a tighter rhythm than the
-           desktop 40vh gaps */
+        /* Lower stacking slot than the graphic. Spacing comes from the panels
+           themselves rather than a gap, so that every section occupies the same
+           slot under the graphic no matter how tall its copy is. */
         position: relative;
         z-index: 1;
-        width: 86vw;
-        /* Sets the minimum spacing between section tops, which has to stay
-           wider than the observer band so only one section can claim the
-           graphic at a time */
-        gap: 18vh;
-        padding-top: 4vh;
-        /* Runway for the last section to reach its snap position */
-        padding-bottom: 50vh;
+        width: 100%;
+        gap: 0;
+        padding: 0;
+        /* Runway so the last panel can still reach the top of the text band */
+        padding-bottom: 6vh;
     }
 
-    /* Align section tops rather than centres. Centring put the text in a
-       different place for every section, since the gap above it depended on how
-       tall that section happened to be.
+    /* One panel per screen, filling everything the graphic does not.
 
        The offset is scroll-margin on the sections, not scroll-padding on the
        scroller: scroll-padding applies to every snap target, so it dragged the
        hero's snap position down by the same amount and left a band of black
        above it. */
+    /* Centred in the band rather than sitting on top of it. Short copy pinned to
+       the top of the band leaves the whole tail of the screen empty, which reads
+       as the panel having run out rather than as spacing. */
     .scroll-section {
+        min-height: var(--band-h);
+        box-sizing: border-box;
+        padding: 2vh 7vw;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
         scroll-snap-align: start;
-        scroll-margin-top: 52vh;
+        scroll-margin-top: var(--art-h);
+    }
+
+    /* Everything but the current panel is dimmed rather than hidden, so the next
+       heading is legible on the way in and the graphic never changes next to
+       copy that has not caught up.
+
+       .active is matched explicitly because it carries the desktop reveal at
+       equal specificity, and .is-current then outranks both. */
+    .scroll-section,
+    .scroll-section.active {
+        opacity: 0.14;
+        transition: opacity 0.45s ease-out;
+    }
+
+    .scroll-section.is-current,
+    .scroll-section.active.is-current {
+        opacity: 1;
+    }
+
+    /* The rise is on the contents, not on the panel. The picker decides which
+       panel is current by measuring where its box sits against the bottom of the
+       graphic, so a transform on the box feeds the answer back into the question:
+       marking a panel current shifted it far enough to hand the title to its
+       neighbour, and the selection chased the scroll one panel behind. */
+    .scroll-section>* {
+        transform: translateY(12px);
+        transition: transform 0.45s ease-out;
+    }
+
+    .scroll-section.is-current>* {
+        transform: none;
+    }
+
+    .scroll-section h2 {
+        margin-bottom: 1.5vh;
+    }
+
+    #section-rail {
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
+        position: fixed;
+        right: 0.7rem;
+        /* Centred on the text band, not the screen, so it reads as belonging to
+           the panel it is marking */
+        top: calc(var(--art-h) + (var(--band-h) / 2));
+        transform: translateY(-50%);
+        z-index: 3;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+    }
+
+    /* Only once the hero is behind you: there is nothing to mark before that */
+    body.past-hero #section-rail {
+        opacity: 1;
+    }
+
+    #section-rail i {
+        display: block;
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: #ffffff;
+        opacity: 0.22;
+        transition: opacity 0.35s ease, height 0.35s ease;
+    }
+
+    #section-rail i.on {
+        opacity: 0.9;
+        height: 11px;
+        border-radius: 2px;
     }
 }

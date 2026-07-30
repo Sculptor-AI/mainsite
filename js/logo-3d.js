@@ -73,7 +73,7 @@
     const FISH_T = 5.0;            // half-thickness at the center of the disc
     const FISH_FLAP_AMP = 3.6;     // how far the fin tips scull out of plane
     const FISH_FLAP_SPEED = 1.05;
-    const FISH_SWAY = 0.5;         // lazy yaw oscillation around the profile view
+    const FISH_SWAY = 0.34;        // lazy yaw oscillation around the profile view
 
     // --- Microscope configuration (research section) ---
     const MK_BASE = 0, MK_ARM = 1, MK_STAGE = 2, MK_SLIDE = 3, MK_TUBE = 4,
@@ -86,6 +86,57 @@
     const SCOPE_PIVOT_X = SCOPE_TURRET_X * SCOPE_SCALE;
     const SCOPE_PIVOT_Z = SCOPE_TURRET_Z * SCOPE_SCALE;
     const SCOPE_TURRET_DWELL = 4.5; // seconds between nosepiece clicks
+
+    // --- Rocket configuration (products section) ---
+    const RK_BODY = 0, RK_NOSE = 1, RK_FIN = 2, RK_WINDOW = 3,
+        RK_NOZZLE = 4, RK_FLAME = 5, RK_STAR = 6;
+
+    // Proportion is the whole game here. Size comes from length, not girth: the
+    // airframe runs about 51 units on a 9.6 unit body, so roughly 5:1. Every
+    // part is a surface of revolution about y, so the stack is built upright and
+    // the render tips it over.
+    const ROCKET_R = 4.8;              // radius of the main fuselage
+    const ROCKET_NOSE_TIP = 30.0;
+    const ROCKET_BODY_TOP = 12.0, ROCKET_BODY_BOT = -14.0;
+    const ROCKET_TAIL_Y = -18.0, ROCKET_TAIL_R = 3.6;   // boat tail into the throat
+    const ROCKET_BELL_Y = -21.5, ROCKET_BELL_R = 6.2;   // flared nozzle
+    // Painted stripe. Kept a gentle step, because a hard one reads as a gap in
+    // the hull rather than as paint.
+    const ROCKET_BAND_LO = 2.0, ROCKET_BAND_HI = 6.5;
+    const ROCKET_BAND_SHADE = 0.7;
+    const ROCKET_FIN_R = 12.0;         // how far the fins reach out
+    const ROCKET_FIN_T = 0.55;
+    const ROCKET_FINS = 4;
+    const ROCKET_WINDOW_Y = 9.0, ROCKET_WINDOW_R = 2.0;
+    const ROCKET_FLAME_LEN = 34.0;     // two thirds the length of the airframe
+    const ROCKET_FLAME_W = 10.0;       // plume is wider than the bell it leaves
+
+    // Climbing pose: nose up and to the right at about 48 degrees, which is how
+    // a rocket is drawn under power. Shifting along the axis first puts the
+    // finished diagonal in the middle of the frame.
+    const ROCKET_TILT = -0.733;
+    const ROCKET_AXIAL_SHIFT = 12.75;
+    const ROCKET_BELL_AXIAL = ROCKET_BELL_Y + ROCKET_AXIAL_SHIFT;
+    const ROCKET_ROLL_SPEED = 0.5;     // slow roll, so the fins sweep round
+
+    // Starfield sits well behind the airframe so it never wins the depth test
+    const ROCKET_STAR_X = 55.0, ROCKET_STAR_Y = 45.0, ROCKET_STAR_Z = 16.0;
+    const ROCKET_FLAME_FLICK = 9.0;    // turbulence rate in the plume
+    const ROCKET_FLAME_PULSE = 6.0;    // rate the plume grows and shrinks
+
+    // --- Portal configuration (Constellation product) ---
+    const PK_LIP = 0, PK_FIELD = 1, PK_MOTE = 2;
+
+    // Shaped after the game: a tall oval with a hot lip and a turning field
+    // inside. Sized to sit just inside the Connect logo, which renders 44 rows
+    // by 54 cols; motes included this comes to about 40 by 50. The projection
+    // is roughly 1.21 cells per unit across and 0.73 down.
+    const PORTAL_RX = 14.5, PORTAL_RY = 21.5;
+    const PORTAL_TUBE = 2.2;        // cross-section radius of the lip
+    const PORTAL_SPIN = 0.55;       // base rate the field turns
+    const PORTAL_RIPPLE = 1.1;      // rate ripples travel out through the field
+    const PORTAL_MOTE_REACH = 4.0;  // how far outside the lip motes start
+    const PORTAL_MOTE_RATE = 0.21;  // how fast they fall inward
 
     // A long gradient used as a fallback ramp
     const SHADE_CHARS = " `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@";
@@ -235,7 +286,9 @@
     // Pale blotches plus the skin folds that radiate out from behind the
     // pectoral fin — the two things that make mola hide read as mola hide.
     function fishSkin(x, y) {
-        const blotch = hash01(Math.floor(x * 1.4) * 37.1 + Math.floor(y * 1.4) * 91.7);
+        // ~3 cols x 2 rows per patch at this projection; any finer and the
+        // blotches land inside a single cell and just read as speckle
+        const blotch = hash01(Math.floor(x * 0.5) * 37.1 + Math.floor(y * 0.45) * 91.7);
         const ang = Math.atan2(y - 1.0, x - 4.0);
         const rad = Math.hypot(x - 4.0, y - 1.0);
         const fold = Math.sin(ang * 11.0 + rad * 0.35);
@@ -268,13 +321,18 @@
             const tx = (fishThickness(x + eps, y) - fishThickness(x - eps, y)) / (2 * eps);
             const ty = (fishThickness(x, y + eps) - fishThickness(x, y - eps)) / (2 * eps);
             const side = Math.random() < 0.5 ? 1 : -1;
-            let nx = -side * tx, ny = -side * ty, nz = side;
+            // Both faces of the lens tilt the same way as the thickness falls
+            // off, and only z flips between them. Folding `side` into the lateral
+            // terms mirrored the gradient on the camera-facing face, which lit
+            // the disc inside-out and read as a flat patch rather than a dome.
+            let nx = -tx, ny = -ty, nz = side;
             const nl = Math.hypot(nx, ny, nz) || 1;
 
             targets.push({
                 x, y, z: side * t,
                 nx: nx / nl, ny: ny / nl, nz: nz / nl,
-                kind: FK_BODY, flap: 0, tex: fishSkin(x, y), a: 0
+                kind: FK_BODY, flap: 0, tex: fishSkin(x, y),
+                a: fishProfileD(x, y)   // 0 along the crown, 1 at the outline
             });
             added++;
         }
@@ -308,7 +366,9 @@
             targets.push({
                 x, y, z: side * t,
                 nx: nx / nl, ny: ny / nl, nz: nz / nl,
-                kind: FK_FIN, flap: Math.pow(h, 1.7), tex: 0, a: 0
+                // Rays run base-to-tip at constant s, converging at the tip
+                kind: FK_FIN, flap: Math.pow(h, 1.7),
+                tex: Math.sin(s * Math.PI * 8.0), a: 0
             });
         }
     }
@@ -320,7 +380,7 @@
             if (xb === null) continue;
 
             // Scalloped trailing edge — the clavus is a row of soft lobes
-            const reach = 4.6 + Math.sin(y * 1.15) * 1.3;
+            const reach = 4.4 + Math.sin(y * 1.15) * 0.9;
             const u = Math.random();
             const x = xb - u * reach;
             const taper = Math.sqrt(clamp01(1 - Math.pow(Math.abs(y) / 10.6, 6)));
@@ -331,7 +391,8 @@
             targets.push({
                 x, y, z: side * t,
                 nx: -0.18 * u, ny: 0, nz: side * 0.98,
-                kind: FK_CLAVUS, flap: Math.pow(u, 1.4) * 0.45, tex: 0, a: 0
+                kind: FK_CLAVUS, flap: Math.pow(u, 1.4) * 0.45,
+                tex: Math.sin(y * 1.15), a: 0   // which lobe of the scallop
             });
         }
     }
@@ -398,9 +459,9 @@
         pushFishBody(targets, share(0.12), true);
         pushFishFin(targets, share(0.10), [2.5, 9.5], [-10.5, 7.5], [-11.0, 26.5], 1.6, 1.7);
         pushFishFin(targets, share(0.09), [1.5, -9.5], [-10.5, -7.5], [-12.0, -25.0], 1.5, 1.5);
-        pushFishClavus(targets, share(0.07));
+        pushFishClavus(targets, share(0.09));
         pushFishPectoral(targets, share(0.035));
-        pushFishPatch(targets, share(0.008), 11.5, 3.2, 1.15, 1.15, FK_EYE, 0.14);
+        pushFishPatch(targets, share(0.012), 11.5, 3.2, 1.35, 1.35, FK_EYE, 0.14);
         pushFishPatch(targets, share(0.004), 14.1, -2.6, 1.0, 0.8, FK_MOUTH, 0.05);
         pushFishGill(targets, share(0.006));
 
@@ -719,6 +780,230 @@
         return targets.slice(0, count);
     }
 
+    // --- Rocket geometry ---
+    // Fuselage, nose cone, boat tail and nozzle are all surfaces of revolution,
+    // so one frustum walker builds every one of them. Fins are flat sheets in
+    // planes through the axis, and the plume is a loose cone the render loop
+    // stretches and shakes.
+
+    // Rejection-sample along the height so points spread evenly over the
+    // surface instead of piling up on the narrow end of a taper.
+    function pushRocketFrustum(targets, count, y0, r0, y1, r1, kind, shade) {
+        const h = y1 - y0;
+        const slope = (r0 - r1) / h;   // outward normal leans by the taper
+        const rMax = Math.max(r0, r1) || 1;
+        let added = 0, guard = count * 40;
+        while (added < count && guard-- > 0) {
+            const t = Math.random();
+            const r = r0 + (r1 - r0) * t;
+            if (Math.random() > r / rMax) continue;
+
+            const a = Math.random() * Math.PI * 2;
+            const ca = Math.cos(a), sa = Math.sin(a);
+            const nl = Math.hypot(1, slope) || 1;
+            targets.push({
+                x: ca * r, y: y0 + h * t, z: sa * r,
+                nx: ca / nl, ny: slope / nl, nz: sa / nl,
+                kind, phase: t, tex: shade, ang: a
+            });
+            added++;
+        }
+    }
+
+    function pushRocketBody(targets, count) {
+        for (let i = 0; i < count; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const y = ROCKET_BODY_BOT + Math.random() * (ROCKET_BODY_TOP - ROCKET_BODY_BOT);
+            const ca = Math.cos(a), sa = Math.sin(a);
+            // A painted stripe round the midsection, so the hull is not one tone
+            const band = (y > ROCKET_BAND_LO && y < ROCKET_BAND_HI)
+                ? ROCKET_BAND_SHADE : 1.0;
+            targets.push({
+                x: ca * ROCKET_R, y, z: sa * ROCKET_R,
+                nx: ca, ny: 0, nz: sa,
+                kind: RK_BODY, phase: 0, tex: band, ang: a
+            });
+        }
+    }
+
+    function pushRocketFins(targets, count) {
+        // Outline in (radius, height): swept back, so the trailing corner sits
+        // below the nozzle throat the way a hobby fin does
+        const rootLead = -5.0, rootTrail = -18.0;
+        const tipLead = -14.5, tipTrail = -22.5;
+        for (let i = 0; i < count; i++) {
+            const fin = Math.floor(Math.random() * ROCKET_FINS);
+            const a0 = fin * (Math.PI * 2 / ROCKET_FINS);
+            const ca = Math.cos(a0), sa = Math.sin(a0);
+
+            const u = Math.random();          // 0 at the root, 1 at the tip
+            const v = Math.random();          // across the chord
+            const r = ROCKET_R + (ROCKET_FIN_R - ROCKET_R) * u;
+            const lead = rootLead + (tipLead - rootLead) * u;
+            const trail = rootTrail + (tipTrail - rootTrail) * u;
+            const y = lead + (trail - lead) * v;
+
+            // Thins to nothing at the free edges so it is not a slab
+            const edge = Math.sqrt(clamp01(2.6 * Math.min(v, 1 - v)));
+            const t = ROCKET_FIN_T * (1 - u * 0.55) * edge;
+            if (t < 0.04) continue;
+
+            const side = Math.random() < 0.5 ? 1 : -1;
+            targets.push({
+                x: ca * r - sa * side * t,
+                y,
+                z: sa * r + ca * side * t,
+                nx: -sa * side, ny: 0, nz: ca * side,
+                kind: RK_FIN, phase: u, tex: v, ang: a0
+            });
+        }
+    }
+
+    function pushRocketWindow(targets, count) {
+        for (let i = 0; i < count; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const rr = Math.sqrt(Math.random());
+            // Wrap the disc onto the hull: one axis is arc length, the other is y
+            const ang = (Math.cos(a) * rr * ROCKET_WINDOW_R) / ROCKET_R;
+            const ca = Math.cos(ang), sa = Math.sin(ang);
+            targets.push({
+                x: ca * (ROCKET_R + 0.14),
+                y: ROCKET_WINDOW_Y + Math.sin(a) * rr * ROCKET_WINDOW_R,
+                z: sa * (ROCKET_R + 0.14),
+                nx: ca, ny: 0, nz: sa,
+                kind: RK_WINDOW, phase: rr, tex: 1.0, ang: ang
+            });
+        }
+    }
+
+    function pushRocketFlame(targets, count) {
+        for (let i = 0; i < count; i++) {
+            // Denser at the throat, which is both the widest part of the plume
+            // and the brightest. An exponent below 1 would bias the other way
+            // and leave the throat too sparse to cover.
+            const u = Math.pow(Math.random(), 1.7);
+            // Bulges just clear of the bell, then necks down toward the tip
+            const w = ROCKET_FLAME_W * (0.85 + 0.4 * Math.sin(u * 3.0)) * (1 - u * 0.75);
+            const a = Math.random() * Math.PI * 2;
+            const rr = Math.sqrt(Math.random());
+            targets.push({
+                x: Math.cos(a) * rr * w,
+                y: ROCKET_BELL_Y - u * ROCKET_FLAME_LEN,
+                z: Math.sin(a) * rr * w,
+                nx: 0, ny: -1, nz: 0,
+                // Half-width at this height, not the radial fraction. Only the
+                // near skin of the plume survives the depth test, and every one
+                // of those points sits at a radial fraction of about 0.97, so
+                // heat has to come from the distance across the screen instead.
+                kind: RK_FLAME, phase: u, tex: w, ang: a
+            });
+        }
+    }
+
+    // Backdrop, not part of the airframe: these are left in view space, so the
+    // roll and the tilt skip them and the field stays put behind the rocket.
+    function pushRocketStars(targets, count) {
+        for (let i = 0; i < count; i++) {
+            targets.push({
+                x: (Math.random() * 2 - 1) * ROCKET_STAR_X,
+                y: (Math.random() * 2 - 1) * ROCKET_STAR_Y,
+                z: ROCKET_STAR_Z + Math.random() * 8.0,
+                nx: 0, ny: 0, nz: -1,
+                kind: RK_STAR, phase: Math.random(), tex: Math.random(), ang: 0
+            });
+        }
+    }
+
+    function generateRocketTargets(count) {
+        const targets = [];
+        const share = f => Math.max(1, Math.floor(count * f));
+        pushRocketBody(targets, share(0.20));
+        pushRocketFrustum(targets, share(0.11), ROCKET_BODY_TOP, ROCKET_R,
+            ROCKET_NOSE_TIP, 0.0, RK_NOSE, 1.0);
+        pushRocketFrustum(targets, share(0.03), ROCKET_BODY_BOT, ROCKET_R,
+            ROCKET_TAIL_Y, ROCKET_TAIL_R, RK_BODY, 1.0);
+        pushRocketFrustum(targets, share(0.05), ROCKET_TAIL_Y, ROCKET_TAIL_R,
+            ROCKET_BELL_Y, ROCKET_BELL_R, RK_NOZZLE, 1.0);
+        pushRocketFins(targets, share(0.14));
+        pushRocketWindow(targets, share(0.015));
+        pushRocketFlame(targets, share(0.36));
+
+        // Centre the stack on its own axis, so tipping it over in the render
+        // leaves the diagonal centred in frame rather than hanging off a corner
+        for (const t of targets) t.y += ROCKET_AXIAL_SHIFT;
+
+        pushRocketStars(targets, share(0.055));
+        if (targets.length < count) pushRocketStars(targets, count - targets.length);
+        return targets.slice(0, count);
+    }
+
+    // --- Portal geometry ---
+    // Three parts. The lip is a torus swept round an ellipse and is the only
+    // thing bright enough to read as solid. The field inside is stored in polar
+    // form and positioned at render time, so it can turn with the inner rings
+    // running faster than the outer ones, which shears it into a spiral. Motes
+    // fall in from outside along the lip's outward normal.
+
+    // Outward normal of the ellipse at angle t. Not the radial direction: for
+    // anything other than a circle those differ, and using the radius makes the
+    // lip look pinched at the ends.
+    function portalOutward(t) {
+        let nx = Math.cos(t) / PORTAL_RX, ny = Math.sin(t) / PORTAL_RY;
+        const l = Math.hypot(nx, ny) || 1;
+        return [nx / l, ny / l];
+    }
+
+    function pushPortalLip(targets, count) {
+        for (let i = 0; i < count; i++) {
+            const t = Math.random() * Math.PI * 2;
+            const [onx, ony] = portalOutward(t);
+            const around = Math.random() * Math.PI * 2;
+            const cp = Math.cos(around), sp = Math.sin(around);
+            targets.push({
+                x: PORTAL_RX * Math.cos(t) + onx * PORTAL_TUBE * cp,
+                y: PORTAL_RY * Math.sin(t) + ony * PORTAL_TUBE * cp,
+                z: PORTAL_TUBE * sp,
+                nx: onx * cp, ny: ony * cp, nz: sp,
+                kind: PK_LIP, fr: 1, fa: t, phase: Math.random()
+            });
+        }
+    }
+
+    function pushPortalField(targets, count) {
+        for (let i = 0; i < count; i++) {
+            targets.push({
+                x: 0, y: 0, z: 0,          // placed by the render loop
+                nx: 0, ny: 0, nz: -1,
+                kind: PK_FIELD,
+                fr: Math.sqrt(Math.random()),   // area-uniform across the mouth
+                fa: Math.random() * Math.PI * 2,
+                phase: Math.random()
+            });
+        }
+    }
+
+    function pushPortalMotes(targets, count) {
+        for (let i = 0; i < count; i++) {
+            targets.push({
+                x: 0, y: 0, z: 0,
+                nx: 0, ny: 0, nz: -1,
+                kind: PK_MOTE, fr: 0,
+                fa: Math.random() * Math.PI * 2,
+                phase: Math.random()
+            });
+        }
+    }
+
+    function generatePortalTargets(count) {
+        const targets = [];
+        const share = f => Math.max(1, Math.floor(count * f));
+        pushPortalLip(targets, share(0.38));
+        pushPortalField(targets, share(0.54));
+        pushPortalMotes(targets, share(0.08));
+        if (targets.length < count) pushPortalField(targets, count - targets.length);
+        return targets.slice(0, count);
+    }
+
     function buildSortedIndices(length, extractor) {
         return Array.from({ length }, (_, i) => {
             const { x, y, z } = extractor(i);
@@ -777,7 +1062,15 @@
                             carX: 0, carY: 0, carZ: 0,
                             carNX: 0, carNY: 0, carNZ: 0,
                             carKind: CK_ROAD, carPhase: 0,
-                            carShade: 0, carBob: 0
+                            carShade: 0, carBob: 0,
+                            rockX: 0, rockY: 0, rockZ: 0,
+                            rockNX: 0, rockNY: 1, rockNZ: 0,
+                            rockKind: RK_BODY, rockPhase: 0,
+                            rockTex: 1, rockAng: 0,
+                            portX: 0, portY: 0, portZ: 0,
+                            portNX: 0, portNY: 0, portNZ: -1,
+                            portKind: PK_FIELD, portFR: 0, portFA: 0,
+                            portPhase: 0
                         });
                     }
                 }
@@ -792,12 +1085,16 @@
     const scopeTargets = generateScopeTargets(particles.length);
     const dwarfTargets = generateDwarfTargets(particles.length);
     const carTargets = generateCarTargets(particles.length);
+    const rocketTargets = generateRocketTargets(particles.length);
+    const portalTargets = generatePortalTargets(particles.length);
 
     const particleOrder = buildSortedIndices(particles.length, i => ({ x: particles[i].logoX, y: particles[i].logoY, z: particles[i].logoZ }));
     const fishOrder = buildSortedIndices(fishTargets.length, i => fishTargets[i]);
     const scopeOrder = buildSortedIndices(scopeTargets.length, i => scopeTargets[i]);
     const dwarfOrder = buildSortedIndices(dwarfTargets.length, i => dwarfTargets[i]);
     const carOrder = buildSortedIndices(carTargets.length, i => carTargets[i]);
+    const rocketOrder = buildSortedIndices(rocketTargets.length, i => rocketTargets[i]);
+    const portalOrder = buildSortedIndices(portalTargets.length, i => portalTargets[i]);
 
     for (let k = 0; k < particles.length; k++) {
         const p = particles[particleOrder[k]];
@@ -839,6 +1136,26 @@
             p.carPhase = tCar.a;
             p.carShade = tCar.s;
             p.carBob = tCar.bob;
+        }
+
+        if (k < rocketTargets.length) {
+            const tRock = rocketTargets[rocketOrder[k]];
+            p.rockX = tRock.x; p.rockY = tRock.y; p.rockZ = tRock.z;
+            p.rockNX = tRock.nx; p.rockNY = tRock.ny; p.rockNZ = tRock.nz;
+            p.rockKind = tRock.kind;
+            p.rockPhase = tRock.phase;
+            p.rockTex = tRock.tex;
+            p.rockAng = tRock.ang;
+        }
+
+        if (k < portalTargets.length) {
+            const tPort = portalTargets[portalOrder[k]];
+            p.portX = tPort.x; p.portY = tPort.y; p.portZ = tPort.z;
+            p.portNX = tPort.nx; p.portNY = tPort.ny; p.portNZ = tPort.nz;
+            p.portKind = tPort.kind;
+            p.portFR = tPort.fr;
+            p.portFA = tPort.fa;
+            p.portPhase = tPort.phase;
         }
 
         p.logo2X = p.logoX; p.logo2Y = p.logoY; p.logo2Z = p.logoZ;
@@ -944,17 +1261,22 @@
     window.addEventListener('touchend', handleDragEnd);
     window.addEventListener('touchcancel', handleDragEnd);
 
-    // State: 0 = Logo, 1 = Microscope, 2 = Fish, 3 = Dwarf, 4 = Logo2, 5 = Car
-    const SHAPE_KEYS = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car'];
-    const STATE_SHAPE = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car'];
+    // State: 0 = Logo, 1 = Microscope, 2 = Fish, 3 = Dwarf, 4 = Logo2, 5 = Car,
+    //        6 = Rocket, 7 = Portal
+    const SHAPE_KEYS = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car', 'rocket', 'portal'];
+    const STATE_SHAPE = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car', 'rocket', 'portal'];
 
     let targetState = 0;
     let lastTimestamp = performance.now();
-    const currentWeights = { logo: 1, scope: 0, fish: 0, dwarf: 0, logo2: 0, car: 0 };
+    const currentWeights = {
+        logo: 1, scope: 0, fish: 0, dwarf: 0, logo2: 0, car: 0, rocket: 0, portal: 0
+    };
     let targetWeights = getTargetWeightsForState(0);
 
     function getTargetWeightsForState(state) {
-        const w = { logo: 0, scope: 0, fish: 0, dwarf: 0, logo2: 0, car: 0 };
+        const w = {
+            logo: 0, scope: 0, fish: 0, dwarf: 0, logo2: 0, car: 0, rocket: 0, portal: 0
+        };
         const key = STATE_SHAPE[state];
         if (key) w[key] = 1;
         return w;
@@ -991,11 +1313,15 @@
         let wDwarf = currentWeights.dwarf < 0.001 ? 0 : currentWeights.dwarf;
         let wLogo2 = currentWeights.logo2 < 0.001 ? 0 : currentWeights.logo2;
         let wCar = currentWeights.car < 0.001 ? 0 : currentWeights.car;
+        let wRocket = currentWeights.rocket < 0.001 ? 0 : currentWeights.rocket;
+        let wPortal = currentWeights.portal < 0.001 ? 0 : currentWeights.portal;
         const wLogoCombined = wLogo + wLogo2;
         const hasScope = wScope > 0;
         const hasFish = wFish > 0;
         const hasDwarf = wDwarf > 0;
         const hasCar = wCar > 0;
+        const hasRocket = wRocket > 0;
+        const hasPortal = wPortal > 0;
 
         const aspectCorrection = (charHeight / charWidth);
 
@@ -1024,6 +1350,22 @@
         const scopeLampPulse = hasScope ? 0.82 + Math.sin(time * 2.3) * 0.14 : 0;
         const scopeKnobSpin = time * 1.6;
 
+        // The portal is always open, so there is no cycle to wait through: all
+        // the life comes from the field turning, ripples crossing it and motes
+        // falling in.
+        const portalSpin = time * PORTAL_SPIN;
+        const portalRipple = time * PORTAL_RIPPLE;
+        // Inner radius of the mouth, just inside the lip
+        const portalInX = PORTAL_RX - PORTAL_TUBE * 0.85;
+        const portalInY = PORTAL_RY - PORTAL_TUBE * 0.85;
+
+        // Rocket: the plume stretches on a slow pulse and boils on a fast one
+        const flamePulse = 1.0 + Math.sin(time * ROCKET_FLAME_PULSE) * 0.22;
+        const flameFlick = time * ROCKET_FLAME_FLICK;
+        const rocketRoll = time * ROCKET_ROLL_SPEED;
+        const rollC = Math.cos(rocketRoll), rollS = Math.sin(rocketRoll);
+        const tiltC = Math.cos(ROCKET_TILT), tiltS = Math.sin(ROCKET_TILT);
+
         // Car animation clocks: dashes scroll backward, wheels spin to match
         const carRoadScroll = time * CAR_ROAD_SPEED;
         const carWheelSpin = time * (CAR_ROAD_SPEED / CAR_WHEEL_R);
@@ -1044,6 +1386,15 @@
         for (let i = 0; i < particles.length; i++) {
             let p = particles[i];
             let px = 0, py = 0, pz = 0;
+            // Both are needed again when shading, so they are hoisted out of the
+            // blend below: how far this point is into the portal, and whether it
+            // is still riding the head of a line that is being drawn.
+            // How far a mote is through its fall, 1 outside and 0 at the lip.
+            // Set while positioning, read back when shading.
+            let portalMoteLife = 0;
+            // Set while the rocket is still upright, read back when shading the
+            // plume: distance from the plume axis across the view plane
+            let flameLat = 0;
 
             if (wLogoCombined) {
                 px += p.logoX * wLogoCombined;
@@ -1070,6 +1421,57 @@
                 px += p.carX * wCar;
                 py += (p.carY + carBobOffset * p.carBob) * wCar;
                 pz += p.carZ * wCar;
+            }
+            if (hasRocket) {
+                let rx = p.rockX, ry = p.rockY, rz = p.rockZ;
+                if (p.rockKind === RK_FLAME) {
+                    const u = p.rockPhase;
+                    // Stretch about the bell, then snake, harder further out
+                    ry = ROCKET_BELL_AXIAL + (ry - ROCKET_BELL_AXIAL) * flamePulse;
+                    const wob = u * 2.4;
+                    rx += Math.sin(u * 5.5 + flameFlick * 0.9 + p.rockAng) * wob;
+                    rz += Math.cos(u * 4.5 + flameFlick * 0.75 + p.rockAng) * wob;
+                }
+                if (p.rockKind !== RK_STAR) {
+                    // Roll about the long axis while it is still upright, which
+                    // is the cheap frame to do it in, then tip the stack into
+                    // its climb. A lateral offset survives the tilt with its
+                    // length intact, so rx here is also how far this point sits
+                    // from the plume axis across the screen.
+                    const arx = rx * rollC + rz * rollS;
+                    rz = rz * rollC - rx * rollS;
+                    rx = arx;
+                    flameLat = rx;
+                    const trx = rx * tiltC - ry * tiltS;
+                    ry = rx * tiltS + ry * tiltC;
+                    rx = trx;
+                }
+                px += rx * wRocket; py += ry * wRocket; pz += rz * wRocket;
+            }
+            if (hasPortal) {
+                let qx = p.portX, qy = p.portY, qz = p.portZ;
+                if (p.portKind === PK_FIELD) {
+                    // Inner rings turn faster than outer ones, and the shear is
+                    // what winds the field into a spiral instead of a spinning
+                    // disc that reads as static
+                    const fr = p.portFR;
+                    const a = p.portFA + portalSpin * (0.35 + 0.95 * (1 - fr));
+                    qx = Math.cos(a) * fr * portalInX;
+                    qy = Math.sin(a) * fr * portalInY;
+                    qz = Math.sin(fr * 5.0 + a * 2.0 + portalRipple) * 0.8;
+                } else if (p.portKind === PK_MOTE) {
+                    // Falls from PORTAL_MOTE_REACH outside the lip down onto it,
+                    // winding forward as it goes
+                    portalMoteLife = 1 - ((p.portPhase + time * PORTAL_MOTE_RATE) % 1);
+                    const a = p.portFA + portalSpin * 0.5 + portalMoteLife * 2.4;
+                    const grow = (1 - portalMoteLife) * PORTAL_MOTE_REACH;
+                    const ox = Math.cos(a) / PORTAL_RX, oy = Math.sin(a) / PORTAL_RY;
+                    const ol = Math.hypot(ox, oy) || 1;
+                    qx = PORTAL_RX * Math.cos(a) + (ox / ol) * grow;
+                    qy = PORTAL_RY * Math.sin(a) + (oy / ol) * grow;
+                    qz = Math.sin(a * 3.0 + portalRipple) * 1.2;
+                }
+                px += qx * wPortal; py += qy * wPortal; pz += qz * wPortal;
             }
 
             let x = px * cosT - pz * sinT;
@@ -1126,6 +1528,29 @@
                             ny += p.carNY * wCar;
                             nz += (p.carNX * sinT + p.carNZ * cosT) * wCar;
                         }
+                        if (hasRocket) {
+                            let rnx = p.rockNX, rny = p.rockNY, rnz = p.rockNZ;
+                            if (p.rockKind !== RK_STAR) {
+                                // Same roll then tilt the positions took
+                                const arx = rnx * rollC + rnz * rollS;
+                                rnz = rnz * rollC - rnx * rollS;
+                                rnx = arx;
+                                const trx = rnx * tiltC - rny * tiltS;
+                                rny = rnx * tiltS + rny * tiltC;
+                                rnx = trx;
+                            }
+                            nx += (rnx * cosT - rnz * sinT) * wRocket;
+                            ny += rny * wRocket;
+                            nz += (rnx * sinT + rnz * cosT) * wRocket;
+                        }
+                        if (hasPortal) {
+                            // The lip carries a real torus normal so the ring
+                            // reads as solid; field and motes are flat sparks
+                            // facing the camera
+                            nx += (p.portNX * cosT - p.portNZ * sinT) * wPortal;
+                            ny += p.portNY * wPortal;
+                            nz += (p.portNX * sinT + p.portNZ * cosT) * wPortal;
+                        }
 
                         if (hasCar) {
                             const tny = ny * carTiltCos + nz * carTiltSin;
@@ -1147,7 +1572,7 @@
                         // how squarely the surface faces the camera, plus a
                         // Blinn specular raised to ^16 by repeated squaring
                         let facing = 0, spec = 0;
-                        if (hasFish || hasScope || hasCar) {
+                        if (hasFish || hasScope || hasCar || hasRocket) {
                             facing = -nz;
                             if (facing < 0) facing = 0;
                             spec = nx * HX + ny * HY + nz * HZ;
@@ -1157,23 +1582,44 @@
 
                         if (hasFish) {
                             let fb;
+                            // A mola is a flat disc, so a world-space light hits
+                            // every body particle at the same angle and the sway
+                            // modulates the whole flank in lockstep. Measured, the
+                            // dense-glyph share swung 20x over one sway cycle, from
+                            // a saturated slab to a hollow husk. Light the fish in
+                            // its own frame instead: tone then comes from where a
+                            // point sits on the dome, and turning only changes the
+                            // silhouette. `nz` is mirrored to the near face so the
+                            // far half of the lens shades like the half you see.
+                            const fishForm = Math.max(0.12,
+                                p.fishNX * LX + p.fishNY * LY
+                                - Math.abs(p.fishNZ) * LZ);
+
                             switch (p.fishKind) {
-                                case FK_BODY:
-                                    // Pale leathery flank: blotches and skin folds ride
-                                    // on top of the broad camera-facing gradient
-                                    fb = 0.14 + facing * 0.5 + diffuse * 0.26 + spec * 0.3
-                                        + p.fishTex * 0.07;
+                                case FK_BODY: {
+                                    // Crown lifts the thick centre, form sweeps the
+                                    // dome head-to-tail, and the skin folds break up
+                                    // what would otherwise be two flat halves.
+                                    const crown = 1 - p.fishPhase;
+                                    fb = 0.12 + crown * 0.16 + fishForm * 0.42
+                                        + p.fishTex * 0.15 + facing * 0.09;
                                     break;
+                                }
                                 case FK_FIN:
-                                    // Dorsal and anal fins read much darker than the body
-                                    fb = 0.07 + facing * 0.26 + diffuse * 0.22;
+                                    // Darker than the body, with the rays picked out
+                                    // against the membrane between them
+                                    fb = 0.11 + fishForm * 0.30
+                                        + (p.fishTex > 0.4 ? 0.17 : 0);
                                     break;
                                 case FK_CLAVUS:
-                                    fb = 0.09 + facing * 0.3 + diffuse * 0.22;
+                                    // Sits at the shadowed rear, so it has to stay
+                                    // at or below the flank it hangs off, since
+                                    // brighter than the body reads as a loose bar
+                                    fb = 0.13 + fishForm * 0.34 + p.fishTex * 0.07;
                                     break;
                                 case FK_PECT:
                                     // Catches more light than the flank behind it
-                                    fb = 0.2 + facing * 0.55 + diffuse * 0.25;
+                                    fb = 0.26 + fishForm * 0.44;
                                     break;
                                 case FK_EYE:
                                     // Dark pupil ringed by a pale iris
@@ -1183,6 +1629,103 @@
                                 default: fb = 0.02; break; // gill slit
                             }
                             brightness += clamp01(fb) * wFish;
+                        }
+
+                        if (hasRocket) {
+                            let rb;
+                            switch (p.rockKind) {
+                                case RK_FLAME: {
+                                    // Emissive, so no key light: hottest along the
+                                    // axis at the throat, cooling down the plume and
+                                    // out toward its edges
+                                    const u = p.rockPhase;
+                                    const core = 1 - clamp01(
+                                        Math.abs(flameLat) / Math.max(0.6, p.rockTex));
+                                    const flick = 0.80 + Math.sin(
+                                        flameFlick + u * 7.0 + p.rockAng * 2.0) * 0.20;
+                                    rb = (0.99 - u * 0.6) * (0.30 + core * 0.70) * flick;
+                                    break;
+                                }
+                                case RK_STAR: {
+                                    // Mostly faint, a few bright, each on its own
+                                    // twinkle phase so the field is never uniform
+                                    const tw = 0.6 + Math.sin(
+                                        time * 1.7 + p.rockPhase * 6.283) * 0.4;
+                                    rb = (0.1 + Math.pow(p.rockTex, 3.0) * 0.75) * tw;
+                                    break;
+                                }
+                                case RK_NOSE:
+                                    // Polished cone, so it takes the hardest sheen
+                                    rb = 0.22 + facing * 0.22 + diffuse * 0.34 + spec * 0.42;
+                                    break;
+                                case RK_WINDOW:
+                                    // Dark glass inside a bright bezel
+                                    rb = p.rockPhase < 0.62 ? 0.05 + spec * 0.45 : 0.9;
+                                    break;
+                                case RK_FIN: {
+                                    // A fin is a thin sheet, so both of its faces
+                                    // land at practically the same depth and the
+                                    // depth test picks between them at random.
+                                    // Shade whichever one points at the camera, or
+                                    // half the sheet comes out backlit and the
+                                    // surface breaks up into speckle.
+                                    const s = nz > 0 ? -1 : 1;
+                                    const fdot = Math.max(0.15,
+                                        s * (nx * LX + ny * LY + nz * LZ));
+                                    // A flat sheet shades dead flat, so pick out
+                                    // the leading edge to give it an outline
+                                    rb = 0.15 + Math.abs(nz) * 0.20 + fdot * 0.34
+                                        + (p.rockTex < 0.15 ? 0.17 : 0);
+                                    break;
+                                }
+                                case RK_NOZZLE:
+                                    // Scorched bell, darkest part of the airframe
+                                    rb = 0.09 + facing * 0.14 + diffuse * 0.22 + spec * 0.3;
+                                    break;
+                                default: // RK_BODY, scaled by the painted stripe
+                                    rb = (0.19 + facing * 0.2 + diffuse * 0.34
+                                        + spec * 0.3) * p.rockTex;
+                                    break;
+                            }
+                            brightness += clamp01(rb) * wRocket;
+                        }
+
+                        if (hasPortal) {
+                            let pb;
+                            if (p.portKind === PK_LIP) {
+                                // Lit in the portal's own frame, since it is held
+                                // square to the camera and a world light would just
+                                // track the drift instead of describing the lip.
+                                const pForm = Math.max(0.15, p.portNX * LX
+                                    + p.portNY * LY - Math.abs(p.portNZ) * LZ);
+                                // A charge runs round the ring. Uniform tone
+                                // saturates in this glyph set past about 0.45, so
+                                // the wave swings across that mark to stay visible
+                                // rather than riding above it.
+                                const wave = Math.sin(p.portFA * 3.0 - portalSpin * 2.6);
+                                pb = 0.34 + pForm * 0.20 + (wave > 0.2 ? 0.28 : 0);
+                            } else if (p.portKind === PK_FIELD) {
+                                const fr = p.portFR;
+                                // Brightest where it meets the lip, falling away
+                                // toward the middle, with spiral arms over the top
+                                // and ripples running outward
+                                // Three separable tones: field, arm, rim. Anything
+                                // over about 0.45 collapses to one glyph, so they
+                                // are spaced inside the band below it.
+                                const glow = Math.pow(fr, 2.6) * 0.22;
+                                const arm = Math.sin(p.portFA * 3.0 - fr * 5.0
+                                    + portalSpin * 1.4);
+                                const ripple = Math.sin(fr * 11.0 - portalRipple * 2.0);
+                                pb = 0.19 + glow + (arm > 0.15 ? 0.16 : 0)
+                                    + ripple * 0.05;
+                            } else {
+                                // Fades up on the way in and dies at the lip, so
+                                // the loop never shows a mote popping in or out
+                                const l = portalMoteLife;
+                                pb = 0.1 + Math.min(1, (1 - l) * 5.0)
+                                    * Math.min(1, l * 5.0) * 0.46;
+                            }
+                            brightness += clamp01(pb) * wPortal;
                         }
 
                         if (hasScope) {
@@ -1347,6 +1890,8 @@
         }
 
         // --- Rotation & Speed ---
+        // The rocket gets its motion from its own roll instead of a world spin,
+        // which would swing the climb angle toward the camera and flatten it.
         let speedMult = 1.0 * wLogoCombined + 0.8 * wDwarf + 0.9 * wScope;
         let timeScale = dt * 60.0;
         let autoSpeed = BASE_ROTATION_SPEED * speedMult;
@@ -1365,6 +1910,16 @@
                 const profileAngle = Math.round(angle / (Math.PI * 2)) * (Math.PI * 2);
                 const pull = 1.0 - Math.pow(0.96, timeScale);
                 angle += (profileAngle - angle) * pull * wCar;
+            }
+
+            // A portal is only a portal seen through, so hold the mouth square to
+            // the camera and keep the oval an oval. Drag still spins it freely.
+            // The rocket is held for the same reason: the climb angle only reads
+            // side on, and its own roll supplies the movement.
+            if (hasPortal || hasRocket) {
+                const square = Math.round(angle / (Math.PI * 2)) * (Math.PI * 2);
+                const pull = 1.0 - Math.pow(0.94, timeScale);
+                angle += (square - angle) * pull * Math.max(wPortal, wRocket);
             }
 
             // A mola is only a mola side-on — hold the profile, but let it
@@ -1386,15 +1941,22 @@
     const sunfish = document.getElementById('project-sunfish');
     const brownDwarf = document.getElementById('brown-dwarf');
     const avResearch = document.getElementById('av-research');
+    const products = document.getElementById('products');
+    const constellation = document.getElementById('project-constellation');
     const sourceCode = document.getElementById('connect');
 
     let isAboutUsVisible = false;
     let isFutureProjectsVisible = false, isSunfishVisible = false;
     let isBrownDwarfVisible = false, isAvResearchVisible = false, isSourceCodeVisible = false;
+    let isProductsVisible = false, isConstellationVisible = false;
 
+    // Checked bottom-of-page first, so when two sections straddle the trigger
+    // band the lower one wins and the shape tracks the scroll direction
     function updateState() {
         let newTarget = null;
         if (isSourceCodeVisible) newTarget = 4;
+        else if (isConstellationVisible) newTarget = 7;
+        else if (isProductsVisible) newTarget = 6;
         else if (isAvResearchVisible) newTarget = 5;
         else if (isBrownDwarfVisible) newTarget = 3;
         else if (isSunfishVisible) newTarget = 2;
@@ -1413,6 +1975,8 @@
     if (sunfish) new IntersectionObserver((e) => { e.forEach(x => { isSunfishVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(sunfish);
     if (brownDwarf) new IntersectionObserver((e) => { e.forEach(x => { isBrownDwarfVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(brownDwarf);
     if (avResearch) new IntersectionObserver((e) => { e.forEach(x => { isAvResearchVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(avResearch);
+    if (products) new IntersectionObserver((e) => { e.forEach(x => { isProductsVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(products);
+    if (constellation) new IntersectionObserver((e) => { e.forEach(x => { isConstellationVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(constellation);
     if (sourceCode) new IntersectionObserver((e) => { e.forEach(x => { isSourceCodeVisible = x.isIntersecting; updateState(); }); }, { threshold: 0.1, rootMargin: '-30% 0px -50% 0px' }).observe(sourceCode);
 
     requestAnimationFrame(render);

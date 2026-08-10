@@ -15,16 +15,6 @@ html {
     font-size: var(--base-font-size);
     overflow-x: hidden;
     width: 100vw;
-    /* The hero and every content section are snap points, so scrolling settles
-       with one subject in place instead of drifting between two of them.
-
-       Proximity rather than mandatory. Mandatory has no notion of a scroll being
-       too small: anything short of halfway to the next section is resolved by
-       dragging you back to the one you started on, which on a wheel or trackpad
-       means most of a section's worth of scrolling reads as the page shoving you
-       backwards. Proximity leaves short scrolls alone and still pulls the
-       section into place once you are most of the way there. */
-    scroll-snap-type: y proximity;
 }
 
 body {
@@ -46,7 +36,6 @@ body {
 #hero {
     height: 100vh;
     /* Full screen hero */
-    scroll-snap-align: start;
     width: 100%;
     display: flex;
     justify-content: center;
@@ -153,8 +142,7 @@ body {
     gap: 40vh;
     /* Large gap for scrolling effect */
     padding-top: 25vh;
-    /* Enough runway below the last section that it can still reach the
-       center snap position */
+    /* Enough runway below the last section for comfortable scrolling */
     padding-bottom: 40vh;
     max-width: none;
     /* Let it scale */
@@ -164,9 +152,6 @@ body {
 
 
 .scroll-section {
-    /* Each section catches at the middle of the viewport, which is also the
-       band the model's state observers watch */
-    scroll-snap-align: center;
     opacity: 0;
     transform: translateY(30px);
     transition: opacity 0.8s ease-out, transform 0.8s ease-out;
@@ -384,12 +369,6 @@ body {
         padding-bottom: 6vh;
     }
 
-    /* One panel per screen, filling everything the graphic does not.
-
-       The offset is scroll-margin on the sections, not scroll-padding on the
-       scroller: scroll-padding applies to every snap target, so it dragged the
-       hero's snap position down by the same amount and left a band of black
-       above it. */
     /* Centred in the band rather than sitting on top of it. Short copy pinned to
        the top of the band leaves the whole tail of the screen empty, which reads
        as the panel having run out rather than as spacing. */
@@ -400,8 +379,6 @@ body {
         display: flex;
         flex-direction: column;
         justify-content: center;
-        scroll-snap-align: start;
-        scroll-margin-top: var(--art-h);
     }
 
     /* Everything but the current panel is dimmed rather than hidden, so the next

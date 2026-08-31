@@ -124,22 +124,19 @@
     const ROCKET_FLAME_FLICK = 9.0;    // turbulence rate in the plume
     const ROCKET_FLAME_PULSE = 6.0;    // rate the plume grows and shrinks
 
-    // --- Members stage configuration ---
-    // At the Members section the particles flatten into a small 2D stage:
-    // a pair of thin rules with a mallet and a chisel in the far margins and
-    // a few sparks adrift. The canvas glides to the middle of the viewport as
-    // it forms, and the section's actual words — real type, not characters —
-    // fade in between the rules (see .members-copy in the stylesheet).
-    // Scrolling on dissolves the stage back into the 3D shapes.
+    // --- Members crest configuration ---
+    // The Members section gets a flat 2D shape in the same slot every other
+    // section uses: the particles settle into a plane and draw a mallet and
+    // chisel side by side — one tool per member, in crisp text-art rather
+    // than shaded voxels — with a few sparks adrift around the pair. The
+    // section's words stay ordinary HTML copy in the text column.
     const TK_GLYPH = 0, TK_SPARK = 1;
 
     // Inverse of the resting projection (K1 = 40, view distance 55, Courier
     // cell aspect): one grid column is 0.825 world units across and one row
-    // 1.375 down, so the layout can be authored directly in cells
+    // 1.375 down, so the crest can be authored directly in cells
     const TEXT_UNIT_X = 0.825;
     const TEXT_UNIT_Y = 1.375;
-    const TEXT_LAYOUT_COLS = 124;  // footprint the centered scale is fit to
-    const TEXT_LAYOUT_ROWS = 36;
 
     // --- Portal configuration (Constellation product) ---
     const PK_LIP = 0, PK_FIELD = 1, PK_MOTE = 2;
@@ -627,36 +624,60 @@
         return targets.slice(0, count);
     }
 
-    // --- Members stage geometry ---
-    // The stuff around the words, drawn in text like everything else
+    // --- Members crest geometry ---
+    // Sized to carry the panel the way the modelled shapes do
     const TEXT_MALLET = [
-        ' .=*#%%#*=.',
-        '-%@@@@@@@@%-',
-        '=@@@@@@@@@@=',
-        '=@@@@@@@@@@=',
-        '-%@@@@@@@@%-',
-        ' .=*#%%#*=.',
-        '    |@@|',
-        '    |@@|',
-        '    |@@|',
-        '    |@@|',
-        '    |@@|',
-        '   .#@@#.',
-        "   '*==*'"
+        '      .-=*#%%%%%%#*=-.',
+        '    -#@@@@@@@@@@@@@@@@#-',
+        '   =@@@@@@@@@@@@@@@@@@@@=',
+        '  .%@@@@@@@@@@@@@@@@@@@@%.',
+        '  =@@@@@@@@@@@@@@@@@@@@@@=',
+        '  #@@@@@@@@@@@@@@@@@@@@@@#',
+        '  #@@@@@@@@@@@@@@@@@@@@@@#',
+        '  #@@@@@@@@@@@@@@@@@@@@@@#',
+        '  =@@@@@@@@@@@@@@@@@@@@@@=',
+        '  .%@@@@@@@@@@@@@@@@@@@@%.',
+        '   =@@@@@@@@@@@@@@@@@@@@=',
+        '    -#@@@@@@@@@@@@@@@@#-',
+        "      '-=*#%%%%%%#*=-'",
+        '           |@@@@|',
+        '           |@@@@|',
+        '           |@@@@|',
+        '           |@@@@|',
+        '           |@@@@|',
+        '           |@@@@|',
+        '           |@@@@|',
+        '           |@@@@|',
+        '           |@@@@|',
+        '           |@@@@|',
+        '           |@@@@|',
+        '           |@@@@|',
+        '          .#@@@@#.',
+        "          '*####*'"
     ];
     const TEXT_CHISEL = [
-        '  .+##+.',
-        "  '%@@%'",
-        '   |@@|',
-        '   |@@|',
-        '   |@@|',
-        '   |@@|',
-        '   |@@|',
-        '  .#@@#.',
-        '  %@@@@%',
-        '  =@@@@=',
-        '   *@@*',
-        "   '=='"
+        '    .=+####+=.',
+        "    '#%@@@@%#'",
+        '      |@@@@|',
+        '      |@@@@|',
+        '      |@@@@|',
+        '      |@@@@|',
+        '      |@@@@|',
+        '      |@@@@|',
+        '      |@@@@|',
+        '      |@@@@|',
+        '      |@@@@|',
+        '      |@@@@|',
+        '      |@@@@|',
+        '      |@@@@|',
+        '     .#@@@@#.',
+        '    .%@@@@@@%.',
+        '   .%@@@@@@@@%.',
+        '   #@@@@@@@@@@#',
+        '   %@@@@@@@@@@%',
+        '   =@@@@@@@@@@=',
+        '    *@@@@@@@@*',
+        "     '======'"
     ];
 
     function pushTextArt(cells, lines, centerCol, topRow) {
@@ -679,36 +700,21 @@
     function generateTextTargets(count) {
         const narrow = window.matchMedia('(max-width: 768px)').matches;
         const cells = [];
-        const DASH = 45;
         const centerRow = narrow ? 42 : 64;
 
-        if (narrow) {
-            // The band carries a small crest — the two tools side by side —
-            // while the panel below sets the section's words in real type
-            pushTextArt(cells, TEXT_MALLET, 53, centerRow - 6);
-            pushTextArt(cells, TEXT_CHISEL, 75, centerRow - 6);
-        } else {
-            // A pair of thin rules frames the copy that fades in between
-            // them, with the tools far out in the margins: the particles set
-            // the stage, real type sets the words
-            for (let c = 0; c < 76; c++) {
-                cells.push({ col: 26 + c, row: centerRow - 13, code: DASH, kind: TK_GLYPH, phase: 0 });
-                cells.push({ col: 26 + c, row: centerRow + 13, code: DASH, kind: TK_GLYPH, phase: 0 });
-            }
-            pushTextArt(cells, TEXT_MALLET, 10, centerRow - 6);
-            pushTextArt(cells, TEXT_CHISEL, 118, centerRow - 6);
-        }
+        // Mallet and chisel side by side, bottoms roughly level, the pair
+        // centered on the canvas like any other shape
+        pushTextArt(cells, TEXT_MALLET, 48, centerRow - 13);
+        pushTextArt(cells, TEXT_CHISEL, 79, centerRow - 8);
 
-        // Loose sparks adrift through the margins, kept off the drawn cells
-        // so a twinkle never eats part of the stage
+        // Loose sparks adrift around the pair, kept off the drawn cells so a
+        // twinkle never eats part of a tool
         const used = new Set();
         for (const cell of cells) used.add(cell.col * 256 + cell.row);
-        const sparkCount = narrow ? 18 : 40;
-        const r0 = centerRow - (narrow ? 10 : 16);
-        const r1 = centerRow + (narrow ? 10 : 16);
+        const sparkCount = 26;
         for (let i = 0; i < sparkCount; i++) {
-            const col = 5 + Math.floor(hash01(i * 12.7) * 118);
-            const row = r0 + Math.floor(hash01(i * 31.3) * (r1 - r0));
+            const col = 30 + Math.floor(hash01(i * 12.7) * 68);
+            const row = centerRow - 17 + Math.floor(hash01(i * 31.3) * 34);
             if (used.has(col * 256 + row)) continue;
             cells.push({ col, row, code: 0, kind: TK_SPARK, phase: hash01(i * 6.7) });
         }
@@ -1352,27 +1358,6 @@
 
     updateLogoMetrics();
     window.addEventListener('resize', updateLogoMetrics);
-
-    // How far the canvas must slide to sit over the middle of the viewport,
-    // and how much to grow so the stage frames the copy at a comfortable
-    // size — a bit over half the viewport, not a takeover. Measured rather
-    // than derived from the column widths, so a layout change cannot strand
-    // the stage off-center. CSS animates the transform whenever the
-    // members-mode class toggles, in step with the particle morph.
-    function updateMembersVars() {
-        if (NARROW.matches) return;
-        const box = asciiColumn.getBoundingClientRect();
-        if (box.width < 1) return;
-        const shift = window.innerWidth / 2 - (box.left + box.width / 2);
-        const sx = (window.innerWidth * 0.58) / (TEXT_LAYOUT_COLS * charWidth);
-        const sy = (window.innerHeight * 0.52) / (TEXT_LAYOUT_ROWS * charHeight);
-        const scale = Math.max(1, Math.min(sx, sy));
-        screenElement.style.setProperty('--members-shift', shift.toFixed(1) + 'px');
-        screenElement.style.setProperty('--members-scale', scale.toFixed(3));
-    }
-
-    updateMembersVars();
-    window.addEventListener('resize', updateMembersVars);
 
     // --- Drag Interaction ---
     let angle = 0;
@@ -2194,13 +2179,6 @@
             // Resized as the morph starts, so the change of scale is carried by
             // the same motion that rebuilds the shape
             fitShapeToPanel(newTarget);
-            // Members: the same moment the particles start flattening into
-            // the stage, the canvas starts sliding to the middle of the
-            // viewport — one motion, two mechanisms. Measured now, not at
-            // load: the column's width includes the rendered frame's
-            // min-content, which does not exist until the first paint.
-            if (newTarget === 8) updateMembersVars();
-            document.body.classList.toggle('members-mode', newTarget === 8);
         }
     }
 
@@ -2222,7 +2200,7 @@
         { cols: 116, rows: 28 },  // 5 road diorama
         { cols: 102, rows: 54 },  // 6 rocket
         { cols: 48, rows: 40 },   // 7 portal
-        { cols: 58, rows: 20 }    // 8 members crest
+        { cols: 62, rows: 32 }    // 8 members crest
     ];
     const CHAR_ASPECT = 0.6;      // Courier advance width, as a fraction of em
 

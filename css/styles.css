@@ -256,66 +256,6 @@ body {
     flex-shrink: 0;
 }
 
-/* ---------------------------------------------------------------------------
-   Members
-
-   On desktop the particle canvas glides to the middle of the viewport and its
-   particles flatten into a small stage — two thin rules, the tools out in the
-   margins — and the section's words fade in between the rules as real type.
-   The transform transition runs on the same clock as the particle morph, so
-   the slide and the stage forming read as one motion, and both reverse when
-   the stage dissolves back into the 3D shapes.
-   --------------------------------------------------------------------------- */
-@media (min-width: 769px) {
-
-    /* The scroll-reveal transform has to go on this one section: a
-       transformed ancestor re-anchors position: fixed, and the copy below
-       must center on the viewport */
-    #members.scroll-section,
-    #members.scroll-section.active {
-        opacity: 1;
-        transform: none;
-        min-height: 40vh;
-    }
-
-    #members .members-copy {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -46%);
-        text-align: center;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.45s ease, transform 0.45s ease;
-    }
-
-    /* Trails the morph slightly: the particles set the stage first, then
-       the names arrive on it */
-    body.members-mode #members .members-copy {
-        opacity: 1;
-        pointer-events: auto;
-        transform: translate(-50%, -50%);
-        transition: opacity 0.8s ease-out 0.5s, transform 0.8s ease-out 0.5s;
-    }
-
-    #members .members-copy h2 {
-        margin-bottom: 1.2rem;
-    }
-
-    #members .members-copy h3 {
-        margin: 0.4em 0;
-        font-weight: 500;
-    }
-
-    #solid-logo-canvas {
-        transition: transform 1.2s cubic-bezier(0.33, 0, 0.15, 1);
-    }
-
-    body.members-mode #solid-logo-canvas {
-        transform: translateX(var(--members-shift, 27.5vw)) scale(var(--members-scale, 1.3));
-    }
-}
-
 /* A portrait affordance. Hidden here rather than only shown in the media query,
    so nothing leaks into the desktop layout. */
 #section-rail {

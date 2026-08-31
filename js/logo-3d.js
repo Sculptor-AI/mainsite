@@ -124,16 +124,21 @@
     const ROCKET_FLAME_FLICK = 9.0;    // turbulence rate in the plume
     const ROCKET_FLAME_PULSE = 6.0;    // rate the plume grows and shrinks
 
-    // --- Mallet & chisel configuration (Members section) ---
-    // One tool per member: the pair splits across the canvas, mallet holding
-    // the left side and chisel pushed out toward the middle of the page.
-    const DK_HEAD = 0, DK_HANDLE = 1, DK_KNOB = 2,
-        DK_CAP = 3, DK_SHAFT = 4, DK_BLADE = 5;
+    // --- Members type configuration ---
+    // At the Members section the graphic goes typographic: the canvas slides
+    // out of its column and fills the screen while the particles flatten into
+    // a plane and set the section's text themselves — MEMBERS on top, the two
+    // names beneath, a mallet and a chisel in the margins, sparks breathing
+    // around it all. Scrolling on crumbles the type back into the 3D shapes.
+    const TK_GLYPH = 0, TK_SPARK = 1;
 
-    const DUO_SPREAD = 27.0;       // how far each tool sits from the canvas center
-    const DUO_SCALE = 1.3;         // sized to carry the panel like the other shapes
-    const DUO_BOB = 0.55;          // counter-phase float, so the pair never sits still
-    const DUO_SWAY = 0.16;         // lazy turn about the held front view
+    // Inverse of the resting projection (K1 = 40, view distance 55, Courier
+    // cell aspect): one grid column is 0.825 world units across and one row
+    // 1.375 down, so the layout can be authored directly in cells
+    const TEXT_UNIT_X = 0.825;
+    const TEXT_UNIT_Y = 1.375;
+    const TEXT_LAYOUT_COLS = 124;  // footprint the fill-screen scale is fit to
+    const TEXT_LAYOUT_ROWS = 52;
 
     // --- Portal configuration (Constellation product) ---
     const PK_LIP = 0, PK_FIELD = 1, PK_MOTE = 2;
@@ -621,67 +626,164 @@
         return targets.slice(0, count);
     }
 
-    // --- Mallet & chisel geometry ---
-    // Both tools are stacks of the same cylinder sampler the microscope uses,
-    // so the pair inherits the established solid-object look for free. The one
-    // custom piece is the chisel blade, which is a flat wedge rather than a
-    // surface of revolution: revolved, it reads as an awl.
+    // --- Members type geometry ---
+    // A 5x7 bitmap face covering just the letters this section needs. Each lit
+    // pixel becomes one grid cell; the title doubles its pixels across, which
+    // restores the letters' proportions inside tall Courier cells.
+    const TEXT_FONT = {
+        A: ['.XXX.', 'X...X', 'X...X', 'XXXXX', 'X...X', 'X...X', 'X...X'],
+        B: ['XXXX.', 'X...X', 'X...X', 'XXXX.', 'X...X', 'X...X', 'XXXX.'],
+        C: ['.XXX.', 'X...X', 'X....', 'X....', 'X....', 'X...X', '.XXX.'],
+        E: ['XXXXX', 'X....', 'X....', 'XXXX.', 'X....', 'X....', 'XXXXX'],
+        H: ['X...X', 'X...X', 'X...X', 'XXXXX', 'X...X', 'X...X', 'X...X'],
+        K: ['X...X', 'X..X.', 'X.X..', 'XX...', 'X.X..', 'X..X.', 'X...X'],
+        L: ['X....', 'X....', 'X....', 'X....', 'X....', 'X....', 'XXXXX'],
+        M: ['X...X', 'XX.XX', 'X.X.X', 'X.X.X', 'X...X', 'X...X', 'X...X'],
+        N: ['X...X', 'XX..X', 'X.X.X', 'X..XX', 'X...X', 'X...X', 'X...X'],
+        O: ['.XXX.', 'X...X', 'X...X', 'X...X', 'X...X', 'X...X', '.XXX.'],
+        R: ['XXXX.', 'X...X', 'X...X', 'XXXX.', 'X.X..', 'X..X.', 'X...X'],
+        S: ['.XXXX', 'X....', 'X....', '.XXX.', '....X', '....X', 'XXXX.'],
+        T: ['XXXXX', '..X..', '..X..', '..X..', '..X..', '..X..', '..X..'],
+        U: ['X...X', 'X...X', 'X...X', 'X...X', 'X...X', 'X...X', '.XXX.'],
+        Y: ['X...X', 'X...X', '.X.X.', '..X..', '..X..', '..X..', '..X..']
+    };
 
-    function pushChiselBlade(targets, count, cx) {
-        const yTop = -7.0, yBot = -17.0;
-        for (let i = 0; i < count; i++) {
-            const u = Math.random();                 // 0 at the shaft, 1 at the edge
-            const w = 2.2 + (4.4 - 2.2) * u;         // flares wider toward the edge
-            const th = 1.6 * (1 - u) + 0.08;         // bevels down to nearly nothing
-            const y = yTop + (yBot - yTop) * u;
-            const side = Math.random() < 0.5 ? 1 : -1;
-            if (Math.random() < 0.85) {
-                // The two beveled faces, tilted slightly down by the taper
-                targets.push({
-                    x: cx + (Math.random() * 2 - 1) * w, y, z: side * th,
-                    nx: 0, ny: -0.14, nz: side * 0.99,
-                    kind: DK_BLADE, a: u, s: 0, spin: 0
-                });
-            } else {
-                // Thin side edges, so the silhouette stays closed
-                const edge = Math.random() < 0.5 ? 1 : -1;
-                targets.push({
-                    x: cx + edge * w, y, z: (Math.random() * 2 - 1) * th,
-                    nx: edge, ny: 0, nz: 0,
-                    kind: DK_BLADE, a: u, s: 0, spin: 0
-                });
+    // The other stuff around the type, drawn in text like everything else
+    const TEXT_MALLET = [
+        ' .=*#%%#*=.',
+        '-%@@@@@@@@%-',
+        '=@@@@@@@@@@=',
+        '=@@@@@@@@@@=',
+        '-%@@@@@@@@%-',
+        ' .=*#%%#*=.',
+        '    |@@|',
+        '    |@@|',
+        '    |@@|',
+        '    |@@|',
+        '    |@@|',
+        '   .#@@#.',
+        "   '*==*'"
+    ];
+    const TEXT_CHISEL = [
+        '  .+##+.',
+        "  '%@@%'",
+        '   |@@|',
+        '   |@@|',
+        '   |@@|',
+        '   |@@|',
+        '   |@@|',
+        '  .#@@#.',
+        '  %@@@@%',
+        '  =@@@@=',
+        '   *@@*',
+        "   '=='"
+    ];
+
+    function textWidth(str, pw) {
+        let w = 0;
+        for (const ch of str) w += (ch === ' ' ? 3 : 6) * pw;
+        return w - pw;
+    }
+
+    function pushTextLine(cells, str, centerCol, topRow, pw, code) {
+        let col = centerCol - Math.floor(textWidth(str, pw) / 2);
+        for (const ch of str) {
+            if (ch === ' ') { col += 3 * pw; continue; }
+            const glyph = TEXT_FONT[ch];
+            for (let r = 0; r < 7; r++) {
+                for (let c = 0; c < 5; c++) {
+                    if (glyph[r][c] !== 'X') continue;
+                    for (let k = 0; k < pw; k++) {
+                        cells.push({ col: col + c * pw + k, row: topRow + r, code, kind: TK_GLYPH, phase: 0 });
+                    }
+                }
+            }
+            col += 6 * pw;
+        }
+    }
+
+    function pushTextArt(cells, lines, centerCol, topRow) {
+        let artW = 0;
+        for (const line of lines) if (line.length > artW) artW = line.length;
+        const col0 = centerCol - Math.floor(artW / 2);
+        for (let r = 0; r < lines.length; r++) {
+            for (let c = 0; c < lines[r].length; c++) {
+                const ch = lines[r][c];
+                if (ch !== ' ') {
+                    cells.push({
+                        col: col0 + c, row: topRow + r,
+                        code: ch.charCodeAt(0), kind: TK_GLYPH, phase: 0
+                    });
+                }
             }
         }
     }
 
-    function generateDuoTargets(count) {
+    function generateTextTargets(count) {
+        const narrow = window.matchMedia('(max-width: 768px)').matches;
+        const cells = [];
+        const AT = 64, HASH = 35, EQ = 61;
+        const centerRow = narrow ? 42 : 64;
+
+        if (narrow) {
+            // The band is short, so it carries the title with the tools at its
+            // shoulders; the names stay HTML copy in the panel below it
+            pushTextLine(cells, 'MEMBERS', 64, centerRow - 3, 2, AT);
+            pushTextArt(cells, TEXT_MALLET, 13, centerRow - 6);
+            pushTextArt(cells, TEXT_CHISEL, 115, centerRow - 6);
+        } else {
+            pushTextLine(cells, 'MEMBERS', 64, 40, 2, AT);
+            for (let c = 0; c < 82; c++) {
+                cells.push({ col: 23 + c, row: 49, code: EQ, kind: TK_GLYPH, phase: 0 });
+            }
+            // Names take the doubled pixels too — single-width letters go
+            // spindly in tall Courier cells — and at that size a full name
+            // outruns the grid, so each member stacks first name over last
+            pushTextLine(cells, 'KELLEN', 64, 53, 2, HASH);
+            pushTextLine(cells, 'HERATY', 64, 62, 2, HASH);
+            pushTextLine(cells, 'CHASE', 64, 73, 2, HASH);
+            pushTextLine(cells, 'CULBERTSON', 64, 82, 2, HASH);
+            pushTextArt(cells, TEXT_MALLET, 8, 40);
+            pushTextArt(cells, TEXT_CHISEL, 120, 41);
+        }
+
+        // Loose sparks scattered through the margins, kept off the type so a
+        // twinkle never eats a letter
+        const used = new Set();
+        for (const cell of cells) used.add(cell.col * 256 + cell.row);
+        const sparkCount = narrow ? 26 : 60;
+        const r0 = narrow ? centerRow - 14 : 36;
+        const r1 = narrow ? centerRow + 14 : 92;
+        for (let i = 0; i < sparkCount; i++) {
+            const col = 5 + Math.floor(hash01(i * 12.7) * 118);
+            const row = r0 + Math.floor(hash01(i * 31.3) * (r1 - r0));
+            if (used.has(col * 256 + row)) continue;
+            cells.push({ col, row, code: 0, kind: TK_SPARK, phase: hash01(i * 6.7) });
+        }
+
+        // Every particle gets a cell; consecutive particles share one, jittered
+        // inside it so the converging cloud has body without blurring the type.
+        // Integer cell coordinates project exactly onto the floor() boundary
+        // of the projection, so the half-cell shift centers each target in its
+        // bucket — without it, half the jittered particles print the glyph one
+        // cell over and every letter grows a ghost outline. The z spread is
+        // kept tiny for the same reason: depth perturbs the projected scale,
+        // and at the edge columns even ±0.4 units walks a particle a full
+        // cell sideways.
         const targets = [];
-        const share = f => Math.max(1, Math.floor(count * f));
-        const mx = -DUO_SPREAD, cx = DUO_SPREAD;
-
-        // Mallet: barrel head across a straight handle with a flared butt
-        pushSurfaceCylinder(targets, share(0.36), mx - 9.5, 9, 0, mx + 9.5, 9, 0, 6.5, DK_HEAD, {});
-        pushSurfaceCylinder(targets, share(0.13), mx, 8, 0, mx, -15.5, 0, 2.1, DK_HANDLE, { capFar: false, capNear: false });
-        pushSurfaceCylinder(targets, share(0.05), mx, -15.5, 0, mx, -18.5, 0, 2.9, DK_KNOB, {});
-
-        // Chisel: struck cap, shaft, and the flat beveled blade
-        pushSurfaceCylinder(targets, share(0.07), cx, 12.7, 0, cx, 16.0, 0, 3.3, DK_CAP, {});
-        pushSurfaceCylinder(targets, share(0.20), cx, -7, 0, cx, 12.7, 0, 2.2, DK_SHAFT, { capFar: false, capNear: false });
-        pushChiselBlade(targets, share(0.17), cx);
-
-        if (targets.length < count) {
-            pushSurfaceCylinder(targets, count - targets.length,
-                mx - 9.5, 9, 0, mx + 9.5, 9, 0, 6.5, DK_HEAD, {});
+        for (let i = 0; i < count; i++) {
+            const cell = cells[Math.floor(i * cells.length / count)];
+            const h1 = hash01(i * 3.71), h2 = hash01(i * 7.33), h3 = hash01(i * 5.17);
+            targets.push({
+                x: (cell.col - 64 + 0.5 + (h1 - 0.5) * 0.7) * TEXT_UNIT_X,
+                y: (centerRow - cell.row - 0.5 + (h2 - 0.5) * 0.6) * TEXT_UNIT_Y,
+                // Sparks sit just behind the plane of the type, so they can
+                // never win a cell from a letter through the depth test
+                z: cell.kind === TK_SPARK ? 2.0 + h3 * 0.3 : (h3 - 0.5) * 0.15,
+                code: cell.code, kind: cell.kind, phase: cell.phase
+            });
         }
-        // The mallet is a wider tool than the chisel, so the pair's true
-        // midpoint sits left of the anchor gap; the shift recenters the
-        // composition on the canvas
-        for (const t of targets) {
-            t.x = (t.x + 2.55) * DUO_SCALE;
-            t.y *= DUO_SCALE;
-            t.z *= DUO_SCALE;
-        }
-        return targets.slice(0, count);
+        return targets;
     }
 
     // --- Car diorama geometry ---
@@ -1145,9 +1247,9 @@
                             portNX: 0, portNY: 0, portNZ: -1,
                             portKind: PK_FIELD, portFR: 0, portFA: 0,
                             portPhase: 0,
-                            duoX: 0, duoY: 0, duoZ: 0,
-                            duoNX: 0, duoNY: 0, duoNZ: 1,
-                            duoKind: DK_HEAD, duoPhase: 0
+                            textX: 0, textY: 0, textZ: 0,
+                            textCode: 32, textKind: TK_GLYPH,
+                            textPhase: 0, textReveal: 1
                         });
                     }
                 }
@@ -1164,7 +1266,7 @@
     const carTargets = generateCarTargets(particles.length);
     const rocketTargets = generateRocketTargets(particles.length);
     const portalTargets = generatePortalTargets(particles.length);
-    const duoTargets = generateDuoTargets(particles.length);
+    const textTargets = generateTextTargets(particles.length);
 
     const particleOrder = buildSortedIndices(particles.length, i => ({ x: particles[i].logoX, y: particles[i].logoY, z: particles[i].logoZ }));
     const fishOrder = buildSortedIndices(fishTargets.length, i => fishTargets[i]);
@@ -1173,7 +1275,7 @@
     const carOrder = buildSortedIndices(carTargets.length, i => carTargets[i]);
     const rocketOrder = buildSortedIndices(rocketTargets.length, i => rocketTargets[i]);
     const portalOrder = buildSortedIndices(portalTargets.length, i => portalTargets[i]);
-    const duoOrder = buildSortedIndices(duoTargets.length, i => duoTargets[i]);
+    const textOrder = buildSortedIndices(textTargets.length, i => textTargets[i]);
 
     for (let k = 0; k < particles.length; k++) {
         const p = particles[particleOrder[k]];
@@ -1237,12 +1339,15 @@
             p.portPhase = tPort.phase;
         }
 
-        if (k < duoTargets.length) {
-            const tDuo = duoTargets[duoOrder[k]];
-            p.duoX = tDuo.x; p.duoY = tDuo.y; p.duoZ = tDuo.z;
-            p.duoNX = tDuo.nx; p.duoNY = tDuo.ny; p.duoNZ = tDuo.nz;
-            p.duoKind = tDuo.kind;
-            p.duoPhase = tDuo.a;
+        if (k < textTargets.length) {
+            const tText = textTargets[textOrder[k]];
+            p.textX = tText.x; p.textY = tText.y; p.textZ = tText.z;
+            p.textCode = tText.code;
+            p.textKind = tText.kind;
+            p.textPhase = tText.phase;
+            // Staggered thresholds: the type crystallizes out of the arriving
+            // cloud one cell at a time, and crumbles back the same way
+            p.textReveal = 0.55 + hash01(k * 0.77) * 0.4;
         }
 
         p.logo2X = p.logoX; p.logo2Y = p.logoY; p.logo2Z = p.logoZ;
@@ -1295,6 +1400,26 @@
 
     updateLogoMetrics();
     window.addEventListener('resize', updateLogoMetrics);
+
+    // How far the canvas must slide to sit over the middle of the viewport,
+    // and how much it must grow for the type layout to fill it. Measured
+    // rather than derived from the column widths, so a layout change cannot
+    // strand the type off-center. CSS animates the transform whenever the
+    // members-mode class toggles, in step with the particle morph.
+    function updateMembersVars() {
+        if (NARROW.matches) return;
+        const box = asciiColumn.getBoundingClientRect();
+        if (box.width < 1) return;
+        const shift = window.innerWidth / 2 - (box.left + box.width / 2);
+        const sx = (window.innerWidth * 0.92) / (TEXT_LAYOUT_COLS * charWidth);
+        const sy = (window.innerHeight * 0.92) / (TEXT_LAYOUT_ROWS * charHeight);
+        const scale = Math.max(1, Math.min(sx, sy));
+        screenElement.style.setProperty('--members-shift', shift.toFixed(1) + 'px');
+        screenElement.style.setProperty('--members-scale', scale.toFixed(3));
+    }
+
+    updateMembersVars();
+    window.addEventListener('resize', updateMembersVars);
 
     // --- Drag Interaction ---
     let angle = 0;
@@ -1373,20 +1498,20 @@
     window.addEventListener('touchcancel', endTouch);
 
     // State: 0 = Logo, 1 = Microscope, 2 = Fish, 3 = Dwarf, 4 = Logo2, 5 = Car,
-    //        6 = Rocket, 7 = Portal, 8 = Mallet & chisel
-    const SHAPE_KEYS = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car', 'rocket', 'portal', 'duo'];
-    const STATE_SHAPE = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car', 'rocket', 'portal', 'duo'];
+    //        6 = Rocket, 7 = Portal, 8 = Members type
+    const SHAPE_KEYS = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car', 'rocket', 'portal', 'text'];
+    const STATE_SHAPE = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car', 'rocket', 'portal', 'text'];
 
     let targetState = 0;
     let lastTimestamp = performance.now();
     const currentWeights = {
-        logo: 1, scope: 0, fish: 0, dwarf: 0, logo2: 0, car: 0, rocket: 0, portal: 0, duo: 0
+        logo: 1, scope: 0, fish: 0, dwarf: 0, logo2: 0, car: 0, rocket: 0, portal: 0, text: 0
     };
     let targetWeights = getTargetWeightsForState(0);
 
     function getTargetWeightsForState(state) {
         const w = {
-            logo: 0, scope: 0, fish: 0, dwarf: 0, logo2: 0, car: 0, rocket: 0, portal: 0, duo: 0
+            logo: 0, scope: 0, fish: 0, dwarf: 0, logo2: 0, car: 0, rocket: 0, portal: 0, text: 0
         };
         const key = STATE_SHAPE[state];
         if (key) w[key] = 1;
@@ -1426,7 +1551,7 @@
         let wCar = currentWeights.car < 0.001 ? 0 : currentWeights.car;
         let wRocket = currentWeights.rocket < 0.001 ? 0 : currentWeights.rocket;
         let wPortal = currentWeights.portal < 0.001 ? 0 : currentWeights.portal;
-        let wDuo = currentWeights.duo < 0.001 ? 0 : currentWeights.duo;
+        let wText = currentWeights.text < 0.001 ? 0 : currentWeights.text;
         const wLogoCombined = wLogo + wLogo2;
         const hasScope = wScope > 0;
         const hasFish = wFish > 0;
@@ -1434,7 +1559,7 @@
         const hasCar = wCar > 0;
         const hasRocket = wRocket > 0;
         const hasPortal = wPortal > 0;
-        const hasDuo = wDuo > 0;
+        const hasText = wText > 0;
 
         const aspectCorrection = (charHeight / charWidth);
 
@@ -1452,10 +1577,6 @@
 
         // Sunfish: dorsal and anal fins scull in unison, the way a mola swims
         const finSweep = hasFish ? Math.sin(time * FISH_FLAP_SPEED) * FISH_FLAP_AMP : 0;
-
-        // Mallet and chisel float in counter-phase, one rising as the other
-        // settles, so the pair reads as two hands at work rather than a poster
-        const duoBob = hasDuo ? Math.sin(time * 1.05) * DUO_BOB : 0;
 
         // Microscope: the nosepiece dwells on an objective, then clicks 120°
         // to the next one
@@ -1590,12 +1711,10 @@
                 }
                 px += qx * wPortal; py += qy * wPortal; pz += qz * wPortal;
             }
-            if (hasDuo) {
-                // Sign of x says which tool a point belongs to, so the bob
-                // needs no stored group id
-                px += p.duoX * wDuo;
-                py += (p.duoY + (p.duoX < 0 ? duoBob : -duoBob)) * wDuo;
-                pz += p.duoZ * wDuo;
+            if (hasText) {
+                px += p.textX * wText;
+                py += p.textY * wText;
+                pz += p.textZ * wText;
             }
 
             let x = px * cosT - pz * sinT;
@@ -1675,10 +1794,9 @@
                             ny += p.portNY * wPortal;
                             nz += (p.portNX * sinT + p.portNZ * cosT) * wPortal;
                         }
-                        if (hasDuo) {
-                            nx += (p.duoNX * cosT - p.duoNZ * sinT) * wDuo;
-                            ny += p.duoNY * wDuo;
-                            nz += (p.duoNX * sinT + p.duoNZ * cosT) * wDuo;
+                        if (hasText) {
+                            // Flat type faces the camera
+                            nz -= wText;
                         }
 
                         if (hasCar) {
@@ -1701,7 +1819,7 @@
                         // how squarely the surface faces the camera, plus a
                         // Blinn specular raised to ^16 by repeated squaring
                         let facing = 0, spec = 0;
-                        if (hasFish || hasScope || hasCar || hasRocket || hasDuo) {
+                        if (hasFish || hasScope || hasCar || hasRocket) {
                             facing = -nz;
                             if (facing < 0) facing = 0;
                             spec = nx * HX + ny * HY + nz * HZ;
@@ -1857,36 +1975,19 @@
                             brightness += clamp01(pb) * wPortal;
                         }
 
-                        if (hasDuo) {
-                            let db;
-                            switch (p.duoKind) {
-                                case DK_HEAD: {
-                                    // Turned hardwood: matte, with faint rings
-                                    // along the barrel where the lathe ran
-                                    const ring = Math.sin(p.duoPhase * 26.0) > 0.55 ? 0.08 : 0;
-                                    db = 0.22 + facing * 0.40 + diffuse * 0.32 + spec * 0.24 + ring;
-                                    break;
-                                }
-                                case DK_HANDLE:
-                                    db = 0.18 + facing * 0.36 + diffuse * 0.28 + spec * 0.18;
-                                    break;
-                                case DK_KNOB:
-                                    db = 0.16 + facing * 0.32 + diffuse * 0.26 + spec * 0.18;
-                                    break;
-                                case DK_CAP:
-                                    // Mushroomed striking end, polished by use
-                                    db = 0.24 + facing * 0.34 + diffuse * 0.30 + spec * 0.50;
-                                    break;
-                                case DK_SHAFT:
-                                    db = 0.20 + facing * 0.40 + diffuse * 0.26 + spec * 0.55;
-                                    break;
-                                default:
-                                    // Blade brightens toward the cutting edge
-                                    db = 0.18 + facing * 0.36 + diffuse * 0.24 + spec * 0.40
-                                        + p.duoPhase * 0.20;
-                                    break;
+                        if (hasText) {
+                            let tb;
+                            if (p.textKind === TK_SPARK) {
+                                // Sparks breathe around the type, each on its
+                                // own clock
+                                tb = 0.08 + Math.max(0, Math.sin(time * 2.1
+                                    + p.textPhase * 6.283)) * 0.55;
+                            } else {
+                                // Even tone, so mid-flight the cloud already
+                                // reads as unlit print rather than a surface
+                                tb = 0.6;
                             }
-                            brightness += clamp01(db) * wDuo;
+                            brightness += clamp01(tb) * wText;
                         }
 
                         if (hasScope) {
@@ -1980,13 +2081,20 @@
                         // Depth fog — pulled back for the modelled shapes, which
                         // are wide enough that full fog would crush their far half
                         let fog = (z + 50) / 200.0;
-                        brightness -= fog * (1.0 - wCar * 0.65 - wFish * 0.5 - wScope * 0.5 - wDuo * 0.5);
+                        brightness -= fog * (1.0 - wCar * 0.65 - wFish * 0.5 - wScope * 0.5 - wText * 0.85);
                         brightness = clamp01(brightness);
 
                         brightnessBuffer[idx] = brightness;
 
-                        // Sentinel: 0 = needs shape matching in Pass 2
-                        textBuffer[idx] = 0;
+                        // Sentinel: 0 = needs shape matching in Pass 2.
+                        // Settled type prints its own character instead: the
+                        // per-particle threshold staggers the switch, so the
+                        // glyphs crystallize out of the arriving cloud rather
+                        // than snapping in — and crumble back out the same way
+                        // when the section scrolls past.
+                        textBuffer[idx] = (hasText && p.textKind === TK_GLYPH
+                            && wText >= p.textReveal)
+                            ? p.textCode : 0;
 
                         // Dwarf color
                         if (useColor && hasDwarf) {
@@ -2076,22 +2184,12 @@
             // A portal is only a portal seen through, so hold the mouth square to
             // the camera and keep the oval an oval. Drag still spins it freely.
             // The rocket is held for the same reason: the climb angle only reads
-            // side on, and its own roll supplies the movement.
-            if (hasPortal || hasRocket) {
+            // side on, and its own roll supplies the movement. Type is held
+            // hardest of all: letters only exist face-on.
+            if (hasPortal || hasRocket || hasText) {
                 const square = Math.round(angle / (Math.PI * 2)) * (Math.PI * 2);
                 const pull = 1.0 - Math.pow(0.94, timeScale);
-                angle += (square - angle) * pull * Math.max(wPortal, wRocket);
-            }
-
-            // Two tools side by side only read as a pair square-on, so hold
-            // the front view with a lazy sway — the mola's treatment. The sway
-            // shifts the two in depth against each other, which keeps the
-            // composition alive without ever crossing them.
-            if (hasDuo) {
-                const sway = Math.sin(time * 0.42) * DUO_SWAY;
-                const held = Math.round((angle - sway) / (Math.PI * 2)) * (Math.PI * 2) + sway;
-                const pull = 1.0 - Math.pow(0.96, timeScale);
-                angle += (held - angle) * pull * wDuo;
+                angle += (square - angle) * pull * Math.max(wPortal, wRocket, wText);
             }
 
             // A mola is only a mola side-on — hold the profile, but let it
@@ -2143,6 +2241,10 @@
             // Resized as the morph starts, so the change of scale is carried by
             // the same motion that rebuilds the shape
             fitShapeToPanel(newTarget);
+            // Members: the same moment the particles start flattening into
+            // type, the canvas starts sliding out to fill the screen — one
+            // motion, two mechanisms
+            document.body.classList.toggle('members-mode', newTarget === 8);
         }
     }
 
@@ -2164,7 +2266,7 @@
         { cols: 116, rows: 28 },  // 5 road diorama
         { cols: 102, rows: 54 },  // 6 rocket
         { cols: 48, rows: 40 },   // 7 portal
-        { cols: 116, rows: 38 }   // 8 mallet & chisel
+        { cols: 124, rows: 28 }   // 8 members type
     ];
     const CHAR_ASPECT = 0.6;      // Courier advance width, as a fraction of em
 

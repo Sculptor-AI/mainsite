@@ -256,6 +256,31 @@ body {
     flex-shrink: 0;
 }
 
+/* ---------------------------------------------------------------------------
+   Members
+
+   On desktop this section has no visible copy of its own: the particle canvas
+   slides out of its column and fills the screen, setting the section's text
+   out of its own particles. The transform transition runs on the same clock
+   as the particle morph, so the enlargement and the type forming read as one
+   motion, and it reverses the same way when the type dissolves back into the
+   3D shapes. The HTML copy keeps its layout box for the scroll observers and
+   stays in the accessibility tree.
+   --------------------------------------------------------------------------- */
+@media (min-width: 769px) {
+    #members>* {
+        opacity: 0;
+    }
+
+    #solid-logo-canvas {
+        transition: transform 1.2s cubic-bezier(0.33, 0, 0.15, 1);
+    }
+
+    body.members-mode #solid-logo-canvas {
+        transform: translateX(var(--members-shift, 27.5vw)) scale(var(--members-scale, 1.8));
+    }
+}
+
 /* A portrait affordance. Hidden here rather than only shown in the media query,
    so nothing leaks into the desktop layout. */
 #section-rail {

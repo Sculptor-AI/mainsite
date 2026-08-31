@@ -5,8 +5,48 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="logo.png">
-    <title>Sculptor AI</title>
+    <title>Sculptor AI — Open-Source AI Research Group</title>
+    <meta name="description"
+        content="Sculptor is a student-run AI research group building open-source models, tools, and infrastructure — from the Sunfish diffusion model to the Constellation AI portal.">
+    <link rel="canonical" href="https://sculptorai.org/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Sculptor AI">
+    <meta property="og:title" content="Sculptor AI — Open-Source AI Research Group">
+    <meta property="og:description"
+        content="Sculptor is a student-run AI research group building open-source models, tools, and infrastructure.">
+    <meta property="og:url" content="https://sculptorai.org/">
+    <meta property="og:image" content="https://sculptorai.org/logo.png">
+    <meta name="twitter:card" content="summary">
     <link rel="stylesheet" href="css/styles.css">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Sculptor AI",
+        "url": "https://sculptorai.org/",
+        "logo": "https://sculptorai.org/logo.png",
+        "email": "contact@sculptorai.org",
+        "description": "Student-run AI research group building open-source models, tools, and infrastructure.",
+        "sameAs": [
+            "https://github.com/Sculptor-AI",
+            "https://huggingface.co/Sculptor-AI"
+        ],
+        "member": [
+            {
+                "@type": "Person",
+                "name": "Kellen Heraty",
+                "url": "https://kaileh.dev",
+                "sameAs": ["https://kaileh.dev"]
+            },
+            {
+                "@type": "Person",
+                "name": "Chase Culbertson",
+                "url": "https://explodingcb.com/",
+                "sameAs": ["https://explodingcb.com/"]
+            }
+        ]
+    }
+    </script>
 </head>
 
 <body>
@@ -20,6 +60,9 @@
     </svg>
 
     <section id="hero">
+        <!-- The hero is ASCII art a crawler cannot read, so the page's one h1
+             lives here off-screen -->
+        <h1 class="visually-hidden">Sculptor AI — student-run, open-source AI research</h1>
         <pre id="canvas"></pre>
     </section>
 
@@ -86,8 +129,12 @@
 
             <section class="scroll-section" id="members">
                 <h2>Members</h2>
-                <h3>Kellen Heraty</h3>
-                <h3>Chase Culbertson</h3>
+                <!-- rel deliberately omits noreferrer so the members' sites see
+                     the referral, and nofollow so the links carry weight -->
+                <h3><a href="https://kaileh.dev" class="member-link" target="_blank"
+                        rel="noopener">Kellen Heraty</a></h3>
+                <h3><a href="https://explodingcb.com/" class="member-link" target="_blank"
+                        rel="noopener">Chase Culbertson</a></h3>
             </section>
 
             <section class="scroll-section" id="connect">

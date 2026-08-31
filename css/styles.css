@@ -218,6 +218,30 @@ body {
     border: 1px solid rgba(255, 95, 86, 0.3);
 }
 
+/* Off-screen but still read by crawlers and screen readers */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Member names: quiet links that only announce themselves by turning white */
+.member-link {
+    color: #ccc;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.member-link:hover {
+    color: #fff;
+}
+
 .modern-link {
     display: inline-block;
     color: #e57373;

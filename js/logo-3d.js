@@ -124,6 +124,20 @@
     const ROCKET_FLAME_FLICK = 9.0;    // turbulence rate in the plume
     const ROCKET_FLAME_PULSE = 6.0;    // rate the plume grows and shrinks
 
+    // --- Members crest configuration ---
+    // The Members section gets a flat 2D shape in the same slot every other
+    // section uses: the particles settle into a plane and draw a mallet and
+    // chisel side by side — one tool per member, in crisp text-art rather
+    // than shaded voxels — with a few sparks adrift around the pair. The
+    // section's words stay ordinary HTML copy in the text column.
+    const TK_GLYPH = 0, TK_SPARK = 1;
+
+    // Inverse of the resting projection (K1 = 40, view distance 55, Courier
+    // cell aspect): one grid column is 0.825 world units across and one row
+    // 1.375 down, so the crest can be authored directly in cells
+    const TEXT_UNIT_X = 0.825;
+    const TEXT_UNIT_Y = 1.375;
+
     // --- Portal configuration (Constellation product) ---
     const PK_LIP = 0, PK_FIELD = 1, PK_MOTE = 2;
 
@@ -610,6 +624,126 @@
         return targets.slice(0, count);
     }
 
+    // --- Members crest geometry ---
+    // Sized to carry the panel the way the modelled shapes do
+    const TEXT_MALLET = [
+        '      .-=*#%%%%%%#*=-.',
+        '    -#@@@@@@@@@@@@@@@@#-',
+        '   =@@@@@@@@@@@@@@@@@@@@=',
+        '  .%@@@@@@@@@@@@@@@@@@@@%.',
+        '  =@@@@@@@@@@@@@@@@@@@@@@=',
+        '  #@@@@@@@@@@@@@@@@@@@@@@#',
+        '  #@@@@@@@@@@@@@@@@@@@@@@#',
+        '  #@@@@@@@@@@@@@@@@@@@@@@#',
+        '  =@@@@@@@@@@@@@@@@@@@@@@=',
+        '  .%@@@@@@@@@@@@@@@@@@@@%.',
+        '   =@@@@@@@@@@@@@@@@@@@@=',
+        '    -#@@@@@@@@@@@@@@@@#-',
+        "      '-=*#%%%%%%#*=-'",
+        '           |@@@@|',
+        '           |@@@@|',
+        '           |@@@@|',
+        '           |@@@@|',
+        '           |@@@@|',
+        '           |@@@@|',
+        '           |@@@@|',
+        '           |@@@@|',
+        '           |@@@@|',
+        '           |@@@@|',
+        '           |@@@@|',
+        '           |@@@@|',
+        '          .#@@@@#.',
+        "          '*####*'"
+    ];
+    const TEXT_CHISEL = [
+        '    .=+####+=.',
+        "    '#%@@@@%#'",
+        '      |@@@@|',
+        '      |@@@@|',
+        '      |@@@@|',
+        '      |@@@@|',
+        '      |@@@@|',
+        '      |@@@@|',
+        '      |@@@@|',
+        '      |@@@@|',
+        '      |@@@@|',
+        '      |@@@@|',
+        '      |@@@@|',
+        '      |@@@@|',
+        '     .#@@@@#.',
+        '    .%@@@@@@%.',
+        '   .%@@@@@@@@%.',
+        '   #@@@@@@@@@@#',
+        '   %@@@@@@@@@@%',
+        '   =@@@@@@@@@@=',
+        '    *@@@@@@@@*',
+        "     '======'"
+    ];
+
+    function pushTextArt(cells, lines, centerCol, topRow) {
+        let artW = 0;
+        for (const line of lines) if (line.length > artW) artW = line.length;
+        const col0 = centerCol - Math.floor(artW / 2);
+        for (let r = 0; r < lines.length; r++) {
+            for (let c = 0; c < lines[r].length; c++) {
+                const ch = lines[r][c];
+                if (ch !== ' ') {
+                    cells.push({
+                        col: col0 + c, row: topRow + r,
+                        code: ch.charCodeAt(0), kind: TK_GLYPH, phase: 0
+                    });
+                }
+            }
+        }
+    }
+
+    function generateTextTargets(count) {
+        const narrow = window.matchMedia('(max-width: 768px)').matches;
+        const cells = [];
+        const centerRow = narrow ? 42 : 64;
+
+        // Mallet and chisel side by side, bottoms roughly level, the pair
+        // centered on the canvas like any other shape
+        pushTextArt(cells, TEXT_MALLET, 48, centerRow - 13);
+        pushTextArt(cells, TEXT_CHISEL, 79, centerRow - 8);
+
+        // Loose sparks adrift around the pair, kept off the drawn cells so a
+        // twinkle never eats part of a tool
+        const used = new Set();
+        for (const cell of cells) used.add(cell.col * 256 + cell.row);
+        const sparkCount = 26;
+        for (let i = 0; i < sparkCount; i++) {
+            const col = 30 + Math.floor(hash01(i * 12.7) * 68);
+            const row = centerRow - 17 + Math.floor(hash01(i * 31.3) * 34);
+            if (used.has(col * 256 + row)) continue;
+            cells.push({ col, row, code: 0, kind: TK_SPARK, phase: hash01(i * 6.7) });
+        }
+
+        // Every particle gets a cell; consecutive particles share one, jittered
+        // inside it so the converging cloud has body without blurring the type.
+        // Integer cell coordinates project exactly onto the floor() boundary
+        // of the projection, so the half-cell shift centers each target in its
+        // bucket — without it, half the jittered particles print the glyph one
+        // cell over and every letter grows a ghost outline. The z spread is
+        // kept tiny for the same reason: depth perturbs the projected scale,
+        // and at the edge columns even ±0.4 units walks a particle a full
+        // cell sideways.
+        const targets = [];
+        for (let i = 0; i < count; i++) {
+            const cell = cells[Math.floor(i * cells.length / count)];
+            const h1 = hash01(i * 3.71), h2 = hash01(i * 7.33), h3 = hash01(i * 5.17);
+            targets.push({
+                x: (cell.col - 64 + 0.5 + (h1 - 0.5) * 0.7) * TEXT_UNIT_X,
+                y: (centerRow - cell.row - 0.5 + (h2 - 0.5) * 0.6) * TEXT_UNIT_Y,
+                // Sparks sit just behind the plane of the type, so they can
+                // never win a cell from a letter through the depth test
+                z: cell.kind === TK_SPARK ? 2.0 + h3 * 0.3 : (h3 - 0.5) * 0.15,
+                code: cell.code, kind: cell.kind, phase: cell.phase
+            });
+        }
+        return targets;
+    }
+
     // --- Car diorama geometry ---
     // A model-style scene: a slab of road with animated lane markings and a
     // car with spoke-shaded wheels, held in profile view while active.
@@ -1070,7 +1204,10 @@
                             portX: 0, portY: 0, portZ: 0,
                             portNX: 0, portNY: 0, portNZ: -1,
                             portKind: PK_FIELD, portFR: 0, portFA: 0,
-                            portPhase: 0
+                            portPhase: 0,
+                            textX: 0, textY: 0, textZ: 0,
+                            textCode: 32, textKind: TK_GLYPH,
+                            textPhase: 0, textReveal: 1
                         });
                     }
                 }
@@ -1087,6 +1224,7 @@
     const carTargets = generateCarTargets(particles.length);
     const rocketTargets = generateRocketTargets(particles.length);
     const portalTargets = generatePortalTargets(particles.length);
+    const textTargets = generateTextTargets(particles.length);
 
     const particleOrder = buildSortedIndices(particles.length, i => ({ x: particles[i].logoX, y: particles[i].logoY, z: particles[i].logoZ }));
     const fishOrder = buildSortedIndices(fishTargets.length, i => fishTargets[i]);
@@ -1095,6 +1233,7 @@
     const carOrder = buildSortedIndices(carTargets.length, i => carTargets[i]);
     const rocketOrder = buildSortedIndices(rocketTargets.length, i => rocketTargets[i]);
     const portalOrder = buildSortedIndices(portalTargets.length, i => portalTargets[i]);
+    const textOrder = buildSortedIndices(textTargets.length, i => textTargets[i]);
 
     for (let k = 0; k < particles.length; k++) {
         const p = particles[particleOrder[k]];
@@ -1156,6 +1295,17 @@
             p.portFR = tPort.fr;
             p.portFA = tPort.fa;
             p.portPhase = tPort.phase;
+        }
+
+        if (k < textTargets.length) {
+            const tText = textTargets[textOrder[k]];
+            p.textX = tText.x; p.textY = tText.y; p.textZ = tText.z;
+            p.textCode = tText.code;
+            p.textKind = tText.kind;
+            p.textPhase = tText.phase;
+            // Staggered thresholds: the type crystallizes out of the arriving
+            // cloud one cell at a time, and crumbles back the same way
+            p.textReveal = 0.55 + hash01(k * 0.77) * 0.4;
         }
 
         p.logo2X = p.logoX; p.logo2Y = p.logoY; p.logo2Z = p.logoZ;
@@ -1286,20 +1436,20 @@
     window.addEventListener('touchcancel', endTouch);
 
     // State: 0 = Logo, 1 = Microscope, 2 = Fish, 3 = Dwarf, 4 = Logo2, 5 = Car,
-    //        6 = Rocket, 7 = Portal
-    const SHAPE_KEYS = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car', 'rocket', 'portal'];
-    const STATE_SHAPE = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car', 'rocket', 'portal'];
+    //        6 = Rocket, 7 = Portal, 8 = Members stage
+    const SHAPE_KEYS = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car', 'rocket', 'portal', 'text'];
+    const STATE_SHAPE = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car', 'rocket', 'portal', 'text'];
 
     let targetState = 0;
     let lastTimestamp = performance.now();
     const currentWeights = {
-        logo: 1, scope: 0, fish: 0, dwarf: 0, logo2: 0, car: 0, rocket: 0, portal: 0
+        logo: 1, scope: 0, fish: 0, dwarf: 0, logo2: 0, car: 0, rocket: 0, portal: 0, text: 0
     };
     let targetWeights = getTargetWeightsForState(0);
 
     function getTargetWeightsForState(state) {
         const w = {
-            logo: 0, scope: 0, fish: 0, dwarf: 0, logo2: 0, car: 0, rocket: 0, portal: 0
+            logo: 0, scope: 0, fish: 0, dwarf: 0, logo2: 0, car: 0, rocket: 0, portal: 0, text: 0
         };
         const key = STATE_SHAPE[state];
         if (key) w[key] = 1;
@@ -1339,6 +1489,7 @@
         let wCar = currentWeights.car < 0.001 ? 0 : currentWeights.car;
         let wRocket = currentWeights.rocket < 0.001 ? 0 : currentWeights.rocket;
         let wPortal = currentWeights.portal < 0.001 ? 0 : currentWeights.portal;
+        let wText = currentWeights.text < 0.001 ? 0 : currentWeights.text;
         const wLogoCombined = wLogo + wLogo2;
         const hasScope = wScope > 0;
         const hasFish = wFish > 0;
@@ -1346,6 +1497,7 @@
         const hasCar = wCar > 0;
         const hasRocket = wRocket > 0;
         const hasPortal = wPortal > 0;
+        const hasText = wText > 0;
 
         const aspectCorrection = (charHeight / charWidth);
 
@@ -1497,6 +1649,11 @@
                 }
                 px += qx * wPortal; py += qy * wPortal; pz += qz * wPortal;
             }
+            if (hasText) {
+                px += p.textX * wText;
+                py += p.textY * wText;
+                pz += p.textZ * wText;
+            }
 
             let x = px * cosT - pz * sinT;
             let z = px * sinT + pz * cosT;
@@ -1574,6 +1731,10 @@
                             nx += (p.portNX * cosT - p.portNZ * sinT) * wPortal;
                             ny += p.portNY * wPortal;
                             nz += (p.portNX * sinT + p.portNZ * cosT) * wPortal;
+                        }
+                        if (hasText) {
+                            // Flat type faces the camera
+                            nz -= wText;
                         }
 
                         if (hasCar) {
@@ -1752,6 +1913,21 @@
                             brightness += clamp01(pb) * wPortal;
                         }
 
+                        if (hasText) {
+                            let tb;
+                            if (p.textKind === TK_SPARK) {
+                                // Sparks breathe around the type, each on its
+                                // own clock
+                                tb = 0.08 + Math.max(0, Math.sin(time * 2.1
+                                    + p.textPhase * 6.283)) * 0.55;
+                            } else {
+                                // Even tone, so mid-flight the cloud already
+                                // reads as unlit print rather than a surface
+                                tb = 0.6;
+                            }
+                            brightness += clamp01(tb) * wText;
+                        }
+
                         if (hasScope) {
                             let sb;
                             switch (p.scopeKind) {
@@ -1843,13 +2019,20 @@
                         // Depth fog — pulled back for the modelled shapes, which
                         // are wide enough that full fog would crush their far half
                         let fog = (z + 50) / 200.0;
-                        brightness -= fog * (1.0 - wCar * 0.65 - wFish * 0.5 - wScope * 0.5);
+                        brightness -= fog * (1.0 - wCar * 0.65 - wFish * 0.5 - wScope * 0.5 - wText * 0.85);
                         brightness = clamp01(brightness);
 
                         brightnessBuffer[idx] = brightness;
 
-                        // Sentinel: 0 = needs shape matching in Pass 2
-                        textBuffer[idx] = 0;
+                        // Sentinel: 0 = needs shape matching in Pass 2.
+                        // Settled type prints its own character instead: the
+                        // per-particle threshold staggers the switch, so the
+                        // glyphs crystallize out of the arriving cloud rather
+                        // than snapping in — and crumble back out the same way
+                        // when the section scrolls past.
+                        textBuffer[idx] = (hasText && p.textKind === TK_GLYPH
+                            && wText >= p.textReveal)
+                            ? p.textCode : 0;
 
                         // Dwarf color
                         if (useColor && hasDwarf) {
@@ -1939,11 +2122,12 @@
             // A portal is only a portal seen through, so hold the mouth square to
             // the camera and keep the oval an oval. Drag still spins it freely.
             // The rocket is held for the same reason: the climb angle only reads
-            // side on, and its own roll supplies the movement.
-            if (hasPortal || hasRocket) {
+            // side on, and its own roll supplies the movement. Type is held
+            // hardest of all: letters only exist face-on.
+            if (hasPortal || hasRocket || hasText) {
                 const square = Math.round(angle / (Math.PI * 2)) * (Math.PI * 2);
                 const pull = 1.0 - Math.pow(0.94, timeScale);
-                angle += (square - angle) * pull * Math.max(wPortal, wRocket);
+                angle += (square - angle) * pull * Math.max(wPortal, wRocket, wText);
             }
 
             // A mola is only a mola side-on — hold the profile, but let it
@@ -1967,18 +2151,20 @@
     const avResearch = document.getElementById('av-research');
     const products = document.getElementById('products');
     const constellation = document.getElementById('project-constellation');
+    const members = document.getElementById('members');
     const sourceCode = document.getElementById('connect');
 
     let isAboutUsVisible = false;
     let isFutureProjectsVisible = false, isSunfishVisible = false;
     let isBrownDwarfVisible = false, isAvResearchVisible = false, isSourceCodeVisible = false;
-    let isProductsVisible = false, isConstellationVisible = false;
+    let isProductsVisible = false, isConstellationVisible = false, isMembersVisible = false;
 
     // Checked bottom-of-page first, so when two sections straddle the trigger
     // band the lower one wins and the shape tracks the scroll direction
     function updateState() {
         let newTarget = null;
         if (isSourceCodeVisible) newTarget = 4;
+        else if (isMembersVisible) newTarget = 8;
         else if (isConstellationVisible) newTarget = 7;
         else if (isProductsVisible) newTarget = 6;
         else if (isAvResearchVisible) newTarget = 5;
@@ -2013,7 +2199,8 @@
         { cols: 70, rows: 46 },   // 4 logo again
         { cols: 116, rows: 28 },  // 5 road diorama
         { cols: 102, rows: 54 },  // 6 rocket
-        { cols: 48, rows: 40 }    // 7 portal
+        { cols: 48, rows: 40 },   // 7 portal
+        { cols: 62, rows: 32 }    // 8 members crest
     ];
     const CHAR_ASPECT = 0.6;      // Courier advance width, as a fraction of em
 
@@ -2052,7 +2239,8 @@
         // coupling, and it also resolves ties without a priority order.
         const tracked = [
             [aboutUs, 0], [futureProjects, 1], [sunfish, 2], [brownDwarf, 3],
-            [avResearch, 5], [products, 6], [constellation, 7], [sourceCode, 4]
+            [avResearch, 5], [products, 6], [constellation, 7], [members, 8],
+            [sourceCode, 4]
         ].filter(([el]) => el);
 
         // One dot per panel. Built from the same list the picker walks, so the
@@ -2134,6 +2322,7 @@
         if (avResearch) new IntersectionObserver((e) => { e.forEach(x => { isAvResearchVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(avResearch);
         if (products) new IntersectionObserver((e) => { e.forEach(x => { isProductsVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(products);
         if (constellation) new IntersectionObserver((e) => { e.forEach(x => { isConstellationVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(constellation);
+        if (members) new IntersectionObserver((e) => { e.forEach(x => { isMembersVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(members);
         if (sourceCode) new IntersectionObserver((e) => { e.forEach(x => { isSourceCodeVisible = x.isIntersecting; updateState(); }); }, connectObsOptions).observe(sourceCode);
     }
 

@@ -124,12 +124,13 @@
     const ROCKET_FLAME_FLICK = 9.0;    // turbulence rate in the plume
     const ROCKET_FLAME_PULSE = 6.0;    // rate the plume grows and shrinks
 
-    // --- Members type configuration ---
-    // At the Members section the graphic goes typographic: the canvas slides
-    // out of its column and fills the screen while the particles flatten into
-    // a plane and set the section's text themselves — MEMBERS on top, the two
-    // names beneath, a mallet and a chisel in the margins, sparks breathing
-    // around it all. Scrolling on crumbles the type back into the 3D shapes.
+    // --- Members stage configuration ---
+    // At the Members section the particles flatten into a small 2D stage:
+    // a pair of thin rules with a mallet and a chisel in the far margins and
+    // a few sparks adrift. The canvas glides to the middle of the viewport as
+    // it forms, and the section's actual words — real type, not characters —
+    // fade in between the rules (see .members-copy in the stylesheet).
+    // Scrolling on dissolves the stage back into the 3D shapes.
     const TK_GLYPH = 0, TK_SPARK = 1;
 
     // Inverse of the resting projection (K1 = 40, view distance 55, Courier
@@ -137,8 +138,8 @@
     // 1.375 down, so the layout can be authored directly in cells
     const TEXT_UNIT_X = 0.825;
     const TEXT_UNIT_Y = 1.375;
-    const TEXT_LAYOUT_COLS = 124;  // footprint the fill-screen scale is fit to
-    const TEXT_LAYOUT_ROWS = 52;
+    const TEXT_LAYOUT_COLS = 124;  // footprint the centered scale is fit to
+    const TEXT_LAYOUT_ROWS = 36;
 
     // --- Portal configuration (Constellation product) ---
     const PK_LIP = 0, PK_FIELD = 1, PK_MOTE = 2;
@@ -626,29 +627,8 @@
         return targets.slice(0, count);
     }
 
-    // --- Members type geometry ---
-    // A 5x7 bitmap face covering just the letters this section needs. Each lit
-    // pixel becomes one grid cell; the title doubles its pixels across, which
-    // restores the letters' proportions inside tall Courier cells.
-    const TEXT_FONT = {
-        A: ['.XXX.', 'X...X', 'X...X', 'XXXXX', 'X...X', 'X...X', 'X...X'],
-        B: ['XXXX.', 'X...X', 'X...X', 'XXXX.', 'X...X', 'X...X', 'XXXX.'],
-        C: ['.XXX.', 'X...X', 'X....', 'X....', 'X....', 'X...X', '.XXX.'],
-        E: ['XXXXX', 'X....', 'X....', 'XXXX.', 'X....', 'X....', 'XXXXX'],
-        H: ['X...X', 'X...X', 'X...X', 'XXXXX', 'X...X', 'X...X', 'X...X'],
-        K: ['X...X', 'X..X.', 'X.X..', 'XX...', 'X.X..', 'X..X.', 'X...X'],
-        L: ['X....', 'X....', 'X....', 'X....', 'X....', 'X....', 'XXXXX'],
-        M: ['X...X', 'XX.XX', 'X.X.X', 'X.X.X', 'X...X', 'X...X', 'X...X'],
-        N: ['X...X', 'XX..X', 'X.X.X', 'X..XX', 'X...X', 'X...X', 'X...X'],
-        O: ['.XXX.', 'X...X', 'X...X', 'X...X', 'X...X', 'X...X', '.XXX.'],
-        R: ['XXXX.', 'X...X', 'X...X', 'XXXX.', 'X.X..', 'X..X.', 'X...X'],
-        S: ['.XXXX', 'X....', 'X....', '.XXX.', '....X', '....X', 'XXXX.'],
-        T: ['XXXXX', '..X..', '..X..', '..X..', '..X..', '..X..', '..X..'],
-        U: ['X...X', 'X...X', 'X...X', 'X...X', 'X...X', 'X...X', '.XXX.'],
-        Y: ['X...X', 'X...X', '.X.X.', '..X..', '..X..', '..X..', '..X..']
-    };
-
-    // The other stuff around the type, drawn in text like everything else
+    // --- Members stage geometry ---
+    // The stuff around the words, drawn in text like everything else
     const TEXT_MALLET = [
         ' .=*#%%#*=.',
         '-%@@@@@@@@%-',
@@ -679,29 +659,6 @@
         "   '=='"
     ];
 
-    function textWidth(str, pw) {
-        let w = 0;
-        for (const ch of str) w += (ch === ' ' ? 3 : 6) * pw;
-        return w - pw;
-    }
-
-    function pushTextLine(cells, str, centerCol, topRow, pw, code) {
-        let col = centerCol - Math.floor(textWidth(str, pw) / 2);
-        for (const ch of str) {
-            if (ch === ' ') { col += 3 * pw; continue; }
-            const glyph = TEXT_FONT[ch];
-            for (let r = 0; r < 7; r++) {
-                for (let c = 0; c < 5; c++) {
-                    if (glyph[r][c] !== 'X') continue;
-                    for (let k = 0; k < pw; k++) {
-                        cells.push({ col: col + c * pw + k, row: topRow + r, code, kind: TK_GLYPH, phase: 0 });
-                    }
-                }
-            }
-            col += 6 * pw;
-        }
-    }
-
     function pushTextArt(cells, lines, centerCol, topRow) {
         let artW = 0;
         for (const line of lines) if (line.length > artW) artW = line.length;
@@ -722,38 +679,33 @@
     function generateTextTargets(count) {
         const narrow = window.matchMedia('(max-width: 768px)').matches;
         const cells = [];
-        const AT = 64, HASH = 35, EQ = 61;
+        const DASH = 45;
         const centerRow = narrow ? 42 : 64;
 
         if (narrow) {
-            // The band is short, so it carries the title with the tools at its
-            // shoulders; the names stay HTML copy in the panel below it
-            pushTextLine(cells, 'MEMBERS', 64, centerRow - 3, 2, AT);
-            pushTextArt(cells, TEXT_MALLET, 13, centerRow - 6);
-            pushTextArt(cells, TEXT_CHISEL, 115, centerRow - 6);
+            // The band carries a small crest — the two tools side by side —
+            // while the panel below sets the section's words in real type
+            pushTextArt(cells, TEXT_MALLET, 53, centerRow - 6);
+            pushTextArt(cells, TEXT_CHISEL, 75, centerRow - 6);
         } else {
-            pushTextLine(cells, 'MEMBERS', 64, 40, 2, AT);
-            for (let c = 0; c < 82; c++) {
-                cells.push({ col: 23 + c, row: 49, code: EQ, kind: TK_GLYPH, phase: 0 });
+            // A pair of thin rules frames the copy that fades in between
+            // them, with the tools far out in the margins: the particles set
+            // the stage, real type sets the words
+            for (let c = 0; c < 76; c++) {
+                cells.push({ col: 26 + c, row: centerRow - 13, code: DASH, kind: TK_GLYPH, phase: 0 });
+                cells.push({ col: 26 + c, row: centerRow + 13, code: DASH, kind: TK_GLYPH, phase: 0 });
             }
-            // Names take the doubled pixels too — single-width letters go
-            // spindly in tall Courier cells — and at that size a full name
-            // outruns the grid, so each member stacks first name over last
-            pushTextLine(cells, 'KELLEN', 64, 53, 2, HASH);
-            pushTextLine(cells, 'HERATY', 64, 62, 2, HASH);
-            pushTextLine(cells, 'CHASE', 64, 73, 2, HASH);
-            pushTextLine(cells, 'CULBERTSON', 64, 82, 2, HASH);
-            pushTextArt(cells, TEXT_MALLET, 8, 40);
-            pushTextArt(cells, TEXT_CHISEL, 120, 41);
+            pushTextArt(cells, TEXT_MALLET, 10, centerRow - 6);
+            pushTextArt(cells, TEXT_CHISEL, 118, centerRow - 6);
         }
 
-        // Loose sparks scattered through the margins, kept off the type so a
-        // twinkle never eats a letter
+        // Loose sparks adrift through the margins, kept off the drawn cells
+        // so a twinkle never eats part of the stage
         const used = new Set();
         for (const cell of cells) used.add(cell.col * 256 + cell.row);
-        const sparkCount = narrow ? 26 : 60;
-        const r0 = narrow ? centerRow - 14 : 36;
-        const r1 = narrow ? centerRow + 14 : 92;
+        const sparkCount = narrow ? 18 : 40;
+        const r0 = centerRow - (narrow ? 10 : 16);
+        const r1 = centerRow + (narrow ? 10 : 16);
         for (let i = 0; i < sparkCount; i++) {
             const col = 5 + Math.floor(hash01(i * 12.7) * 118);
             const row = r0 + Math.floor(hash01(i * 31.3) * (r1 - r0));
@@ -1402,17 +1354,18 @@
     window.addEventListener('resize', updateLogoMetrics);
 
     // How far the canvas must slide to sit over the middle of the viewport,
-    // and how much it must grow for the type layout to fill it. Measured
-    // rather than derived from the column widths, so a layout change cannot
-    // strand the type off-center. CSS animates the transform whenever the
+    // and how much to grow so the stage frames the copy at a comfortable
+    // size — a bit over half the viewport, not a takeover. Measured rather
+    // than derived from the column widths, so a layout change cannot strand
+    // the stage off-center. CSS animates the transform whenever the
     // members-mode class toggles, in step with the particle morph.
     function updateMembersVars() {
         if (NARROW.matches) return;
         const box = asciiColumn.getBoundingClientRect();
         if (box.width < 1) return;
         const shift = window.innerWidth / 2 - (box.left + box.width / 2);
-        const sx = (window.innerWidth * 0.92) / (TEXT_LAYOUT_COLS * charWidth);
-        const sy = (window.innerHeight * 0.92) / (TEXT_LAYOUT_ROWS * charHeight);
+        const sx = (window.innerWidth * 0.58) / (TEXT_LAYOUT_COLS * charWidth);
+        const sy = (window.innerHeight * 0.52) / (TEXT_LAYOUT_ROWS * charHeight);
         const scale = Math.max(1, Math.min(sx, sy));
         screenElement.style.setProperty('--members-shift', shift.toFixed(1) + 'px');
         screenElement.style.setProperty('--members-scale', scale.toFixed(3));
@@ -1498,7 +1451,7 @@
     window.addEventListener('touchcancel', endTouch);
 
     // State: 0 = Logo, 1 = Microscope, 2 = Fish, 3 = Dwarf, 4 = Logo2, 5 = Car,
-    //        6 = Rocket, 7 = Portal, 8 = Members type
+    //        6 = Rocket, 7 = Portal, 8 = Members stage
     const SHAPE_KEYS = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car', 'rocket', 'portal', 'text'];
     const STATE_SHAPE = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car', 'rocket', 'portal', 'text'];
 
@@ -2242,8 +2195,11 @@
             // the same motion that rebuilds the shape
             fitShapeToPanel(newTarget);
             // Members: the same moment the particles start flattening into
-            // type, the canvas starts sliding out to fill the screen — one
-            // motion, two mechanisms
+            // the stage, the canvas starts sliding to the middle of the
+            // viewport — one motion, two mechanisms. Measured now, not at
+            // load: the column's width includes the rendered frame's
+            // min-content, which does not exist until the first paint.
+            if (newTarget === 8) updateMembersVars();
             document.body.classList.toggle('members-mode', newTarget === 8);
         }
     }
@@ -2266,7 +2222,7 @@
         { cols: 116, rows: 28 },  // 5 road diorama
         { cols: 102, rows: 54 },  // 6 rocket
         { cols: 48, rows: 40 },   // 7 portal
-        { cols: 124, rows: 28 }   // 8 members type
+        { cols: 58, rows: 20 }    // 8 members crest
     ];
     const CHAR_ASPECT = 0.6;      // Courier advance width, as a fraction of em
 

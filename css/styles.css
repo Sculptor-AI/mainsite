@@ -259,17 +259,52 @@ body {
 /* ---------------------------------------------------------------------------
    Members
 
-   On desktop this section has no visible copy of its own: the particle canvas
-   slides out of its column and fills the screen, setting the section's text
-   out of its own particles. The transform transition runs on the same clock
-   as the particle morph, so the enlargement and the type forming read as one
-   motion, and it reverses the same way when the type dissolves back into the
-   3D shapes. The HTML copy keeps its layout box for the scroll observers and
-   stays in the accessibility tree.
+   On desktop the particle canvas glides to the middle of the viewport and its
+   particles flatten into a small stage — two thin rules, the tools out in the
+   margins — and the section's words fade in between the rules as real type.
+   The transform transition runs on the same clock as the particle morph, so
+   the slide and the stage forming read as one motion, and both reverse when
+   the stage dissolves back into the 3D shapes.
    --------------------------------------------------------------------------- */
 @media (min-width: 769px) {
-    #members>* {
+
+    /* The scroll-reveal transform has to go on this one section: a
+       transformed ancestor re-anchors position: fixed, and the copy below
+       must center on the viewport */
+    #members.scroll-section,
+    #members.scroll-section.active {
+        opacity: 1;
+        transform: none;
+        min-height: 40vh;
+    }
+
+    #members .members-copy {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -46%);
+        text-align: center;
         opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.45s ease, transform 0.45s ease;
+    }
+
+    /* Trails the morph slightly: the particles set the stage first, then
+       the names arrive on it */
+    body.members-mode #members .members-copy {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translate(-50%, -50%);
+        transition: opacity 0.8s ease-out 0.5s, transform 0.8s ease-out 0.5s;
+    }
+
+    #members .members-copy h2 {
+        margin-bottom: 1.2rem;
+    }
+
+    #members .members-copy h3 {
+        margin: 0.4em 0;
+        font-weight: 500;
     }
 
     #solid-logo-canvas {
@@ -277,7 +312,7 @@ body {
     }
 
     body.members-mode #solid-logo-canvas {
-        transform: translateX(var(--members-shift, 27.5vw)) scale(var(--members-scale, 1.8));
+        transform: translateX(var(--members-shift, 27.5vw)) scale(var(--members-scale, 1.3));
     }
 }
 

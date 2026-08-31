@@ -124,6 +124,17 @@
     const ROCKET_FLAME_FLICK = 9.0;    // turbulence rate in the plume
     const ROCKET_FLAME_PULSE = 6.0;    // rate the plume grows and shrinks
 
+    // --- Mallet & chisel configuration (Members section) ---
+    // One tool per member: the pair splits across the canvas, mallet holding
+    // the left side and chisel pushed out toward the middle of the page.
+    const DK_HEAD = 0, DK_HANDLE = 1, DK_KNOB = 2,
+        DK_CAP = 3, DK_SHAFT = 4, DK_BLADE = 5;
+
+    const DUO_SPREAD = 27.0;       // how far each tool sits from the canvas center
+    const DUO_SCALE = 1.3;         // sized to carry the panel like the other shapes
+    const DUO_BOB = 0.55;          // counter-phase float, so the pair never sits still
+    const DUO_SWAY = 0.16;         // lazy turn about the held front view
+
     // --- Portal configuration (Constellation product) ---
     const PK_LIP = 0, PK_FIELD = 1, PK_MOTE = 2;
 
@@ -610,6 +621,69 @@
         return targets.slice(0, count);
     }
 
+    // --- Mallet & chisel geometry ---
+    // Both tools are stacks of the same cylinder sampler the microscope uses,
+    // so the pair inherits the established solid-object look for free. The one
+    // custom piece is the chisel blade, which is a flat wedge rather than a
+    // surface of revolution: revolved, it reads as an awl.
+
+    function pushChiselBlade(targets, count, cx) {
+        const yTop = -7.0, yBot = -17.0;
+        for (let i = 0; i < count; i++) {
+            const u = Math.random();                 // 0 at the shaft, 1 at the edge
+            const w = 2.2 + (4.4 - 2.2) * u;         // flares wider toward the edge
+            const th = 1.6 * (1 - u) + 0.08;         // bevels down to nearly nothing
+            const y = yTop + (yBot - yTop) * u;
+            const side = Math.random() < 0.5 ? 1 : -1;
+            if (Math.random() < 0.85) {
+                // The two beveled faces, tilted slightly down by the taper
+                targets.push({
+                    x: cx + (Math.random() * 2 - 1) * w, y, z: side * th,
+                    nx: 0, ny: -0.14, nz: side * 0.99,
+                    kind: DK_BLADE, a: u, s: 0, spin: 0
+                });
+            } else {
+                // Thin side edges, so the silhouette stays closed
+                const edge = Math.random() < 0.5 ? 1 : -1;
+                targets.push({
+                    x: cx + edge * w, y, z: (Math.random() * 2 - 1) * th,
+                    nx: edge, ny: 0, nz: 0,
+                    kind: DK_BLADE, a: u, s: 0, spin: 0
+                });
+            }
+        }
+    }
+
+    function generateDuoTargets(count) {
+        const targets = [];
+        const share = f => Math.max(1, Math.floor(count * f));
+        const mx = -DUO_SPREAD, cx = DUO_SPREAD;
+
+        // Mallet: barrel head across a straight handle with a flared butt
+        pushSurfaceCylinder(targets, share(0.36), mx - 9.5, 9, 0, mx + 9.5, 9, 0, 6.5, DK_HEAD, {});
+        pushSurfaceCylinder(targets, share(0.13), mx, 8, 0, mx, -15.5, 0, 2.1, DK_HANDLE, { capFar: false, capNear: false });
+        pushSurfaceCylinder(targets, share(0.05), mx, -15.5, 0, mx, -18.5, 0, 2.9, DK_KNOB, {});
+
+        // Chisel: struck cap, shaft, and the flat beveled blade
+        pushSurfaceCylinder(targets, share(0.07), cx, 12.7, 0, cx, 16.0, 0, 3.3, DK_CAP, {});
+        pushSurfaceCylinder(targets, share(0.20), cx, -7, 0, cx, 12.7, 0, 2.2, DK_SHAFT, { capFar: false, capNear: false });
+        pushChiselBlade(targets, share(0.17), cx);
+
+        if (targets.length < count) {
+            pushSurfaceCylinder(targets, count - targets.length,
+                mx - 9.5, 9, 0, mx + 9.5, 9, 0, 6.5, DK_HEAD, {});
+        }
+        // The mallet is a wider tool than the chisel, so the pair's true
+        // midpoint sits left of the anchor gap; the shift recenters the
+        // composition on the canvas
+        for (const t of targets) {
+            t.x = (t.x + 2.55) * DUO_SCALE;
+            t.y *= DUO_SCALE;
+            t.z *= DUO_SCALE;
+        }
+        return targets.slice(0, count);
+    }
+
     // --- Car diorama geometry ---
     // A model-style scene: a slab of road with animated lane markings and a
     // car with spoke-shaded wheels, held in profile view while active.
@@ -1070,7 +1144,10 @@
                             portX: 0, portY: 0, portZ: 0,
                             portNX: 0, portNY: 0, portNZ: -1,
                             portKind: PK_FIELD, portFR: 0, portFA: 0,
-                            portPhase: 0
+                            portPhase: 0,
+                            duoX: 0, duoY: 0, duoZ: 0,
+                            duoNX: 0, duoNY: 0, duoNZ: 1,
+                            duoKind: DK_HEAD, duoPhase: 0
                         });
                     }
                 }
@@ -1087,6 +1164,7 @@
     const carTargets = generateCarTargets(particles.length);
     const rocketTargets = generateRocketTargets(particles.length);
     const portalTargets = generatePortalTargets(particles.length);
+    const duoTargets = generateDuoTargets(particles.length);
 
     const particleOrder = buildSortedIndices(particles.length, i => ({ x: particles[i].logoX, y: particles[i].logoY, z: particles[i].logoZ }));
     const fishOrder = buildSortedIndices(fishTargets.length, i => fishTargets[i]);
@@ -1095,6 +1173,7 @@
     const carOrder = buildSortedIndices(carTargets.length, i => carTargets[i]);
     const rocketOrder = buildSortedIndices(rocketTargets.length, i => rocketTargets[i]);
     const portalOrder = buildSortedIndices(portalTargets.length, i => portalTargets[i]);
+    const duoOrder = buildSortedIndices(duoTargets.length, i => duoTargets[i]);
 
     for (let k = 0; k < particles.length; k++) {
         const p = particles[particleOrder[k]];
@@ -1156,6 +1235,14 @@
             p.portFR = tPort.fr;
             p.portFA = tPort.fa;
             p.portPhase = tPort.phase;
+        }
+
+        if (k < duoTargets.length) {
+            const tDuo = duoTargets[duoOrder[k]];
+            p.duoX = tDuo.x; p.duoY = tDuo.y; p.duoZ = tDuo.z;
+            p.duoNX = tDuo.nx; p.duoNY = tDuo.ny; p.duoNZ = tDuo.nz;
+            p.duoKind = tDuo.kind;
+            p.duoPhase = tDuo.a;
         }
 
         p.logo2X = p.logoX; p.logo2Y = p.logoY; p.logo2Z = p.logoZ;
@@ -1286,20 +1373,20 @@
     window.addEventListener('touchcancel', endTouch);
 
     // State: 0 = Logo, 1 = Microscope, 2 = Fish, 3 = Dwarf, 4 = Logo2, 5 = Car,
-    //        6 = Rocket, 7 = Portal
-    const SHAPE_KEYS = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car', 'rocket', 'portal'];
-    const STATE_SHAPE = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car', 'rocket', 'portal'];
+    //        6 = Rocket, 7 = Portal, 8 = Mallet & chisel
+    const SHAPE_KEYS = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car', 'rocket', 'portal', 'duo'];
+    const STATE_SHAPE = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car', 'rocket', 'portal', 'duo'];
 
     let targetState = 0;
     let lastTimestamp = performance.now();
     const currentWeights = {
-        logo: 1, scope: 0, fish: 0, dwarf: 0, logo2: 0, car: 0, rocket: 0, portal: 0
+        logo: 1, scope: 0, fish: 0, dwarf: 0, logo2: 0, car: 0, rocket: 0, portal: 0, duo: 0
     };
     let targetWeights = getTargetWeightsForState(0);
 
     function getTargetWeightsForState(state) {
         const w = {
-            logo: 0, scope: 0, fish: 0, dwarf: 0, logo2: 0, car: 0, rocket: 0, portal: 0
+            logo: 0, scope: 0, fish: 0, dwarf: 0, logo2: 0, car: 0, rocket: 0, portal: 0, duo: 0
         };
         const key = STATE_SHAPE[state];
         if (key) w[key] = 1;
@@ -1339,6 +1426,7 @@
         let wCar = currentWeights.car < 0.001 ? 0 : currentWeights.car;
         let wRocket = currentWeights.rocket < 0.001 ? 0 : currentWeights.rocket;
         let wPortal = currentWeights.portal < 0.001 ? 0 : currentWeights.portal;
+        let wDuo = currentWeights.duo < 0.001 ? 0 : currentWeights.duo;
         const wLogoCombined = wLogo + wLogo2;
         const hasScope = wScope > 0;
         const hasFish = wFish > 0;
@@ -1346,6 +1434,7 @@
         const hasCar = wCar > 0;
         const hasRocket = wRocket > 0;
         const hasPortal = wPortal > 0;
+        const hasDuo = wDuo > 0;
 
         const aspectCorrection = (charHeight / charWidth);
 
@@ -1363,6 +1452,10 @@
 
         // Sunfish: dorsal and anal fins scull in unison, the way a mola swims
         const finSweep = hasFish ? Math.sin(time * FISH_FLAP_SPEED) * FISH_FLAP_AMP : 0;
+
+        // Mallet and chisel float in counter-phase, one rising as the other
+        // settles, so the pair reads as two hands at work rather than a poster
+        const duoBob = hasDuo ? Math.sin(time * 1.05) * DUO_BOB : 0;
 
         // Microscope: the nosepiece dwells on an objective, then clicks 120°
         // to the next one
@@ -1497,6 +1590,13 @@
                 }
                 px += qx * wPortal; py += qy * wPortal; pz += qz * wPortal;
             }
+            if (hasDuo) {
+                // Sign of x says which tool a point belongs to, so the bob
+                // needs no stored group id
+                px += p.duoX * wDuo;
+                py += (p.duoY + (p.duoX < 0 ? duoBob : -duoBob)) * wDuo;
+                pz += p.duoZ * wDuo;
+            }
 
             let x = px * cosT - pz * sinT;
             let z = px * sinT + pz * cosT;
@@ -1575,6 +1675,11 @@
                             ny += p.portNY * wPortal;
                             nz += (p.portNX * sinT + p.portNZ * cosT) * wPortal;
                         }
+                        if (hasDuo) {
+                            nx += (p.duoNX * cosT - p.duoNZ * sinT) * wDuo;
+                            ny += p.duoNY * wDuo;
+                            nz += (p.duoNX * sinT + p.duoNZ * cosT) * wDuo;
+                        }
 
                         if (hasCar) {
                             const tny = ny * carTiltCos + nz * carTiltSin;
@@ -1596,7 +1701,7 @@
                         // how squarely the surface faces the camera, plus a
                         // Blinn specular raised to ^16 by repeated squaring
                         let facing = 0, spec = 0;
-                        if (hasFish || hasScope || hasCar || hasRocket) {
+                        if (hasFish || hasScope || hasCar || hasRocket || hasDuo) {
                             facing = -nz;
                             if (facing < 0) facing = 0;
                             spec = nx * HX + ny * HY + nz * HZ;
@@ -1752,6 +1857,38 @@
                             brightness += clamp01(pb) * wPortal;
                         }
 
+                        if (hasDuo) {
+                            let db;
+                            switch (p.duoKind) {
+                                case DK_HEAD: {
+                                    // Turned hardwood: matte, with faint rings
+                                    // along the barrel where the lathe ran
+                                    const ring = Math.sin(p.duoPhase * 26.0) > 0.55 ? 0.08 : 0;
+                                    db = 0.22 + facing * 0.40 + diffuse * 0.32 + spec * 0.24 + ring;
+                                    break;
+                                }
+                                case DK_HANDLE:
+                                    db = 0.18 + facing * 0.36 + diffuse * 0.28 + spec * 0.18;
+                                    break;
+                                case DK_KNOB:
+                                    db = 0.16 + facing * 0.32 + diffuse * 0.26 + spec * 0.18;
+                                    break;
+                                case DK_CAP:
+                                    // Mushroomed striking end, polished by use
+                                    db = 0.24 + facing * 0.34 + diffuse * 0.30 + spec * 0.50;
+                                    break;
+                                case DK_SHAFT:
+                                    db = 0.20 + facing * 0.40 + diffuse * 0.26 + spec * 0.55;
+                                    break;
+                                default:
+                                    // Blade brightens toward the cutting edge
+                                    db = 0.18 + facing * 0.36 + diffuse * 0.24 + spec * 0.40
+                                        + p.duoPhase * 0.20;
+                                    break;
+                            }
+                            brightness += clamp01(db) * wDuo;
+                        }
+
                         if (hasScope) {
                             let sb;
                             switch (p.scopeKind) {
@@ -1843,7 +1980,7 @@
                         // Depth fog — pulled back for the modelled shapes, which
                         // are wide enough that full fog would crush their far half
                         let fog = (z + 50) / 200.0;
-                        brightness -= fog * (1.0 - wCar * 0.65 - wFish * 0.5 - wScope * 0.5);
+                        brightness -= fog * (1.0 - wCar * 0.65 - wFish * 0.5 - wScope * 0.5 - wDuo * 0.5);
                         brightness = clamp01(brightness);
 
                         brightnessBuffer[idx] = brightness;
@@ -1946,6 +2083,17 @@
                 angle += (square - angle) * pull * Math.max(wPortal, wRocket);
             }
 
+            // Two tools side by side only read as a pair square-on, so hold
+            // the front view with a lazy sway — the mola's treatment. The sway
+            // shifts the two in depth against each other, which keeps the
+            // composition alive without ever crossing them.
+            if (hasDuo) {
+                const sway = Math.sin(time * 0.42) * DUO_SWAY;
+                const held = Math.round((angle - sway) / (Math.PI * 2)) * (Math.PI * 2) + sway;
+                const pull = 1.0 - Math.pow(0.96, timeScale);
+                angle += (held - angle) * pull * wDuo;
+            }
+
             // A mola is only a mola side-on — hold the profile, but let it
             // turn lazily in place rather than freezing.
             if (hasFish) {
@@ -1967,18 +2115,20 @@
     const avResearch = document.getElementById('av-research');
     const products = document.getElementById('products');
     const constellation = document.getElementById('project-constellation');
+    const members = document.getElementById('members');
     const sourceCode = document.getElementById('connect');
 
     let isAboutUsVisible = false;
     let isFutureProjectsVisible = false, isSunfishVisible = false;
     let isBrownDwarfVisible = false, isAvResearchVisible = false, isSourceCodeVisible = false;
-    let isProductsVisible = false, isConstellationVisible = false;
+    let isProductsVisible = false, isConstellationVisible = false, isMembersVisible = false;
 
     // Checked bottom-of-page first, so when two sections straddle the trigger
     // band the lower one wins and the shape tracks the scroll direction
     function updateState() {
         let newTarget = null;
         if (isSourceCodeVisible) newTarget = 4;
+        else if (isMembersVisible) newTarget = 8;
         else if (isConstellationVisible) newTarget = 7;
         else if (isProductsVisible) newTarget = 6;
         else if (isAvResearchVisible) newTarget = 5;
@@ -2013,7 +2163,8 @@
         { cols: 70, rows: 46 },   // 4 logo again
         { cols: 116, rows: 28 },  // 5 road diorama
         { cols: 102, rows: 54 },  // 6 rocket
-        { cols: 48, rows: 40 }    // 7 portal
+        { cols: 48, rows: 40 },   // 7 portal
+        { cols: 116, rows: 38 }   // 8 mallet & chisel
     ];
     const CHAR_ASPECT = 0.6;      // Courier advance width, as a fraction of em
 
@@ -2052,7 +2203,8 @@
         // coupling, and it also resolves ties without a priority order.
         const tracked = [
             [aboutUs, 0], [futureProjects, 1], [sunfish, 2], [brownDwarf, 3],
-            [avResearch, 5], [products, 6], [constellation, 7], [sourceCode, 4]
+            [avResearch, 5], [products, 6], [constellation, 7], [members, 8],
+            [sourceCode, 4]
         ].filter(([el]) => el);
 
         // One dot per panel. Built from the same list the picker walks, so the
@@ -2134,6 +2286,7 @@
         if (avResearch) new IntersectionObserver((e) => { e.forEach(x => { isAvResearchVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(avResearch);
         if (products) new IntersectionObserver((e) => { e.forEach(x => { isProductsVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(products);
         if (constellation) new IntersectionObserver((e) => { e.forEach(x => { isConstellationVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(constellation);
+        if (members) new IntersectionObserver((e) => { e.forEach(x => { isMembersVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(members);
         if (sourceCode) new IntersectionObserver((e) => { e.forEach(x => { isSourceCodeVisible = x.isIntersecting; updateState(); }); }, connectObsOptions).observe(sourceCode);
     }
 

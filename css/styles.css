@@ -255,7 +255,8 @@ body {
     border-bottom-color: #e57373;
 }
 
-.repo-pill {
+.repo-pill,
+.paper-pill {
     display: inline-flex;
     align-items: center;
     gap: 0.5em;
@@ -270,13 +271,14 @@ body {
     transition: color 0.3s ease, border-color 0.3s ease, background 0.3s ease;
 }
 
-.repo-pill:hover {
+.repo-pill:hover,
+.paper-pill:hover {
     color: #fff;
     border-color: rgba(229, 115, 115, 0.5);
     background: rgba(229, 115, 115, 0.08);
 }
 
-.repo-pill-mark {
+.pill-mark {
     flex-shrink: 0;
 }
 

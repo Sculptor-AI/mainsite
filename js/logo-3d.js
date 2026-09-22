@@ -126,8 +126,8 @@
 
     // --- Members crest configuration ---
     // The Members section gets a flat 2D shape in the same slot every other
-    // section uses: the particles settle into a plane and draw a mallet and
-    // chisel side by side — one tool per member, in crisp text-art rather
+    // section uses: the particles settle into a plane and draw two person
+    // silhouettes side by side — one per member, in crisp text-art rather
     // than shaded voxels — with a few sparks adrift around the pair. The
     // section's words stay ordinary HTML copy in the text column.
     const TK_GLYPH = 0, TK_SPARK = 1;
@@ -626,58 +626,31 @@
 
     // --- Members crest geometry ---
     // Sized to carry the panel the way the modelled shapes do
-    const TEXT_MALLET = [
-        '      .-=*#%%%%%%#*=-.',
-        '    -#@@@@@@@@@@@@@@@@#-',
-        '   =@@@@@@@@@@@@@@@@@@@@=',
-        '  .%@@@@@@@@@@@@@@@@@@@@%.',
-        '  =@@@@@@@@@@@@@@@@@@@@@@=',
-        '  #@@@@@@@@@@@@@@@@@@@@@@#',
-        '  #@@@@@@@@@@@@@@@@@@@@@@#',
-        '  #@@@@@@@@@@@@@@@@@@@@@@#',
-        '  =@@@@@@@@@@@@@@@@@@@@@@=',
-        '  .%@@@@@@@@@@@@@@@@@@@@%.',
-        '   =@@@@@@@@@@@@@@@@@@@@=',
-        '    -#@@@@@@@@@@@@@@@@#-',
-        "      '-=*#%%%%%%#*=-'",
-        '           |@@@@|',
-        '           |@@@@|',
-        '           |@@@@|',
-        '           |@@@@|',
-        '           |@@@@|',
-        '           |@@@@|',
-        '           |@@@@|',
-        '           |@@@@|',
-        '           |@@@@|',
-        '           |@@@@|',
-        '           |@@@@|',
-        '           |@@@@|',
-        '          .#@@@@#.',
-        "          '*####*'"
-    ];
-    const TEXT_CHISEL = [
-        '    .=+####+=.',
-        "    '#%@@@@%#'",
-        '      |@@@@|',
-        '      |@@@@|',
-        '      |@@@@|',
-        '      |@@@@|',
-        '      |@@@@|',
-        '      |@@@@|',
-        '      |@@@@|',
-        '      |@@@@|',
-        '      |@@@@|',
-        '      |@@@@|',
-        '      |@@@@|',
-        '      |@@@@|',
-        '     .#@@@@#.',
-        '    .%@@@@@@%.',
-        '   .%@@@@@@@@%.',
-        '   #@@@@@@@@@@#',
-        '   %@@@@@@@@@@%',
-        '   =@@@@@@@@@@=',
-        '    *@@@@@@@@*',
-        "     '======'"
+    const TEXT_PERSON = [
+        '           =+**+=',
+        '        .*@@@@@@@@*.',
+        '       -@@@@@@@@@@@@-',
+        '       %@@@@@@@@@@@@%',
+        '      .@@@@@@@@@@@@@@.',
+        '       @@@@@@@@@@@@@@',
+        '       =@@@@@@@@@@@@=',
+        '        =@@@@@@@@@@=',
+        '          =*%@@%*=',
+        '',
+        '',
+        '       -==++++++++==-',
+        '   =*%@@@@@@@@@@@@@@@@%*=',
+        ' .#@@@@@@@@@@@@@@@@@@@@@@#.',
+        ' #@@@@@@@@@@@@@@@@@@@@@@@@#',
+        ' %@@@@@@@@@@@@@@@@@@@@@@@@%',
+        ' %@@@@@@@@@@@@@@@@@@@@@@@@%',
+        ' %@@@@@@@@@@@@@@@@@@@@@@@@%',
+        ' %@@@@@@@@@@@@@@@@@@@@@@@@%',
+        ' %@@@@@@@@@@@@@@@@@@@@@@@@%',
+        ' %@@@@@@@@@@@@@@@@@@@@@@@@%',
+        ' %@@@@@@@@@@@@@@@@@@@@@@@@%',
+        ' %@@@@@@@@@@@@@@@@@@@@@@@@%',
+        ' %@@@@@@@@@@@@@@@@@@@@@@@@%'
     ];
 
     function pushTextArt(cells, lines, centerCol, topRow) {
@@ -702,13 +675,13 @@
         const cells = [];
         const centerRow = narrow ? 42 : 64;
 
-        // Mallet and chisel side by side, bottoms roughly level, the pair
-        // centered on the canvas like any other shape
-        pushTextArt(cells, TEXT_MALLET, 48, centerRow - 13);
-        pushTextArt(cells, TEXT_CHISEL, 79, centerRow - 8);
+        // Two figures side by side, one per member, the pair centered on the
+        // canvas like any other shape
+        pushTextArt(cells, TEXT_PERSON, 48, centerRow - 12);
+        pushTextArt(cells, TEXT_PERSON, 80, centerRow - 12);
 
         // Loose sparks adrift around the pair, kept off the drawn cells so a
-        // twinkle never eats part of a tool
+        // twinkle never eats part of a figure
         const used = new Set();
         for (const cell of cells) used.add(cell.col * 256 + cell.row);
         const sparkCount = 26;

@@ -282,6 +282,61 @@ body {
     flex-shrink: 0;
 }
 
+/* A pill grown to hold a picture: same border, fill and hover as the pills, so a
+   project with something to look at links out the same way the rest do */
+.link-card {
+    display: flex;
+    align-items: center;
+    gap: 1em;
+    max-width: 26em;
+    padding: 0.5em;
+    padding-right: 1.2em;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    color: #aaa;
+    text-decoration: none;
+    transition: color 0.3s ease, border-color 0.3s ease, background 0.3s ease;
+}
+
+.link-card:hover {
+    color: #fff;
+    border-color: rgba(229, 115, 115, 0.5);
+    background: rgba(229, 115, 115, 0.08);
+}
+
+.link-card img {
+    flex: none;
+    width: 9em;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 7px;
+    background: #1b2033;
+}
+
+.link-card-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25em;
+    min-width: 0;
+}
+
+.link-card-title {
+    color: #fff;
+    font-weight: 600;
+    font-size: 1.1em;
+}
+
+.link-card-meta {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9em;
+}
+
+.link-card-meta::after {
+    content: " \2197";
+}
+
 /* A portrait affordance. Hidden here rather than only shown in the media query,
    so nothing leaks into the desktop layout. */
 #section-rail {
@@ -440,6 +495,10 @@ body {
 
     .scroll-section h2 {
         margin-bottom: 1.5vh;
+    }
+
+    .link-card img {
+        width: 7em;
     }
 
     #section-rail {

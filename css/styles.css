@@ -282,59 +282,119 @@ body {
     flex-shrink: 0;
 }
 
-/* A pill grown to hold a picture: same border, fill and hover as the pills, so a
-   project with something to look at links out the same way the rest do */
-.link-card {
-    display: flex;
-    align-items: center;
-    gap: 1em;
-    max-width: 26em;
-    padding: 0.5em;
-    padding-right: 1.2em;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.04);
-    color: #aaa;
-    text-decoration: none;
-    transition: color 0.3s ease, border-color 0.3s ease, background 0.3s ease;
+/* The link to TurnPilot is set as TurnPilot's own wordmark, in its typeface and the
+   cream its title is painted in. The address under it takes a turn signal for its
+   arrow: unlit at rest, like an indicator that's off, and flashing amber at blinker
+   speed when you point at it. */
+@font-face {
+    font-family: "Courier Prime";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url(../fonts/courier-prime-400.woff2) format("woff2");
 }
 
-.link-card:hover {
-    color: #fff;
-    border-color: rgba(229, 115, 115, 0.5);
-    background: rgba(229, 115, 115, 0.08);
-}
-
-.link-card img {
-    flex: none;
-    width: 9em;
-    height: auto;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-    border-radius: 7px;
-    background: #1b2033;
-}
-
-.link-card-text {
-    display: flex;
+.turnpilot-link {
+    display: inline-flex;
     flex-direction: column;
-    gap: 0.25em;
-    min-width: 0;
+    align-items: flex-start;
+    gap: 0.45em;
+    margin-top: 0.4rem;
+    text-decoration: none;
 }
 
-.link-card-title {
-    color: #fff;
-    font-weight: 600;
-    font-size: 1.1em;
+.turnpilot-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6em;
 }
 
-.link-card-meta {
+.turnpilot-mark {
+    font-family: "Courier Prime", 'Courier New', Courier, monospace;
+    font-size: 2.2em;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    color: #ece4d2;
+}
+
+.turnpilot-signal {
+    /* sized to the address beside it, not the name above */
+    width: 0.95em;
+    height: 0.78em;
+    overflow: visible;
+}
+
+/* The lens is always there; the lamp behind it is what flashes */
+.turnpilot-signal .lens {
+    fill: rgba(255, 166, 46, 0.16);
+    stroke: rgba(255, 166, 46, 0.45);
+    stroke-width: 1;
+    stroke-linejoin: round;
+}
+
+.turnpilot-signal .lamp {
+    fill: #ffa62e;
+    opacity: 0;
+    filter: drop-shadow(0 0 3px rgba(255, 166, 46, 0.75));
+}
+
+.turnpilot-url {
     font-family: 'Courier New', Courier, monospace;
     font-size: 0.9em;
+    color: #aaa;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    padding-bottom: 1px;
+    transition: color 0.3s ease, border-color 0.3s ease;
 }
 
-.link-card-meta::after {
-    content: " \2197";
+.turnpilot-link:hover .turnpilot-url,
+.turnpilot-link:focus-visible .turnpilot-url {
+    color: #fff;
+    border-bottom-color: rgba(255, 166, 46, 0.6);
+}
+
+/* About 83 flashes a minute, on a little longer than off, with the short rise and
+   fall of a bulb rather than a hard cut */
+.turnpilot-link:hover .turnpilot-signal .lamp,
+.turnpilot-link:focus-visible .turnpilot-signal .lamp {
+    animation: turnpilot-flash 0.72s ease-in-out infinite;
+}
+
+.turnpilot-link:focus-visible {
+    outline: 2px solid #ffa62e;
+    outline-offset: 6px;
+    border-radius: 2px;
+}
+
+@keyframes turnpilot-flash {
+    0%, 52% {
+        opacity: 1;
+    }
+
+    62%, 100% {
+        opacity: 0;
+    }
+}
+
+/* No pointer to hover with: it signals three times as its panel comes up */
+@media (hover: none) {
+    .scroll-section.is-current .turnpilot-signal .lamp {
+        animation: turnpilot-flash 0.72s ease-in-out 0.5s 3;
+    }
+}
+
+/* Without motion it just lights, steady, instead of flashing */
+@media (prefers-reduced-motion: reduce) {
+    .turnpilot-link:hover .turnpilot-signal .lamp,
+    .turnpilot-link:focus-visible .turnpilot-signal .lamp,
+    .scroll-section.is-current .turnpilot-signal .lamp {
+        animation: none;
+    }
+
+    .turnpilot-link:hover .turnpilot-signal .lamp,
+    .turnpilot-link:focus-visible .turnpilot-signal .lamp {
+        opacity: 1;
+    }
 }
 
 /* A portrait affordance. Hidden here rather than only shown in the media query,
@@ -495,10 +555,6 @@ body {
 
     .scroll-section h2 {
         margin-bottom: 1.5vh;
-    }
-
-    .link-card img {
-        width: 7em;
     }
 
     #section-rail {

@@ -282,10 +282,20 @@ body {
     flex-shrink: 0;
 }
 
-/* The link to TurnPilot is set as TurnPilot's own wordmark, in its typeface and the
-   cream its title is painted in. The address under it takes a turn signal for its
+/* The link to TurnPilot is set as TurnPilot's own wordmark: Paintwriter, built from
+   the painted font sheet the title on drive.sculptorai.org is lettered in (its i
+   carries the orange dot as a colour layer), in the cream the title is painted in. The address under it takes a turn signal for its
    arrow: unlit at rest, like an indicator that's off, and flashing amber at blinker
    speed when you point at it. */
+@font-face {
+    font-family: "Paintwriter";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url(../fonts/Paintwriter-Regular.woff2) format("woff2"),
+        url(../fonts/Paintwriter-Regular.ttf) format("truetype");
+}
+
 @font-face {
     font-family: "Courier Prime";
     font-style: normal;
@@ -310,8 +320,10 @@ body {
 }
 
 .turnpilot-mark {
-    font-family: "Courier Prime", 'Courier New', Courier, monospace;
-    font-size: 2.2em;
+    font-family: "Paintwriter", "Courier Prime", 'Courier New', Courier, monospace;
+    /* Paintwriter sets wider than Courier Prime (760 units a character against 600),
+       so it runs a little smaller to keep the name about the width it was */
+    font-size: 1.9em;
     line-height: 1;
     letter-spacing: 0.01em;
     color: #ece4d2;

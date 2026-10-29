@@ -7,13 +7,13 @@
     <link rel="icon" type="image/png" href="logo.png">
     <title>Sculptor AI</title>
     <meta name="description"
-        content="Sculptor is a student-run AI research group building open-source models, tools, and infrastructure — from the Sunfish diffusion model to the Constellation AI portal.">
+        content="Sculptor AI is a student-run nonprofit research lab building open-source models, tools, and infrastructure, from the Sunfish diffusion model to the Constellation AI portal.">
     <link rel="canonical" href="https://sculptorai.org/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Sculptor AI">
     <meta property="og:title" content="Sculptor AI">
     <meta property="og:description"
-        content="Sculptor is a student-run AI research group building open-source models, tools, and infrastructure.">
+        content="Sculptor AI is a student-run nonprofit research lab building open-source models, tools, and infrastructure.">
     <meta property="og:url" content="https://sculptorai.org/">
     <meta property="og:image" content="https://sculptorai.org/logo.png">
     <meta name="twitter:card" content="summary">
@@ -21,12 +21,19 @@
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
-        "@type": "Organization",
+        "@type": "NGO",
         "name": "Sculptor AI",
+        "legalName": "SculptorAI",
         "url": "https://sculptorai.org/",
         "logo": "https://sculptorai.org/logo.png",
         "email": "contact@sculptorai.org",
-        "description": "Student-run AI research group building open-source models, tools, and infrastructure.",
+        "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Seattle",
+            "addressRegion": "WA",
+            "addressCountry": "US"
+        },
+        "description": "Student-run nonprofit research lab building open-source models, tools, and infrastructure.",
         "sameAs": [
             "https://github.com/Sculptor-AI",
             "https://huggingface.co/Sculptor-AI"
@@ -34,15 +41,27 @@
         "member": [
             {
                 "@type": "Person",
+                "name": "Chase Culbertson",
+                "jobTitle": "CEO",
+                "url": "https://explodingcb.com/",
+                "sameAs": ["https://explodingcb.com/"]
+            },
+            {
+                "@type": "Person",
                 "name": "Kellen Heraty",
+                "jobTitle": "Chief Scientist",
                 "url": "https://kaileh.dev",
                 "sameAs": ["https://kaileh.dev"]
             },
             {
                 "@type": "Person",
-                "name": "Chase Culbertson",
-                "url": "https://explodingcb.com/",
-                "sameAs": ["https://explodingcb.com/"]
+                "name": "Trisha Choudhary",
+                "jobTitle": "CFO",
+                "sameAs": ["https://www.linkedin.com/in/trisha-choudhary-/"]
+            },
+            {
+                "@type": "Person",
+                "name": "Patrick Graff"
             }
         ]
     }
@@ -69,7 +88,7 @@
     <section id="hero">
         <!-- The hero is ASCII art a crawler cannot read, so the page's one h1
              lives here off-screen -->
-        <h1 class="visually-hidden">Sculptor AI — student-run, open-source AI research</h1>
+        <h1 class="visually-hidden">Sculptor AI, a student-run nonprofit for open-source AI research</h1>
         <pre id="canvas"></pre>
     </section>
 
@@ -84,8 +103,8 @@
         <div class="text-column">
             <section class="scroll-section" id="about-us">
                 <h2>About</h2>
-                <p>Sculptor is a student-run AI research group. We build models, tools, and infrastructure, and
-                    release everything open source.</p>
+                <p>Sculptor AI is a student-run nonprofit research lab. We build models, tools, and
+                    infrastructure, and release everything open source.</p>
             </section>
 
             <section class="scroll-section" id="future-projects">
@@ -156,13 +175,34 @@
             </section>
 
             <section class="scroll-section" id="members">
-                <h2>Members</h2>
+                <h2>People</h2>
                 <!-- rel deliberately omits noreferrer so the members' sites see
-                     the referral, and nofollow so the links carry weight -->
-                <h3><a href="https://kaileh.dev" class="member-link" target="_blank"
-                        rel="noopener">Kellen Heraty</a></h3>
-                <h3><a href="https://explodingcb.com/" class="member-link" target="_blank"
-                        rel="noopener">Chase Culbertson</a></h3>
+                     the referral, and nofollow so the links carry weight.
+                     One entry per person: their title, then "Director" if they
+                     sit on the board. Officers first, then outside directors. Keep this in step with the
+                     directors in the Articles of Incorporation (Article 7) and
+                     the latest report filed with the Secretary of State. -->
+                <ul class="people-list">
+                    <li>
+                        <h3><a href="https://explodingcb.com/" class="member-link" target="_blank"
+                                rel="noopener">Chase Culbertson</a></h3>
+                        <p class="person-role">CEO, Director</p>
+                    </li>
+                    <li>
+                        <h3><a href="https://kaileh.dev" class="member-link" target="_blank"
+                                rel="noopener">Kellen Heraty</a></h3>
+                        <p class="person-role">Chief Scientist, Director</p>
+                    </li>
+                    <li>
+                        <h3><a href="https://www.linkedin.com/in/trisha-choudhary-/" class="member-link"
+                                target="_blank" rel="noopener">Trisha Choudhary</a></h3>
+                        <p class="person-role">CFO</p>
+                    </li>
+                    <li>
+                        <h3><span class="member-name">Patrick Graff</span></h3>
+                        <p class="person-role">Director</p>
+                    </li>
+                </ul>
             </section>
 
             <section class="scroll-section" id="connect">
@@ -181,6 +221,25 @@
             </section>
         </div>
     </div>
+
+    <footer class="site-footer">
+        <!-- Legal name and status as filed: SculptorAI, a charitable
+             nonprofit corporation under chapter 24.03A RCW (Articles of
+             Incorporation, Oct 28 2026). Once the IRS determination
+             letter arrives, add:
+             "SculptorAI is tax-exempt under section 501(c)(3) of the
+             Internal Revenue Code (EIN XX-XXXXXXX). Donations are
+             tax-deductible to the extent allowed by law."
+             If you register with the WA Charities Program to take
+             donations, add the RCW 19.09.100 line:
+             "SculptorAI is registered with Washington State's Charities
+             Program as required by law. Additional information is
+             available by calling 800-332-4483 or visiting
+             sos.wa.gov/charities." -->
+        <p>SculptorAI is a charitable nonprofit corporation organized under Washington law.</p>
+        <p class="footer-copy">&copy; 2026 SculptorAI. Code and models released under their own open-source
+            licenses.</p>
+    </footer>
 
     <script src="js/ascii-utils.js"></script>
     <!-- Main Animation Script -->

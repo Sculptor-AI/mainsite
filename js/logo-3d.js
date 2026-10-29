@@ -126,9 +126,9 @@
 
     // --- Members crest configuration ---
     // The Members section gets a flat 2D shape in the same slot every other
-    // section uses: the particles settle into a plane and draw two person
-    // silhouettes side by side — one per member, in crisp text-art rather
-    // than shaded voxels — with a few sparks adrift around the pair. The
+    // section uses: the particles settle into a plane and draw one person
+    // silhouette in crisp text-art rather than shaded voxels, with a few
+    // sparks adrift around it. The
     // section's words stay ordinary HTML copy in the text column.
     const TK_GLYPH = 0, TK_SPARK = 1;
 
@@ -675,18 +675,17 @@
         const cells = [];
         const centerRow = narrow ? 42 : 64;
 
-        // Two figures side by side, one per member, the pair centered on the
-        // canvas like any other shape
-        pushTextArt(cells, TEXT_PERSON, 48, centerRow - 12);
-        pushTextArt(cells, TEXT_PERSON, 80, centerRow - 12);
+        // One figure standing for the team, centered on the canvas like any
+        // other shape
+        pushTextArt(cells, TEXT_PERSON, 64, centerRow - 12);
 
-        // Loose sparks adrift around the pair, kept off the drawn cells so a
-        // twinkle never eats part of a figure
+        // Loose sparks adrift around the figure, kept off the drawn cells so a
+        // twinkle never eats part of it
         const used = new Set();
         for (const cell of cells) used.add(cell.col * 256 + cell.row);
         const sparkCount = 26;
         for (let i = 0; i < sparkCount; i++) {
-            const col = 30 + Math.floor(hash01(i * 12.7) * 68);
+            const col = 40 + Math.floor(hash01(i * 12.7) * 48);
             const row = centerRow - 17 + Math.floor(hash01(i * 31.3) * 34);
             if (used.has(col * 256 + row)) continue;
             cells.push({ col, row, code: 0, kind: TK_SPARK, phase: hash01(i * 6.7) });
@@ -2173,7 +2172,7 @@
         { cols: 116, rows: 28 },  // 5 road diorama
         { cols: 102, rows: 54 },  // 6 rocket
         { cols: 48, rows: 40 },   // 7 portal
-        { cols: 62, rows: 32 }    // 8 members crest
+        { cols: 40, rows: 32 }    // 8 members figure
     ];
     const CHAR_ASPECT = 0.6;      // Courier advance width, as a fraction of em
 

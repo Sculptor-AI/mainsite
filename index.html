@@ -138,6 +138,13 @@
                 </a>
             </section>
 
+            <section class="scroll-section" id="spoilage">
+                <h2>Hyperspectral Spoilage Forecasting</h2>
+                <p>Fruit is managed by the batch, but apples from the same crate can spoil days apart. We're
+                    using hyperspectral imaging to forecast how many days each individual apple has left, and
+                    will release the dataset and code.</p>
+            </section>
+
             <section class="scroll-section" id="av-research">
                 <h2>Autonomous Driving</h2>
                 <p>Research in perception and planning for autonomous vehicles, from simulation to small-scale
@@ -204,26 +211,101 @@
                     </li>
                 </ul>
             </section>
-
-            <section class="scroll-section" id="connect">
-                <h2>Connect</h2>
-                <div style="display: flex; flex-direction: column; gap: 1rem;">
-                    <div>
-                        <a href="https://github.com/Sculptor-AI" class="modern-link">GitHub</a>
-                    </div>
-                    <div>
-                        <a href="https://huggingface.co/Sculptor-AI" class="modern-link">HuggingFace</a>
-                    </div>
-                    <div>
-                        <a href="mailto:contact@sculptorai.org" class="modern-link">contact@sculptorai.org</a>
-                    </div>
-                </div>
-            </section>
         </div>
     </div>
 
+    <!-- The closing section. #connect keeps its id and .scroll-section class because
+         logo-3d.js watches it by id to bring the graphic in, and main.js reveals it.
+         The footer is pulled up over the empty runway at the bottom of the text column
+         (see .site-footer in the CSS) so it still sits beside the graphic. -->
     <footer class="site-footer">
-        <!-- Legal name and status as filed: SculptorAI, a charitable
+        <div class="footer-top">
+            <section class="scroll-section" id="connect">
+                <h2>Support us</h2>
+                <p>We're a small nonprofit, and everything we make is open source. The most useful things you can
+                    give us are compute, equipment, and time. If you can help, get in touch.</p>
+                <div class="connect-links">
+                    <a href="https://github.com/Sculptor-AI" class="link-pill">
+                        <svg class="pill-mark" width="16" height="16" aria-hidden="true">
+                            <use href="#gh-mark" />
+                        </svg>
+                        <span>GitHub</span>
+                    </a>
+                    <a href="https://huggingface.co/Sculptor-AI" class="link-pill">
+                        <span>HuggingFace</span>
+                    </a>
+                    <a href="mailto:contact@sculptorai.org" class="link-pill">
+                        <span>contact@sculptorai.org</span>
+                    </a>
+                </div>
+            </section>
+        </div>
+
+        <!-- Everything below the container's end sits on the page background, so the
+             graphic cannot show through it -->
+        <div class="footer-main">
+            <div class="footer-cols">
+                <div class="footer-id">
+                    <div class="footer-brand">
+                        <!-- The mark, drawn from the same art the graphic above builds its logo from -->
+                        <pre class="footer-mark" aria-hidden="true">               .:=*##-
+             :*@@@@@%-
+       .    +@@@@@#-   -+####+=.
+     =@@=  =@@@@@=   +%@@@@@@@@@%=
+    +@@@=  #@@@@-  .#@@@@@@%##%%@%.
+   :@@@@:  *@@@+  .%@@%+-.
+   +@@@@=  -@@@.  #@%-    :-==+==:.
+   =@@@@%   *@@.  %+  .=#@@@@@@@@@@*:
+    #@@@@*   *@-  .   :+=--=+*%@@@@@@+
+ .   +@@@@#.  :.               .=%@@@@=
+#@%-  .+%@@@+:          .*%%*=.   -%@@@.
+#@@@*:   .-+##-           :*@@@#-  .#@@.
+.@@@@@#=:               +.  -@@@@#.  ..
+ :%@@@@@@@##**##+   :.  %@-  -@@@@%.
+  .=%@@@@@@@@%*-  .*@:  #@@.  +@@@@+
+     .:---:.    .=%@#   %@@+  :@@@@+
+      ..    .-+#@@@%.  =@@@%  .@@@@:
+     *@@@@@@@@@@@@#.  -@@@@%  -@@@=
+     :*%@@@@@@@@%=   =@@@@@=  :##=
+        .-=+++-:  .=%@@@@@+
+                 :@@@@@%+:
+                  =+=-.</pre>
+                        <span>Sculptor AI</span>
+                    </div>
+                    <p>Nonprofit research lab building open-source models, tools, and infrastructure.</p>
+                    <p class="footer-place">Seattle, WA</p>
+                </div>
+
+                <nav class="footer-col" aria-labelledby="footer-research">
+                    <h3 id="footer-research">Research</h3>
+                    <ul>
+                        <li><a href="#project-sunfish">Sunfish</a></li>
+                        <li><a href="#brown-dwarf">Brown Dwarf Atmospheres</a></li>
+                        <li><a href="#spoilage">Hyperspectral Spoilage Forecasting</a></li>
+                        <li><a href="#av-research">Autonomous Driving</a></li>
+                    </ul>
+                </nav>
+
+                <nav class="footer-col" aria-labelledby="footer-products">
+                    <h3 id="footer-products">Products</h3>
+                    <ul>
+                        <li><a href="#project-constellation">Constellation</a></li>
+                        <li><a href="https://drive.sculptorai.org" target="_blank" rel="noopener">TurnPilot</a></li>
+                    </ul>
+                </nav>
+
+                <nav class="footer-col" aria-labelledby="footer-connect">
+                    <h3 id="footer-connect">Connect</h3>
+                    <ul>
+                        <li><a href="https://github.com/Sculptor-AI">GitHub</a></li>
+                        <li><a href="https://huggingface.co/Sculptor-AI">HuggingFace</a></li>
+                        <li><a href="mailto:contact@sculptorai.org">contact@sculptorai.org</a></li>
+                    </ul>
+                </nav>
+            </div>
+
+            <div class="footer-legal">
+                <!-- Legal name and status as filed: SculptorAI, a charitable
              nonprofit corporation under chapter 24.03A RCW (Articles of
              Incorporation, Oct 28 2026). Once the IRS determination
              letter arrives, add:
@@ -236,9 +318,11 @@
              Program as required by law. Additional information is
              available by calling 800-332-4483 or visiting
              sos.wa.gov/charities." -->
-        <p>SculptorAI is a charitable nonprofit corporation organized under Washington law.</p>
-        <p class="footer-copy">&copy; 2026 SculptorAI. Code and models released under their own open-source
-            licenses.</p>
+                <p>SculptorAI is a charitable nonprofit corporation organized under Washington law.</p>
+                <p class="footer-copy">&copy; 2026 SculptorAI. Code and models released under their own open-source
+                    licenses.</p>
+            </div>
+        </div>
     </footer>
 
     <script src="js/ascii-utils.js"></script>

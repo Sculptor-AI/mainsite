@@ -9,12 +9,22 @@
     --ascii-font-size: max(8px, 0.6vw);
     --h2-size: max(2rem, 3vw);
     --h3-size: max(1.2rem, 1.5vw);
+    /* How far the closing footer reaches up into the text column. The Support
+       section sits in that overlap, so the graphic is still pinned beside it. */
+    --closing-h: 60vh;
 }
 
 html {
     font-size: var(--base-font-size);
     overflow-x: hidden;
     width: 100vw;
+}
+
+/* The footer links jump up the page; glide rather than cut */
+@media (prefers-reduced-motion: no-preference) {
+    html {
+        scroll-behavior: smooth;
+    }
 }
 
 body {
@@ -142,8 +152,9 @@ body {
     gap: 40vh;
     /* Large gap for scrolling effect */
     padding-top: 25vh;
-    /* Enough runway below the last section for comfortable scrolling */
-    padding-bottom: 40vh;
+    /* The usual 40vh below the last section, plus the stretch the footer is
+       pulled up over, so the graphic stays pinned until Support has been read */
+    padding-bottom: calc(40vh + var(--closing-h));
     max-width: none;
     /* Let it scale */
     width: 45vw;
@@ -152,6 +163,9 @@ body {
 
 
 .scroll-section {
+    /* Where an anchor link leaves a section, so it lands in the reading band
+       with the graphic beside it rather than flush against the top edge */
+    scroll-margin-top: 30vh;
     opacity: 0;
     transform: translateY(30px);
     transition: opacity 0.8s ease-out, transform 0.8s ease-out;
@@ -231,32 +245,23 @@ body {
     border: 0;
 }
 
-/* Member names: quiet links that only announce themselves by turning white */
-.member-link {
+/* Member names: quiet links that only announce themselves by turning white.
+   A name without a personal site is set the same way at rest. */
+.member-link,
+.member-name {
     color: #ccc;
     text-decoration: none;
     transition: color 0.3s ease;
 }
 
-.member-link:hover {
+.member-link:hover,
+.member-link:focus-visible {
     color: #fff;
 }
 
-.modern-link {
-    display: inline-block;
-    color: #e57373;
-    text-decoration: none;
-    font-weight: 500;
-    border-bottom: 1px solid transparent;
-    transition: border-color 0.3s ease;
-}
-
-.modern-link:hover {
-    border-bottom-color: #e57373;
-}
-
 .repo-pill,
-.paper-pill {
+.paper-pill,
+.link-pill {
     display: inline-flex;
     align-items: center;
     gap: 0.5em;
@@ -272,10 +277,25 @@ body {
 }
 
 .repo-pill:hover,
-.paper-pill:hover {
+.paper-pill:hover,
+.link-pill:hover {
     color: #fff;
     border-color: rgba(229, 115, 115, 0.5);
     background: rgba(229, 115, 115, 0.08);
+}
+
+.repo-pill:focus-visible,
+.paper-pill:focus-visible,
+.link-pill:focus-visible {
+    outline: 2px solid #e57373;
+    outline-offset: 3px;
+}
+
+/* Connect: the same pills, side by side, wrapping when the column runs out */
+.connect-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
 }
 
 .pill-mark {
@@ -409,15 +429,25 @@ body {
     }
 }
 
-/* People: name, then title in the site's mono, with a small outlined tag for
-   board seats in the same pill language as the repo links */
+/* People: a ledger rather than a stack. Each person is one row between hairlines
+   (the same 10% white as the footer rule), name left in the heading weight, title
+   right in the site's mono. Rows wrap to name over title when the column is narrow. */
 .people-list {
     list-style: none;
     margin: 0;
     padding: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.people-list li {
     display: flex;
-    flex-direction: column;
-    gap: 1.4rem;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    column-gap: 1.5rem;
+    row-gap: 0.2rem;
+    padding: 0.9rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .people-list h3 {
@@ -425,39 +455,183 @@ body {
 }
 
 .scroll-section .person-role {
-    display: flex;
-    align-items: center;
-    gap: 0.7em;
-    margin: 0.3rem 0 0;
+    margin: 0;
     font-family: 'Courier New', Courier, monospace;
     font-size: 0.95em;
     color: #888;
 }
 
-/* Footer: the legal line and copyright, set quiet in the terminal type so
-   it reads as the page's colophon rather than another panel */
+/* Footer: the page's closing section, full width and deliberately tall. It is
+   pulled up over the empty runway at the foot of the text column (--closing-h plus
+   the container's 3rem margin), so the Support block lands in the right-hand
+   column beside the graphic like any other section. Everything below it starts
+   where the container ends, once the graphic has gone.
+
+   The overlap is transparent, so the footer ignores the pointer and only its
+   contents take it back; otherwise it would sit over the draggable graphic. */
 .site-footer {
     width: 90vw;
     box-sizing: border-box;
-    margin-top: -20vh;
-    padding: 2.5rem 0 2rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin: calc(-1 * var(--closing-h) - 3rem) 0 0;
+    padding: 0;
     font-family: 'Courier New', Courier, monospace;
     font-size: 0.85rem;
-    color: #777;
+    color: #888;
     position: relative;
     z-index: 20;
+    pointer-events: none;
 }
 
-.site-footer p {
+.site-footer>*:not(.footer-top),
+.footer-top .scroll-section {
+    pointer-events: auto;
+}
+
+/* Holds Support at the top of the overlap. Its height is what puts the footer
+   proper below the container's end rather than on top of the graphic. Its own box
+   spans the footer, so it is Support alone that takes the pointer. */
+.footer-top {
+    min-height: var(--closing-h);
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* 34vw is the width the text column settles at beside the graphic, so Support
+   shares its left edge */
+.footer-top .scroll-section {
+    width: 34vw;
+}
+
+/* Keeps the last line of the pitch from standing alone */
+.footer-top .scroll-section p {
+    text-wrap: pretty;
+}
+
+/* The footer proper. Opaque on purpose: the graphic's grid is taller than its
+   column, so the last rows of a shape can spill below the end of the container,
+   and left transparent they showed through here as stray underscores and dashes
+   along the bottom edge of the page. */
+.footer-main {
+    background: #050505;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 4rem 0 3rem;
+}
+
+/* Identity first and widest, then one column per group of links */
+.footer-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr));
+    gap: 3rem 4vw;
+}
+
+.footer-id,
+.footer-col {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-size: max(0.95rem, 14px);
+    line-height: 1.5;
+}
+
+.footer-id p {
+    margin: 0 0 0.8rem;
+    max-width: 22em;
+    color: #888;
+}
+
+.footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-size: 1.15em;
+    font-weight: 600;
+}
+
+.footer-id .footer-brand {
+    margin-bottom: 1.1rem;
+    color: #fff;
+}
+
+/* The logo as type, in the graphic's Courier and faint glow, sized to stand a
+   little taller than the name beside it. The characters are far too small to read
+   at this size, which is the point: they give the mark its grain.
+   The art is drawn for rows 1.93 times the column pitch (GRID_Y / GRID_X in
+   logo-3d.js). Courier advances 0.6em, so the rows need 1.156em or the mark comes
+   out squat. 22 rows at that height is 25.4em, which is what the size divides by. */
+.footer-mark {
+    margin: 0;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: calc(3rem / 25.4);
+    line-height: 1.156;
+    white-space: pre;
+    color: #e0e0e0;
+    text-shadow: 0 0 1px rgba(255, 255, 255, 0.15);
+    font-variant-ligatures: none;
+    font-kerning: none;
+    user-select: none;
+}
+
+.footer-id .footer-place {
+    margin: 0;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9em;
+    color: #777;
+}
+
+/* Group titles take the site's mono, small and dim, like the page's other
+   technical labels */
+.footer-col h3 {
+    margin: 0 0 1rem;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: #777;
+}
+
+.footer-col ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+}
+
+.footer-col a {
+    color: #aaa;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+    transition: color 0.3s ease;
+}
+
+.footer-col a:hover,
+.footer-col a:focus-visible {
+    color: #fff;
+}
+
+.footer-col a:focus-visible {
+    outline: 2px solid #e57373;
+    outline-offset: 3px;
+    border-radius: 2px;
+}
+
+/* Legal line left, copyright right, under a second hairline */
+.footer-legal {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.4rem 3rem;
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-legal p {
     margin: 0;
     line-height: 1.6;
+    text-wrap: balance;
 }
 
 .footer-copy {
-    margin-top: 0.4rem !important;
-    font-size: 0.85em;
-    color: #555;
+    color: #777;
 }
 
 /* A portrait affordance. Hidden here rather than only shown in the media query,
@@ -487,6 +661,9 @@ body {
         --vp-h: 100vh;
         --art-h: 52vh;
         --band-h: 48vh;
+        /* No overlap on a phone: Support is the last panel, so the container ends
+           where it begins and the graphic can never sit on top of its copy */
+        --closing-h: 0px;
     }
 
     @supports (height: 100svh) {
@@ -569,14 +746,17 @@ body {
         width: 100%;
         gap: 0;
         padding: 0;
-        /* Runway so the last panel can still reach the top of the text band */
-        padding-bottom: 6vh;
+        /* The footer follows directly, and its Support panel is the next one in
+           the sequence, so there is no runway to leave here */
+        padding-bottom: 0;
     }
 
     /* Centred in the band rather than sitting on top of it. Short copy pinned to
        the top of the band leaves the whole tail of the screen empty, which reads
        as the panel having run out rather than as spacing. */
     .scroll-section {
+        /* Anchor links land a panel where it rests, just under the graphic */
+        scroll-margin-top: var(--art-h);
         min-height: var(--band-h);
         box-sizing: border-box;
         padding: 2vh 7vw;
@@ -657,27 +837,48 @@ body {
         border-radius: 2px;
     }
 
-    /* Stacked, and padded to match the panels above it */
-    .site-footer {
-        width: 100%;
-        margin-top: 0;
-        padding: 2rem 7vw 2.5rem;
-    }
-
-}
-
-/* A name without a personal site, set like the linked ones at rest */
-.member-name {
-    color: #ccc;
-}
-
-/* Three people have to share one portrait panel */
-@media (max-width: 768px) {
-    .people-list {
-        gap: 0.9rem;
+    /* Four people have to share one portrait panel */
+    .people-list li {
+        padding: 0.55rem 0;
     }
 
     .people-list h3 {
         font-size: 1.15rem;
+    }
+
+    /* Support is the last panel. Because the container ends where it begins, the
+       graphic scrolls away with the top of the panel instead of sitting over it. */
+    .site-footer {
+        width: 100%;
+        margin-top: 0;
+    }
+
+    .footer-top {
+        display: block;
+    }
+
+    .footer-top .scroll-section {
+        width: auto;
+    }
+
+    .footer-main {
+        padding: 2.5rem 7vw 2.5rem;
+    }
+
+    /* Two by two: the name and description across the top, then the link groups
+       in pairs. Research's longer titles take a full row of their own. */
+    .footer-cols {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 2rem 1.5rem;
+    }
+
+    .footer-id,
+    .footer-col:first-of-type {
+        grid-column: 1 / -1;
+    }
+
+    .footer-legal {
+        flex-direction: column;
+        margin-top: 2.5rem;
     }
 }

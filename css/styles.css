@@ -409,6 +409,57 @@ body {
     }
 }
 
+/* People: name, then title in the site's mono, with a small outlined tag for
+   board seats in the same pill language as the repo links */
+.people-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+}
+
+.people-list h3 {
+    margin: 0;
+}
+
+.scroll-section .person-role {
+    display: flex;
+    align-items: center;
+    gap: 0.7em;
+    margin: 0.3rem 0 0;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.95em;
+    color: #888;
+}
+
+/* Footer: the legal line and copyright, set quiet in the terminal type so
+   it reads as the page's colophon rather than another panel */
+.site-footer {
+    width: 90vw;
+    box-sizing: border-box;
+    margin-top: -20vh;
+    padding: 2.5rem 0 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.85rem;
+    color: #777;
+    position: relative;
+    z-index: 20;
+}
+
+.site-footer p {
+    margin: 0;
+    line-height: 1.6;
+}
+
+.footer-copy {
+    margin-top: 0.4rem !important;
+    font-size: 0.85em;
+    color: #555;
+}
+
 /* A portrait affordance. Hidden here rather than only shown in the media query,
    so nothing leaks into the desktop layout. */
 #section-rail {
@@ -604,5 +655,29 @@ body {
         opacity: 0.9;
         height: 11px;
         border-radius: 2px;
+    }
+
+    /* Stacked, and padded to match the panels above it */
+    .site-footer {
+        width: 100%;
+        margin-top: 0;
+        padding: 2rem 7vw 2.5rem;
+    }
+
+}
+
+/* A name without a personal site, set like the linked ones at rest */
+.member-name {
+    color: #ccc;
+}
+
+/* Three people have to share one portrait panel */
+@media (max-width: 768px) {
+    .people-list {
+        gap: 0.9rem;
+    }
+
+    .people-list h3 {
+        font-size: 1.15rem;
     }
 }

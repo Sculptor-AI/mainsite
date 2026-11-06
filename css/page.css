@@ -1,0 +1,302 @@
+/*
+ * Sculptor AI - inner pages
+ * Loaded after styles.css. The homepage's own logo stands in the left column, and
+ * the page is a tree of folders beside it. Folders are <details>, so they open and
+ * close with no scripting and their content is always in the page. The guide lines,
+ * slashes, and the footer's mark are CSS, so they stay out of the page's text.
+ */
+
+.page-body {
+    display: block;
+    overflow-x: hidden;
+}
+
+.page-body .site-footer {
+    margin: 0 auto;
+    pointer-events: auto;
+}
+
+.css-art {
+    margin: 0;
+    font-family: 'Courier New', Courier, monospace;
+    line-height: 1.156;
+    white-space: pre;
+    color: #e0e0e0;
+    font-variant-ligatures: none;
+    font-kerning: none;
+    user-select: none;
+}
+
+.css-art::before {
+    content: "               .:=*##-\A              :*@@@@@%-\A        .    +@@@@@#-   -+####+=.\A      =@@=  =@@@@@=   +%@@@@@@@@@%=\A     +@@@=  #@@@@-  .#@@@@@@%##%%@%.\A    :@@@@:  *@@@+  .%@@%+-.\A    +@@@@=  -@@@.  #@%-    :-==+==:.\A    =@@@@%   *@@.  %+  .=#@@@@@@@@@@*:\A     #@@@@*   *@-  .   :+=--=+*%@@@@@@+\A  .   +@@@@#.  :.               .=%@@@@=\A #@%-  .+%@@@+:          .*%%*=.   -%@@@.\A #@@@*:   .-+##-           :*@@@#-  .#@@.\A .@@@@@#=:               +.  -@@@@#.  ..\A  :%@@@@@@@##**##+   :.  %@-  -@@@@%.\A   .=%@@@@@@@@%*-  .*@:  #@@.  +@@@@+\A      .:---:.    .=%@#   %@@+  :@@@@+\A       ..    .-+#@@@%.  =@@@%  .@@@@:\A      *@@@@@@@@@@@@#.  -@@@@%  -@@@=\A      :*%@@@@@@@@%=   =@@@@@=  :##=\A         .-=+++-:  .=%@@@@@+\A                  :@@@@@%+:\A                   =+=-.";
+}
+
+.page-body .footer-mark.css-art {
+    font-size: calc(3rem / 25.4);
+}
+
+.fs {
+    width: 90vw;
+    margin: 0 auto;
+    padding: 3rem 0 6rem;
+    display: grid;
+    grid-template-columns: minmax(0, 30rem) minmax(0, 1fr);
+    gap: 2rem 4vw;
+    align-items: start;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: max(1rem, 15px);
+    line-height: 1.5;
+    color: #999;
+}
+
+/* The renderer's grid is a fixed 128 cells, far larger than the logo, so it is
+   centred in this box and the empty margins clipped, as on the portrait homepage */
+.fs .ascii-column {
+    position: sticky;
+    top: 3rem;
+    flex: none;
+    width: 100%;
+    height: max(31rem, 440px);
+    overflow: hidden;
+    background: none;
+    z-index: auto;
+}
+
+.fs .ascii-column::after {
+    display: none;
+}
+
+.fs #solid-logo-canvas,
+.fs-still {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.fs-still {
+    font-size: 0.86rem;
+}
+
+.fs-tree {
+    min-width: 0;
+}
+
+.fs-path {
+    margin: 0 0 1rem;
+    color: #777;
+    overflow-wrap: anywhere;
+}
+
+.fs-tree h1 {
+    margin: 0 0 0.8rem;
+    font: inherit;
+    font-size: 1.35em;
+    font-weight: 700;
+    color: #fff;
+}
+
+.fs-intro {
+    max-width: 68ch;
+    margin: 0 0 2rem;
+    color: #c8c8c8;
+}
+
+.fs-folder {
+    margin-bottom: 1.4rem;
+}
+
+.fs-folder summary {
+    display: flex;
+    align-items: baseline;
+    gap: 0.8ch;
+    width: fit-content;
+    cursor: pointer;
+    list-style: none;
+    color: #fff;
+}
+
+.fs-folder summary::-webkit-details-marker {
+    display: none;
+}
+
+.fs-folder summary::before {
+    content: "";
+    flex: none;
+    align-self: center;
+    width: 0;
+    height: 0;
+    border-left: 0.32em solid currentColor;
+    border-top: 0.26em solid transparent;
+    border-bottom: 0.26em solid transparent;
+    transition: transform 0.15s ease;
+}
+
+.fs-folder[open] summary::before {
+    transform: rotate(90deg);
+}
+
+.fs-folder summary:focus-visible {
+    outline: 2px solid #e57373;
+    outline-offset: 3px;
+}
+
+.fs-folder h2 {
+    margin: 0;
+    font: inherit;
+    font-weight: 700;
+}
+
+.fs-folder h2::after {
+    content: "/";
+    color: #777;
+}
+
+/* Guide lines: one rail down the folder, one tick to each entry, and the rail
+   stops at the last entry's tick */
+.fs-folder ul {
+    list-style: none;
+    margin: 0.25rem 0 0 0.16em;
+    padding: 0;
+}
+
+.fs-folder li {
+    --name-col: 20ch;
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, var(--name-col)) minmax(0, 1fr);
+    gap: 0 2ch;
+    padding: 0.2rem 0 0.2rem 2.4ch;
+    scroll-margin-top: 3rem;
+}
+
+.fs-long li {
+    --name-col: 36ch;
+}
+
+.fs-folder li::before,
+.fs-folder li::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    background: rgba(255, 255, 255, 0.22);
+}
+
+.fs-folder li::before {
+    top: 0;
+    bottom: 0;
+    width: 1px;
+}
+
+.fs-folder li:last-child::before {
+    bottom: auto;
+    height: 0.95em;
+}
+
+.fs-folder li::after {
+    top: 0.95em;
+    width: 1.7ch;
+    height: 1px;
+}
+
+.fs-name {
+    color: #e0e0e0;
+}
+
+.fs-note {
+    overflow-wrap: anywhere;
+}
+
+/* Prose, tables, and the citation sit on the same rail as the entries */
+.fs-block {
+    margin: 0.25rem 0 0 0.16em;
+    padding: 0.2rem 0 0.2rem 2.4ch;
+    border-left: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.fs-block p {
+    max-width: 68ch;
+    margin: 0 0 0.8rem;
+}
+
+.fs-block>:last-child {
+    margin-bottom: 0;
+}
+
+.fs-table {
+    overflow-x: auto;
+    margin-bottom: 0.8rem;
+}
+
+.fs-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.fs-table th,
+.fs-table td {
+    padding: 0.2rem 2ch 0.2rem 0;
+    text-align: left;
+    vertical-align: top;
+    font-weight: 400;
+}
+
+.fs-table th {
+    color: #777;
+}
+
+.fs-table td:first-child {
+    color: #e0e0e0;
+}
+
+.fs-table .num {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.fs-table .num.best {
+    color: #fff;
+}
+
+.fs-bib {
+    margin: 0;
+    font: inherit;
+    font-size: 0.92em;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.fs a {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: rgba(255, 255, 255, 0.28);
+    text-underline-offset: 0.18em;
+    transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+.fs a:hover,
+.fs a:focus-visible {
+    color: #fff;
+    text-decoration-color: #e57373;
+}
+
+@media (max-width: 1100px) {
+
+    .fs-folder li {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+
+    .fs {
+        grid-template-columns: minmax(0, 1fr);
+        padding-top: 1rem;
+    }
+
+    .fs .ascii-column {
+        position: relative;
+        top: auto;
+        height: 92vw;
+    }
+}

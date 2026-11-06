@@ -232,6 +232,83 @@ body {
     border: 1px solid rgba(255, 95, 86, 0.3);
 }
 
+/* The top bar, on every page. On the inner pages it just sits at the top. */
+.page-header {
+    width: 90vw;
+    margin: 0 auto;
+    padding: 1.6rem 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.6rem 2rem;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: max(0.95rem, 14px);
+}
+
+.page-home {
+    color: #fff;
+    text-decoration: none;
+}
+
+.page-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.6rem;
+}
+
+.page-nav a {
+    color: #999;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.page-nav a:hover,
+.page-nav a:focus-visible,
+.page-nav a[aria-current] {
+    color: #fff;
+}
+
+/* On the homepage it stays out of the way of the intro, then slides down once the
+   logo has formed. main.js adds .intro-done when the last frame of the convergence
+   has played. Hidden from focus until then, so the keyboard can't land on links
+   that aren't there yet. */
+.home-bar {
+    position: absolute;
+    top: 0;
+    left: 5vw;
+    z-index: 2;
+    visibility: hidden;
+    transform: translateY(-110%);
+}
+
+body.intro-done .home-bar {
+    visibility: visible;
+    transform: none;
+    transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.intro-done .home-bar {
+        transition: none;
+    }
+}
+
+/* Quiet links inside running copy, on the homepage and the inner pages */
+.scroll-section .text-link {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: rgba(255, 255, 255, 0.35);
+    text-underline-offset: 0.18em;
+    transition: color 0.3s ease, text-decoration-color 0.3s ease;
+}
+
+.scroll-section .text-link:hover,
+.scroll-section .text-link:focus-visible {
+    color: #fff;
+    text-decoration-color: #e57373;
+}
+
 /* Off-screen but still read by crawlers and screen readers */
 .visually-hidden {
     position: absolute;

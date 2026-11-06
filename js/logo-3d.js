@@ -348,6 +348,28 @@
     const APPLE_DULL_FROM = 1.8, APPLE_DULL_TO = 5.0;     // the sheen goes
     const APPLE_SLUMP_FROM = 4.5, APPLE_SLUMP_TO = 7.0;   // then it slumps and creases
 
+    // --- Cloud configuration (weather section) ---
+    // A cumulus of overlapping puffs on a flat base, breathing slowly. Over each
+    // loop it darkens, rains in slanted streaks, and clears again.
+    const CK_PUFF = 0, CK_DROP = 1;
+    const CLOUD_BASE_Y = -3.0;       // puffs are cut off flat at this height
+    const CLOUD_PUFFS = [            // x, y, z, radius
+        [0, 9, 0, 13.5], [-11, 6, 1, 10.5], [12, 5, -1, 11],
+        [-21, 1, 0, 7.5], [22, 0.5, 1, 7],
+        [5, 14, 2, 8], [-5, 13, -3, 8.5],
+        [0, 2, 8, 9], [0, 2, -8, 9], [-13, 1, -6, 7.5], [13, 1, 6, 7.5]
+    ];
+    const CLOUD_CREASE = 1.5;        // how far the shading reaches out of a crease
+    const CLOUD_LUMP = 0.55;         // the cauliflower texture on each puff
+    const CLOUD_BILLOW = 0.7;        // how far the surface breathes
+    const CLOUD_DROP_SHARE = 0.027;   // of the particles, held back as rain
+    const CLOUD_FALL = 21.0;         // how far a drop falls before it restarts
+    const CLOUD_FALL_SPEED = 15.0;
+    const CLOUD_WIND = 0.28;         // drift per unit of fall; matches the / glyph
+    const CLOUD_CYCLE = 14.0;
+    const CLOUD_RAIN_IN = [1.5, 4.0], CLOUD_RAIN_OUT = [10.0, 12.5];
+    const CLOUD_SWAY = 0.2;
+
     // A long gradient used as a fallback ramp
     const SHADE_CHARS = " `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@";
     const SHADE_CHAR_CODES = toCharCodes(SHADE_CHARS);
@@ -1533,6 +1555,71 @@
         return targets.slice(0, count);
     }
 
+    // --- Cloud geometry ---
+    function pushCloudPuffs(targets, count) {
+        const weights = CLOUD_PUFFS.map(q => q[3] * q[3]);
+        const total = weights.reduce((a, b) => a + b, 0);
+        let guard = count * 60;
+        while (targets.length < count && guard-- > 0) {
+            // Pick a puff by surface area, so density is even across the cloud
+            let pick = Math.random() * total, n = 0;
+            while (n < CLOUD_PUFFS.length - 1 && pick > weights[n]) pick -= weights[n++];
+            const [qx, qy, qz, qr] = CLOUD_PUFFS[n];
+            const phi = Math.acos(1 - 2 * Math.random());
+            const theta = Math.random() * Math.PI * 2;
+            const ux = Math.sin(phi) * Math.cos(theta), uy = Math.cos(phi), uz = Math.sin(phi) * Math.sin(theta);
+            const lump = CLOUD_LUMP * (Math.sin(theta * 5 + qx) * Math.sin(phi * 6 + qz)
+                + 0.5 * Math.sin(theta * 11 + qy) * Math.sin(phi * 13));
+            const r = qr + lump;
+            let x = qx + ux * r, y = qy + uy * r, z = qz + uz * r;
+            let nx = ux, ny = uy, nz = uz;
+            if (y < CLOUD_BASE_Y) {
+                y = CLOUD_BASE_Y; nx = 0; ny = -1; nz = 0;
+            }
+            // Only the outer skin of the union of puffs is kept
+            // and how near it sits to the crease with another puff, which is
+            // what draws the puffs apart from one another
+            let inside = false, crease = 1e9;
+            for (let m = 0; m < CLOUD_PUFFS.length && !inside; m++) {
+                if (m === n) continue;
+                const q = CLOUD_PUFFS[m];
+                const gap = Math.hypot(x - q[0], y - q[1], z - q[2]) - q[3];
+                inside = gap < -0.15;
+                if (gap < crease) crease = gap;
+            }
+            if (inside) continue;
+            targets.push({
+                x, y, z, nx, ny, nz, kind: CK_PUFF, tex: Math.random(), gate: 0,
+                open: clamp01(crease / CLOUD_CREASE),
+                phase: x * 0.17 + y * 0.23 + z * 0.13
+            });
+        }
+    }
+
+    function pushCloudDrops(targets, count) {
+        for (let i = 0; i < count; i++) {
+            targets.push({
+                // Offset against the wind, so the rain falls under the cloud
+                x: 3 + (Math.random() * 2 - 1) * 22,
+                y: CLOUD_BASE_Y,
+                z: (Math.random() * 2 - 1) * 8,
+                nx: 0, ny: 0, nz: 1, kind: CK_DROP, tex: 0,
+                // The heavier the rain, the more of the drops are falling
+                gate: Math.random() * 0.95,
+                phase: Math.random()
+            });
+        }
+    }
+
+    function generateCloudTargets(count) {
+        const targets = [];
+        pushCloudDrops(targets, Math.floor(count * CLOUD_DROP_SHARE));
+        pushCloudPuffs(targets, count);
+        // Should the rejection sampling run short, doubling up beats a hole
+        for (let i = 0; targets.length < count; i++) targets.push(targets[i]);
+        return targets.slice(0, count);
+    }
+
     function buildSortedIndices(length, extractor) {
         return Array.from({ length }, (_, i) => {
             const { x, y, z } = extractor(i);
@@ -1624,6 +1711,7 @@
     const portalTargets = generatePortalTargets(particles.length);
     const textTargets = generateTextTargets(particles.length);
     const appleTargets = generateAppleTargets(particles.length);
+    const cloudTargets = generateCloudTargets(particles.length);
 
     const particleOrder = buildSortedIndices(particles.length, i => ({ x: particles[i].logoX, y: particles[i].logoY, z: particles[i].logoZ }));
     const fishOrder = buildSortedIndices(fishTargets.length, i => fishTargets[i]);
@@ -1634,6 +1722,7 @@
     const portalOrder = buildSortedIndices(portalTargets.length, i => portalTargets[i]);
     const textOrder = buildSortedIndices(textTargets.length, i => textTargets[i]);
     const appleOrder = buildSortedIndices(appleTargets.length, i => appleTargets[i]);
+    const cloudOrder = buildSortedIndices(cloudTargets.length, i => cloudTargets[i]);
 
     for (let k = 0; k < particles.length; k++) {
         const p = particles[particleOrder[k]];
@@ -1709,6 +1798,17 @@
             p.appOnset = tApple.onset;
             p.appTex = tApple.tex;
             p.appWrinkle = tApple.wrinkle;
+        }
+
+        if (k < cloudTargets.length) {
+            const tCloud = cloudTargets[cloudOrder[k]];
+            p.cldX = tCloud.x; p.cldY = tCloud.y; p.cldZ = tCloud.z;
+            p.cldNX = tCloud.nx; p.cldNY = tCloud.ny; p.cldNZ = tCloud.nz;
+            p.cldKind = tCloud.kind;
+            p.cldTex = tCloud.tex;
+            p.cldGate = tCloud.gate;
+            p.cldPhase = tCloud.phase;
+            p.cldOpen = tCloud.open;
         }
 
         if (k < textTargets.length) {
@@ -1850,22 +1950,28 @@
     window.addEventListener('touchcancel', endTouch);
 
     // State: 0 = Logo, 1 = Microscope, 2 = Fish, 3 = Dwarf, 4 = Logo2, 5 = Car,
-    //        6 = Rocket, 7 = Constellation, 8 = Members stage, 9 = Apple
-    const SHAPE_KEYS = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car', 'rocket', 'portal', 'text', 'apple'];
-    const STATE_SHAPE = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car', 'rocket', 'portal', 'text', 'apple'];
+    //        6 = Rocket, 7 = Constellation, 8 = Members stage, 9 = Apple,
+    //        10 = Cloud
+    const SHAPE_KEYS = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car', 'rocket', 'portal', 'text', 'apple', 'cloud'];
+    const STATE_SHAPE = ['logo', 'scope', 'fish', 'dwarf', 'logo2', 'car', 'rocket', 'portal', 'text', 'apple', 'cloud'];
 
-    let targetState = 0;
+    // The homepage opens on the logo and morphs as you scroll. An inner page names
+    // its one shape with data-shape on the <pre>, and starts already formed.
+    const initialState = Number(screenElement.dataset.shape) || 0;
+    let targetState = initialState;
     let lastTimestamp = performance.now();
     const currentWeights = {
         logo: 1, scope: 0, fish: 0, dwarf: 0, logo2: 0, car: 0, rocket: 0, portal: 0, text: 0,
-        apple: 0
+        apple: 0, cloud: 0
     };
-    let targetWeights = getTargetWeightsForState(0);
+    currentWeights.logo = 0;
+    currentWeights[STATE_SHAPE[initialState]] = 1;
+    let targetWeights = getTargetWeightsForState(initialState);
 
     function getTargetWeightsForState(state) {
         const w = {
             logo: 0, scope: 0, fish: 0, dwarf: 0, logo2: 0, car: 0, rocket: 0, portal: 0, text: 0,
-            apple: 0
+            apple: 0, cloud: 0
         };
         const key = STATE_SHAPE[state];
         if (key) w[key] = 1;
@@ -1877,6 +1983,8 @@
     let constClock = 0;
     // The apple's own clock, for the spoiling and the scan
     let appleClock = 0;
+    // The cloud's own clock, so it always starts dry and builds to rain
+    let cloudClock = 0;
     const constLinkProg = new Float32Array(CONST_LINKS.length);
     const constStarGlyph = new Uint8Array(CONST_STARS.length);
     const constStarGlint = new Uint8Array(CONST_STARS.length);
@@ -1914,6 +2022,7 @@
         if (STATE_SHAPE[state] === 'portal' && currentWeights.portal < 0.5) constClock = 0;
         // The apple likewise always arrives fresh
         if (STATE_SHAPE[state] === 'apple' && currentWeights.apple < 0.5) appleClock = 0;
+        if (STATE_SHAPE[state] === 'cloud' && currentWeights.cloud < 0.5) cloudClock = 0;
         targetState = state;
         targetWeights = getTargetWeightsForState(state);
         // Resized as the morph starts, so the change of scale is carried by
@@ -1956,6 +2065,7 @@
         let wPortal = currentWeights.portal < 0.001 ? 0 : currentWeights.portal;
         let wText = currentWeights.text < 0.001 ? 0 : currentWeights.text;
         let wApple = currentWeights.apple < 0.001 ? 0 : currentWeights.apple;
+        let wCloud = currentWeights.cloud < 0.001 ? 0 : currentWeights.cloud;
         const wLogoCombined = wLogo + wLogo2;
         // The constellation's clock runs at the speed the shape has the frame:
         // stopped while the last shape is still there, full speed once it
@@ -1963,6 +2073,7 @@
         // them on, rather than unseen inside the morph.
         constClock += dt * clamp01((wPortal - 0.4) / 0.5);
         appleClock += dt * clamp01((wApple - 0.4) / 0.5);
+        cloudClock += dt * clamp01((wCloud - 0.4) / 0.5);
         const hasScope = wScope > 0;
         const hasFish = wFish > 0;
         const hasDwarf = wDwarf > 0;
@@ -1971,6 +2082,7 @@
         const hasPortal = wPortal > 0;
         const hasText = wText > 0;
         const hasApple = wApple > 0;
+        const hasCloud = wCloud > 0;
 
         const aspectCorrection = (charHeight / charWidth);
 
@@ -2047,6 +2159,13 @@
         // on the last sweep it is looking at the next apple's.
         let appleC = 0, appleScanY = 0, appleDull = 0, appleSlump = 0;
         let appleForecast = 0, appleReset = false;
+        // How hard it is raining right now, from 0 to 1
+        let cloudRain = 0;
+        if (hasCloud) {
+            const c = cloudClock % CLOUD_CYCLE;
+            cloudRain = smooth01(clamp01((c - CLOUD_RAIN_IN[0]) / (CLOUD_RAIN_IN[1] - CLOUD_RAIN_IN[0])))
+                * (1 - smooth01(clamp01((c - CLOUD_RAIN_OUT[0]) / (CLOUD_RAIN_OUT[1] - CLOUD_RAIN_OUT[0]))));
+        }
         if (hasApple) {
             appleC = appleClock % APPLE_CYCLE;
             const sweep = (appleC % APPLE_SCAN_TIME) / APPLE_SCAN_TIME;
@@ -2100,6 +2219,7 @@
             // read back when shading: how rotten, how creased, how much sheen
             // is left, how wilted, and its height for the scan
             let appleRot = 0, appleCrease = 0, appleSheen = 1, appleWilt = 0, appleY = 0;
+            let cloudDropOn = false;
             // Set while the rocket is still upright, read back when shading the
             // plume: distance from the plume axis across the view plane
             let flameLat = 0;
@@ -2356,6 +2476,23 @@
                 appleY = ay;
                 px += ax * wApple; py += ay * wApple; pz += az * wApple;
             }
+            if (hasCloud) {
+                let cx, cy, cz;
+                if (p.cldKind === CK_PUFF) {
+                    const b = CLOUD_BILLOW * Math.sin(cloudClock * 0.7 + p.cldPhase);
+                    cx = p.cldX + p.cldNX * b; cy = p.cldY + p.cldNY * b; cz = p.cldZ + p.cldNZ * b;
+                } else {
+                    // A drop that isn't falling waits out of sight inside the cloud
+                    cloudDropOn = cloudRain > p.cldGate;
+                    if (cloudDropOn) {
+                        const fall = (cloudClock * CLOUD_FALL_SPEED + p.cldPhase * CLOUD_FALL) % CLOUD_FALL;
+                        cx = p.cldX - fall * CLOUD_WIND; cy = p.cldY - fall; cz = p.cldZ;
+                    } else {
+                        cx = p.cldX * 0.5; cy = CLOUD_BASE_Y + 8; cz = p.cldZ * 0.5;
+                    }
+                }
+                px += cx * wCloud; py += cy * wCloud; pz += cz * wCloud;
+            }
             if (hasText) {
                 px += p.textX * wText;
                 py += p.textY * wText;
@@ -2469,6 +2606,11 @@
                             ny += p.appNY * wApple;
                             nz += (p.appNX * sinT + p.appNZ * cosT) * wApple;
                         }
+                        if (hasCloud) {
+                            nx += (p.cldNX * cosT - p.cldNZ * sinT) * wCloud;
+                            ny += p.cldNY * wCloud;
+                            nz += (p.cldNX * sinT + p.cldNZ * cosT) * wCloud;
+                        }
 
                         if (hasCar) {
                             const tny = ny * carTiltCos + nz * carTiltSin;
@@ -2490,7 +2632,7 @@
                         // how squarely the surface faces the camera, plus a
                         // Blinn specular raised to ^16 by repeated squaring
                         let facing = 0, spec = 0;
-                        if (hasFish || hasScope || hasCar || hasRocket || hasApple) {
+                        if (hasFish || hasScope || hasCar || hasRocket || hasApple || hasCloud) {
                             facing = -nz;
                             if (facing < 0) facing = 0;
                             spec = nx * HX + ny * HY + nz * HZ;
@@ -2754,6 +2896,27 @@
                             brightness += clamp01(ab) * wApple;
                         }
 
+                        if (hasCloud) {
+                            let cb;
+                            if (p.cldKind === CK_PUFF) {
+                                // Soft and matte, lit from above, with a rim to
+                                // keep the outline of the puffs. Shaded toward
+                                // the base, and heavier while it rains.
+                                const edge = 1 - facing;
+                                const height = clamp01((p.cldY - CLOUD_BASE_Y) / 14);
+                                cb = 0.08 + facing * 0.12 + diffuse * 0.15
+                                    + edge * edge * edge * 0.3 + p.cldTex * 0.05;
+                                cb *= (0.66 + height * 0.34) * (1 - 0.14 * cloudRain);
+                                // Held under the level where this glyph set
+                                // turns to hatching, so the top stays soft
+                                if (cb > 0.27) cb = 0.27;
+                                cb *= 0.66 + 0.34 * p.cldOpen;
+                            } else {
+                                cb = cloudDropOn ? 0.55 : 0;
+                            }
+                            brightness += clamp01(cb) * wCloud;
+                        }
+
                         let dwarfThermal = 0;
                         if (hasDwarf) {
                             const pat = sampleDwarfSurface(p, dwarfTime);
@@ -2766,7 +2929,7 @@
                         // are wide enough that full fog would crush their far half
                         let fog = (z + 50) / 200.0;
                         brightness -= fog * (1.0 - wCar * 0.65 - wFish * 0.5 - wScope * 0.5
-                            - wText * 0.85 - wPortal * 0.8 - wApple * 0.5);
+                            - wText * 0.85 - wPortal * 0.8 - wApple * 0.5 - wCloud * 0.5);
                         brightness = clamp01(brightness);
 
                         brightnessBuffer[idx] = brightness;
@@ -2782,6 +2945,8 @@
                             glyph = p.textCode;
                         } else if (portalGlyph && wPortal >= 0.55 + p.portPhase * 0.35) {
                             glyph = portalGlyph;
+                        } else if (cloudDropOn && wCloud >= 0.6) {
+                            glyph = GLYPH_SLASH;
                         }
                         textBuffer[idx] = glyph;
 
@@ -2891,6 +3056,14 @@
                 angle += (held - angle) * pull * wApple;
             }
 
+            // A cloud reads by its long lumpy outline, so it stays side on too
+            if (hasCloud) {
+                const sway = Math.sin(time * 0.3) * CLOUD_SWAY;
+                const held = Math.round((angle - sway) / (Math.PI * 2)) * (Math.PI * 2) + sway;
+                const pull = 1.0 - Math.pow(0.965, timeScale);
+                angle += (held - angle) * pull * wCloud;
+            }
+
             // A mola is only a mola side-on — hold the profile, but let it
             // turn lazily in place rather than freezing.
             if (hasFish) {
@@ -2910,6 +3083,7 @@
     const sunfish = document.getElementById('project-sunfish');
     const brownDwarf = document.getElementById('brown-dwarf');
     const spoilage = document.getElementById('spoilage');
+    const weather = document.getElementById('weather');
     const avResearch = document.getElementById('av-research');
     const products = document.getElementById('products');
     const constellation = document.getElementById('project-constellation');
@@ -2919,7 +3093,7 @@
     let isAboutUsVisible = false;
     let isFutureProjectsVisible = false, isSunfishVisible = false;
     let isBrownDwarfVisible = false, isAvResearchVisible = false, isSourceCodeVisible = false;
-    let isSpoilageVisible = false;
+    let isSpoilageVisible = false, isWeatherVisible = false;
     let isProductsVisible = false, isConstellationVisible = false, isMembersVisible = false;
 
     // Checked bottom-of-page first, so when two sections straddle the trigger
@@ -2931,6 +3105,7 @@
         else if (isConstellationVisible) newTarget = 7;
         else if (isProductsVisible) newTarget = 6;
         else if (isAvResearchVisible) newTarget = 5;
+        else if (isWeatherVisible) newTarget = 10;
         else if (isSpoilageVisible) newTarget = 9;
         else if (isBrownDwarfVisible) newTarget = 3;
         else if (isSunfishVisible) newTarget = 2;
@@ -2959,7 +3134,8 @@
         { cols: 102, rows: 54 },  // 6 rocket
         { cols: 56, rows: 36 },   // 7 constellation sky, then the black hole
         { cols: 40, rows: 32 },   // 8 members figure
-        { cols: 60, rows: 38 }    // 9 apple
+        { cols: 60, rows: 38 },   // 9 apple
+        { cols: 72, rows: 46 }    // 10 cloud and its rain
     ];
     const CHAR_ASPECT = 0.6;      // Courier advance width, as a fraction of em
 
@@ -2967,7 +3143,9 @@
         // Re-read the query rather than trusting the value from load: rotating a
         // phone into landscape hands the layout back to the desktop rules, and a
         // font size measured against the portrait band would be left behind.
-        if (!NARROW.matches) {
+        // Inner pages hold their shape in a narrower column at every width, so they
+        // are always sized to fit it
+        if (!NARROW.matches && !screenElement.closest('.fs')) {
             screenElement.style.fontSize = '';
             screenElement.style.lineHeight = '';
             return;
@@ -2980,7 +3158,9 @@
         // put the top of the shape against the top of the screen, where it read
         // as cropped rather than as placed.
         const byWidth = (box.width * 0.86) / (ext.cols * CHAR_ASPECT);
-        const byHeight = (box.height * 0.84) / ext.rows;
+        // Inner pages get more headroom, since their shape turns for as long as you
+        // read and its tallest angle shouldn't touch the edge of the box
+        const byHeight = (box.height * (screenElement.closest('.fs') ? 0.74 : 0.84)) / ext.rows;
         const size = Math.max(3, Math.min(byWidth, byHeight));
         screenElement.style.fontSize = size.toFixed(2) + 'px';
         screenElement.style.lineHeight = size.toFixed(2) + 'px';
@@ -2998,7 +3178,7 @@
         // coupling, and it also resolves ties without a priority order.
         const tracked = [
             [aboutUs, 0], [futureProjects, 1], [sunfish, 2], [brownDwarf, 3],
-            [spoilage, 9], [avResearch, 5], [products, 6], [constellation, 7],
+            [spoilage, 9], [weather, 10], [avResearch, 5], [products, 6], [constellation, 7],
             [members, 8], [sourceCode, 4]
         ].filter(([el]) => el);
 
@@ -3075,6 +3255,7 @@
         if (sunfish) new IntersectionObserver((e) => { e.forEach(x => { isSunfishVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(sunfish);
         if (brownDwarf) new IntersectionObserver((e) => { e.forEach(x => { isBrownDwarfVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(brownDwarf);
         if (spoilage) new IntersectionObserver((e) => { e.forEach(x => { isSpoilageVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(spoilage);
+        if (weather) new IntersectionObserver((e) => { e.forEach(x => { isWeatherVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(weather);
         if (avResearch) new IntersectionObserver((e) => { e.forEach(x => { isAvResearchVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(avResearch);
         if (products) new IntersectionObserver((e) => { e.forEach(x => { isProductsVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(products);
         if (constellation) new IntersectionObserver((e) => { e.forEach(x => { isConstellationVisible = x.isIntersecting; updateState(); }); }, obsOptions).observe(constellation);

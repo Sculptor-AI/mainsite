@@ -54,6 +54,7 @@ const TIME_TEXT_START = TIME_EXPLODE_END;
 let stateTimer = 0;
 let hasTriggeredExplosion = false;
 let hasTriggeredConvergence = false;
+let hasFinishedIntro = false;
 let lastTimestamp = performance.now();
 
 // --- Particle State (structure-of-arrays) ---
@@ -391,6 +392,12 @@ function render(timestamp) {
     const aspectCorrection = (charHeight / charWidth);
 
     stateTimer += timeScale;
+
+    // The logo has finished forming: bring the top bar down
+    if (!hasFinishedIntro && stateTimer >= TIME_TEXT_START + TIME_GATHER_DURATION) {
+        hasFinishedIntro = true;
+        document.body.classList.add('intro-done');
+    }
 
     // --- PHASE LOGIC ---
 

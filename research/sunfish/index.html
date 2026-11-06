@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/logo.png">
+    <title>Sunfish | SculptorAI</title>
+    <meta name="description" content="Sunfish is an experimental, coding-first diffusion language model from Sculptor AI, a pruned derivative of Google's DiffusionGemma aimed at low latency on an RTX 5080 and Apple Silicon laptops.">
+    <link rel="canonical" href="https://sculptorai.org/research/sunfish/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Sculptor AI">
+    <meta property="og:title" content="Sunfish | SculptorAI">
+    <meta property="og:description" content="Sunfish is an experimental, coding-first diffusion language model from Sculptor AI, a pruned derivative of Google's DiffusionGemma aimed at low latency on an RTX 5080 and Apple Silicon laptops.">
+    <meta property="og:url" content="https://sculptorai.org/research/sunfish/">
+    <meta property="og:image" content="https://sculptorai.org/img/og.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/page.css">
+    <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://sculptorai.org/research/sunfish/#webpage",
+      "url": "https://sculptorai.org/research/sunfish/",
+      "name": "Sunfish",
+      "description": "Sunfish is an experimental, coding-first diffusion language model from Sculptor AI, a pruned derivative of Google's DiffusionGemma aimed at low latency on an RTX 5080 and Apple Silicon laptops.",
+      "isPartOf": {
+        "@id": "https://sculptorai.org/#website"
+      },
+      "publisher": {
+        "@type": [
+          "NGO",
+          "ResearchOrganization"
+        ],
+        "@id": "https://sculptorai.org/#organization",
+        "name": "Sculptor AI"
+      },
+      "dateModified": "2026-11-06",
+      "mainEntity": {
+        "@type": "SoftwareSourceCode",
+        "name": "Sunfish",
+        "description": "Sunfish is an experimental, coding-first diffusion language model from Sculptor AI, a pruned derivative of Google's DiffusionGemma aimed at low latency on an RTX 5080 and Apple Silicon laptops.",
+        "codeRepository": "https://github.com/Sculptor-AI/Sunfish",
+        "programmingLanguage": "Python",
+        "creator": {
+          "@type": [
+            "NGO",
+            "ResearchOrganization"
+          ],
+          "@id": "https://sculptorai.org/#organization",
+          "name": "Sculptor AI"
+        },
+        "creativeWorkStatus": "In development"
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Sculptor AI",
+          "item": "https://sculptorai.org/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Research",
+          "item": "https://sculptorai.org/research/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Sunfish",
+          "item": "https://sculptorai.org/research/sunfish/"
+        }
+      ]
+    }
+  ]
+}
+    </script>
+</head>
+
+<body class="page-body">
+    <header class="page-header">
+        <a class="page-home" href="/">Sculptor AI</a>
+        <nav class="page-nav" aria-label="Main">
+            <a href="/about/">About</a>
+            <a href="/research/" aria-current="page">Research</a>
+            <a href="/models/">Models</a>
+        </nav>
+    </header>
+    <main class="fs">
+        <div class="ascii-column">
+            <pre id="solid-logo-canvas" data-shape="2" aria-hidden="true"></pre>
+            <noscript><div class="fs-still css-art"></div></noscript>
+        </div>
+        <div class="fs-tree">
+            <p class="fs-path"><a href="/">Sculptor AI</a> / <a href="/research/">Research</a> / Sunfish</p>
+            <h1>Sunfish</h1>
+            <p class="fs-intro">Sunfish is an experimental, coding-first diffusion language model from Sculptor AI, aimed at very low single-user latency on consumer hardware.</p>
+            <details class="fs-folder" open>
+                <summary><h2>status</h2></summary>
+                <ul>
+                    <li><span class="fs-name">Stage</span><span class="fs-note">In development. No weights have been released yet.</span></li>
+                    <li><span class="fs-name">Primary target</span><span class="fs-note">RTX 5080 with 16 GB of memory</span></li>
+                    <li><span class="fs-name">Secondary target</span><span class="fs-note">24 GB Apple Silicon laptop</span></li>
+                    <li><span class="fs-name"><a href="https://github.com/Sculptor-AI/Sunfish">Code</a></span><span class="fs-note">github.com/Sculptor-AI/Sunfish</span></li>
+                </ul>
+            </details>
+            <details class="fs-folder" open>
+                <summary><h2>design</h2></summary>
+                <ul>
+                    <li><span class="fs-name">Base</span><span class="fs-note">A text-only, structurally pruned derivative of Google's DiffusionGemma architecture</span></li>
+                    <li><span class="fs-name">Experts per layer</span><span class="fs-note">128 reduced to 32, keeping the always-active shared expert</span></li>
+                    <li><span class="fs-name">Routing</span><span class="fs-note">4 experts per token initially, down from 8</span></li>
+                    <li><span class="fs-name">Vision tower</span><span class="fs-note">Removed for the coding and agentic target</span></li>
+                    <li><span class="fs-name">Parameters</span><span class="fs-note">8,114,384,892 total, 3,118,575,612 active (audited against the released shard headers)</span></li>
+                </ul>
+            </details>
+            <details class="fs-folder" open>
+                <summary><h2>why-pruning</h2></summary>
+                <div class="fs-block">
+                    <p>Starting from a small autoregressive model would mean teaching it the diffusion objective,
+                        bidirectional denoising, self-conditioning, and prefill behavior from nothing. Pruning lets Sunfish inherit
+                        those behaviors from a model that is already trained, and makes expert selection and recovery training the
+                        main research problem.</p>
+                </div>
+            </details>
+            <details class="fs-folder" open>
+                <summary><h2>first-gates</h2></summary>
+                <div class="fs-block">
+                    <p>The project does not spend on a large training run until the checkpoint transformation is lossless on a
+                        no-prune control and zero-shot pruning data supports a specific candidate. The first gates are to reproduce
+                        the upstream 4-bit model on the target hardware, instrument router use across coding, agentic, and general
+                        prompts, and run a controlled pruning ablation measuring quality, memory, and latency at each step.</p>
+                </div>
+            </details>
+
+        </div>
+    </main>
+    <footer class="site-footer">
+        <div class="footer-main">
+            <div class="footer-cols">
+                <div class="footer-id">
+                    <div class="footer-brand">
+                        <div class="footer-mark css-art" aria-hidden="true"></div>
+                        <span>Sculptor AI</span>
+                    </div>
+                    <p>Nonprofit research lab building open-source models, tools, and infrastructure.</p>
+                    <p class="footer-place">Seattle, WA</p>
+                </div>
+                <nav class="footer-col" aria-labelledby="footer-research">
+                    <h3 id="footer-research">Research</h3>
+                    <ul>
+                        <li><a href="/research/sunfish/">Sunfish</a></li>
+                        <li><a href="/research/brown-dwarf-atmospheres/">Brown Dwarf Atmospheres</a></li>
+                        <li><a href="/research/#hyperspectral-spoilage-forecasting">Hyperspectral Spoilage Forecasting</a></li>
+                        <li><a href="/research/weather-forecasting/">Weather Forecasting</a></li>
+                        <li><a href="/research/autonomous-driving/">Autonomous Driving</a></li>
+                    </ul>
+                </nav>
+                <nav class="footer-col" aria-labelledby="footer-products">
+                    <h3 id="footer-products">Products</h3>
+                    <ul>
+                        <li><a href="/products/constellation/">Constellation</a></li>
+                        <li><a href="https://drive.sculptorai.org" rel="noopener">TurnPilot</a></li>
+                        <li><a href="/models/">Models</a></li>
+                    </ul>
+                </nav>
+                <nav class="footer-col" aria-labelledby="footer-connect">
+                    <h3 id="footer-connect">Connect</h3>
+                    <ul>
+                        <li><a href="/about/">About</a></li>
+                        <li><a href="https://github.com/Sculptor-AI">GitHub</a></li>
+                        <li><a href="https://huggingface.co/Sculptor-AI">HuggingFace</a></li>
+                        <li><!--email_off--><a href="mailto:contact@sculptorai.org">contact@sculptorai.org</a><!--/email_off--></li>
+                    </ul>
+                </nav>
+            </div>
+            <div class="footer-legal">
+                <p>SculptorAI is a charitable nonprofit corporation organized under Washington law.</p>
+                <p class="footer-copy">&copy; 2026 SculptorAI. Code and models released under their own open-source
+                    licenses.</p>
+            </div>
+        </div>
+    </footer>
+    <script src="/js/ascii-utils.js" defer></script>
+    <script src="/js/logo-3d.js" defer></script>
+</body>
+
+</html>

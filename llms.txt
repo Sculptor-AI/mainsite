@@ -1,0 +1,22 @@
+# Sculptor AI
+
+> Sculptor AI (SculptorAI) is a nonprofit AI research lab based in Seattle, Washington. It builds machine learning models, tools, and infrastructure, and publishes the work in the open. It is not affiliated with Imbue, which makes a coding agent tool called Sculptor.
+
+## Lab
+
+- [About](https://sculptorai.org/about/): what the lab is, its people, and its legal status
+
+## Research
+
+- [Research overview](https://sculptorai.org/research/): all current projects
+- [Sunfish](https://sculptorai.org/research/sunfish/): an experimental, coding-first diffusion language model
+- [Brown dwarf atmospheres](https://sculptorai.org/research/brown-dwarf-atmospheres/): calibrated C/O intervals under line-list uncertainty (arXiv:2609.01665)
+- [Weather forecasting](https://sculptorai.org/research/weather-forecasting/): Indystral, an hourly forecast for Indianapolis fine-tuned from Timestral, with its track record against the NWS
+- [Autonomous driving](https://sculptorai.org/research/autonomous-driving/): TurnPilot, a fork of openpilot, and lightd, a traffic light detector
+
+## Releases
+
+- [Models](https://sculptorai.org/models/): Ursa Minor, Ursa Minor Smashed, lightd v4
+- [Constellation](https://sculptorai.org/products/constellation/): an open-source AI portal
+- [GitHub](https://github.com/Sculptor-AI)
+- [Hugging Face](https://huggingface.co/Sculptor-AI)

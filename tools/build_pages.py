@@ -160,6 +160,12 @@ def collection(path, name, description, kind="CollectionPage"):
             "dateModified": UPDATED}
 
 
+HF = "https://huggingface.co/Sculptor-AI/Indra-3M"
+INDRA = {"@type": "SoftwareApplication", "@id": f"{HF}#model", "name": "Indra-3M", "url": HF,
+         "applicationCategory": "Weather forecasting model", "operatingSystem": "Any",
+         "description": "A 3M-parameter weather model for US airports, forecasting temperature, dew point, wind, and "
+                        "pressure hourly for 72 hours.", "creator": ORG}
+
 PAGES = []
 
 
@@ -239,14 +245,14 @@ page("/about/", "About | SculptorAI", d,
           "/research/brown-dwarf-atmospheres/"),
          ("Hyperspectral spoilage forecasting", "Predicting how many days each individual apple has left",
           "/research/#hyperspectral-spoilage-forecasting"),
-         ("Weather forecasting", "Fine-tuned time-series models that correct weather guidance, live at Indianapolis "
-          "as Indystral", "/research/weather-forecasting/"),
+         ("Weather forecasting", "Fine-tuned time-series models that correct weather guidance: Indystral for "
+          "Indianapolis and Indra-3M for US airports", "/research/weather-forecasting/"),
          ("Autonomous driving", "TurnPilot, our fork of openpilot, and lightd, its traffic light detector",
           "/research/autonomous-driving/"),
      ), long_names=True)
      + folder("products", rows(
          ("Constellation", "An open-source AI portal, one interface onto many models", "/products/constellation/"),
-         ("Models", "The weights we have released, including Ursa Minor and lightd", "/models/"),
+         ("Models", "The weights we have released, including Indra-3M, Ursa Minor, and lightd", "/models/"),
      ), long_names=True)
      + folder("people", rows(
          ("Chase Culbertson", "CEO, Director", "https://explodingcb.com/"),
@@ -289,9 +295,9 @@ page("/research/", "Research | SculptorAI", d,
          ("Hyperspectral spoilage forecasting", "Fruit is managed by the batch, but apples from the same crate can "
           "spoil days apart. We're using hyperspectral imaging to forecast how many days each individual apple has "
           "left, and will release the dataset and code.", None, "hyperspectral-spoilage-forecasting"),
-         ("Weather forecasting", "Teaching a time-series model where the weather models go wrong. At Indianapolis, its "
-          "13 to 24 hour temperature error over a held-out year was 1.72&deg;F, against 2.39&deg;F for the official "
-          "NWS forecast. A general model is in training.", "/research/weather-forecasting/"),
+         ("Weather forecasting", "Teaching time-series models where the weather models go wrong. Indystral, our "
+          "Indianapolis forecast, had a 13 to 24 hour temperature error of 1.72&deg;F over a held-out year, against "
+          "2.39&deg;F for the official NWS forecast. Indra-3M is a 3M-parameter model for US airports, with open weights.", "/research/weather-forecasting/"),
          ("Autonomous driving", "TurnPilot, our fork of openpilot, and lightd, a small traffic light detector for "
           "comma cameras.", "/research/autonomous-driving/"),
      ), long_names=True),
@@ -386,28 +392,56 @@ page("/research/sunfish/", "Sunfish | SculptorAI", d,
              "creator": ORG, "creativeWorkStatus": "In development"})])
 
 # ---------------------------------------------------------------- Weather
-d = ("Indystral is Sculptor AI's hourly forecast for Indianapolis, fine-tuned from Mistral's Timestral. Over a "
-     "held-out year its 13 to 24 hour temperature error was 1.72 F, against 2.39 F for the NWS.")
+d = ("Sculptor AI's weather models: Indystral, an hourly forecast for Indianapolis, and Indra-3M, a 3M-parameter "
+     "open model for US airports, both fine-tuned from Mistral's Timestral.")
 page("/research/weather-forecasting/", "Weather Forecasting | SculptorAI", d,
      head("Weather forecasting", "We fine-tune time-series models to learn where the professional weather models go "
-          'wrong at a specific place. Our first forecast is <a href="https://weather.explodingcb.com">Indystral</a>, '
-          "which runs hourly for Indianapolis International Airport (KIND). A general model is in training, and we plan "
-          "to release the weights on Hugging Face.")
-     + folder("models", rows(
+          'wrong. <a href="https://weather.explodingcb.com">Indystral</a> is our hourly forecast for Indianapolis '
+          f'International Airport (KIND), and <a href="{HF}">Indra-3M</a> is a separate, much smaller model with open '
+          "weights for US airports.")
+     + folder("Indra-3M", rows(
+         ("What it is", "A 12 MB model that forecasts temperature, dew point, wind, and pressure for each of the next 72 "
+          "hours at US airports, with an 80% range around each forecast"),
+         ("Size", "2,999,627 parameters"),
+         ("Base", "Pruned and fine-tuned from Timestral-5M by Mistral AI"),
+         ("Inputs", "An airport's last 90 days of observations, plus US forecast guidance: the National Blend of Models, "
+          "GFS MOS, and NAM MOS"),
+         ("License", "Modified MIT, the same as Timestral, with Mistral AI's attribution notice and a condition on "
+          "companies with more than $20 million in monthly revenue"),
+         ("Not for", "Safety decisions, including aviation and emergencies. It's a research model."),
+         ("Weights and card", "huggingface.co/Sculptor-AI/Indra-3M", HF),
+     ))
+     + folder("Indra-3M record", block(
+         "                    <p>Average temperature error, 1 to 72 hours ahead, over November 2025 to October 2026, at six "
+         "airports it never trained on. Scored once on the locked model. Lower is better.</p>\n                    "
+         + table(["Airport", "Indra-3M", "National Blend", "Improvement"], [
+             ["Columbus (CMH)", "2.04&deg;F", "2.27&deg;F", "10.2%"],
+             ["Chicago O'Hare (ORD)", "2.08&deg;F", "2.31&deg;F", "10.2%"],
+             ["Denver (DEN)", "2.79&deg;F", "3.29&deg;F", "15.4%"],
+             ["Miami (MIA)", "1.42&deg;F", "1.59&deg;F", "10.3%"],
+             ["Seattle (SEA)", "1.61&deg;F", "1.79&deg;F", "9.7%"],
+             ["Phoenix (PHX)", "1.70&deg;F", "2.03&deg;F", "15.9%"],
+         ]) + """
+                    <p>These six weren't completely untouched: we had used them to check earlier models, and a 5.2M version from
+                        this same work had already been scored on this period. So before scoring, we also wrote down 12 other
+                        airports that no model in this project had trained on, been tuned on, or been checked against, and scored
+                        them once over the same year, with 240 forecasts each. There its temperature error was 3.7% to 15.4%
+                        lower than the National Blend.</p>"""))
+     + folder("Indystral", rows(
          ("Timestral-28M", "Forecasts temperature, dew point, wind, and pressure"),
          ("Timestral-5M", "Forecasts rain"),
          ("Base", "Both are fine-tuned from Timestral, a time-series model released by Mistral AI"),
          ("Live forecast", "weather.explodingcb.com", "https://weather.explodingcb.com"),
      ))
-     + folder("inputs", block("""                    <p>The models read recent measurements at the airport alongside four forecast sources over those same days and
+     + folder("Indystral inputs", block("""                    <p>The models read recent measurements at the airport alongside four forecast sources over those same days and
                         the next 72 hours: the HRRR, the National Blend of Models, and the GFS and NAM model output statistics. Seeing
                         each source's recent forecasts next to what happened lets them learn where it tends to be wrong.</p>"""))
-     + folder("training", rows(
+     + folder("Indystral training", rows(
          ("Train", "Hourly data from 2008 to October 2024, where every starting point saw only data published by then"),
          ("Choose", "November 2024 to October 2025, used to choose between versions"),
          ("Test", "November 2025 to October 2026, left untouched until the models were final"),
      ))
-     + folder("temperature-record", block(
+     + folder("Indystral temperature record", block(
          "                    <p>Average temperature error at KIND over the test year, in &deg;F. All three forecasts are scored on the "
          "same hours against what the station measured. Lower is better.</p>\n                    "
          + table(["Hours ahead", "Indystral", "National Blend", "NWS"], [
@@ -416,7 +450,7 @@ page("/research/weather-forecasting/", "Weather Forecasting | SculptorAI", d,
              ["37 to 48", "2.12", "2.47", "2.77"], ["49 to 72", "2.38", "2.67", "2.96"],
          ]) + """
                     <p>Over that year, the 80% temperature range contained the real temperature 79.5% of the time.</p>"""))
-     + folder("rain-record", block(
+     + folder("Indystral rain record", block(
          "                    <p>Brier score for the chance of at least 0.01 inches of rain or melted snow in an hour, over the same year. "
          "Lower is better.</p>\n                    "
          + table(["Hours ahead", "Indystral", "Blend, 6 h chance scaled to one hour", "HRRR, rain or no rain"], [
@@ -426,7 +460,7 @@ page("/research/weather-forecasting/", "Weather Forecasting | SculptorAI", d,
      crumbs=[("/research/", "Research"), ("/research/weather-forecasting/", "Weather Forecasting")], schema=[
          webpage("/research/weather-forecasting/", "Weather forecasting", d, {
              "@type": "WebApplication", "name": "Indystral", "description": d, "url": "https://weather.explodingcb.com",
-             "applicationCategory": "Weather forecast", "operatingSystem": "Web", "creator": ORG})])
+             "applicationCategory": "Weather forecast", "operatingSystem": "Web", "creator": ORG}), INDRA])
 
 # ---------------------------------------------------------------- Driving
 d = ("Sculptor AI's autonomous driving research: TurnPilot, a fork of openpilot that took third at COMMA_HACK 7, "
@@ -461,11 +495,18 @@ page("/research/autonomous-driving/", "Autonomous Driving | SculptorAI", d,
          webpage("/research/autonomous-driving/", "Autonomous driving", d)])
 
 # ---------------------------------------------------------------- Models
-d = ("Open model weights released by Sculptor AI on Hugging Face: Ursa Minor, Ursa Minor Smashed, "
-     "and the lightd v4 traffic light detector.")
+d = ("Open model weights released by Sculptor AI on Hugging Face: the Indra-3M weather model, Ursa Minor, "
+     "Ursa Minor Smashed, and the lightd v4 traffic light detector.")
 page("/models/", "Models | SculptorAI", d,
      head("Models", 'The model weights Sculptor AI has released, all on '
           '<a href="https://huggingface.co/Sculptor-AI">Hugging Face</a>.')
+     + folder("Indra-3M", rows(
+         ("What it is", "A weather model for US airports: temperature, dew point, wind, and pressure, hourly for 72 hours",
+          "/research/weather-forecasting/"),
+         ("Size", "2,999,627 parameters, 12 MB"),
+         ("License", "Modified MIT, the same as Timestral"),
+         ("Weights", "Sculptor-AI/Indra-3M", HF),
+     ))
      + folder("Ursa Minor", rows(
          ("What it is", "A reasoning-focused language model built on Qwen2.5-7B-Instruct"),
          ("Size", "7.6B parameters"),
@@ -486,9 +527,8 @@ page("/models/", "Models | SculptorAI", d,
      ))
      + folder("in development", rows(
          ("Sunfish", "Our diffusion language model", "/research/sunfish/"),
-         ("Weather", "A general weather model, in training, with weights to follow", "/research/weather-forecasting/"),
      )),
-     crumbs=[("/models/", "Models")], schema=[collection("/models/", "Models", d)])
+     crumbs=[("/models/", "Models")], schema=[collection("/models/", "Models", d), INDRA])
 
 # ---------------------------------------------------------------- Constellation
 d = ("Constellation is Sculptor AI's open-source AI portal: one interface onto models from Anthropic, OpenAI, Google, "
@@ -542,12 +582,12 @@ urls = ["/"] + PAGES
 - [Research overview]({SITE}/research/): all current projects
 - [Sunfish]({SITE}/research/sunfish/): an experimental, coding-first diffusion language model
 - [Brown dwarf atmospheres]({SITE}/research/brown-dwarf-atmospheres/): calibrated C/O intervals under line-list uncertainty (arXiv:2609.01665)
-- [Weather forecasting]({SITE}/research/weather-forecasting/): Indystral, an hourly forecast for Indianapolis fine-tuned from Timestral, with its track record against the NWS
+- [Weather forecasting]({SITE}/research/weather-forecasting/): Indystral, an hourly forecast for Indianapolis, and Indra-3M, an open model for US airports, each with its own track record
 - [Autonomous driving]({SITE}/research/autonomous-driving/): TurnPilot, a fork of openpilot, and lightd, a traffic light detector
 
 ## Releases
 
-- [Models]({SITE}/models/): Ursa Minor, Ursa Minor Smashed, lightd v4
+- [Models]({SITE}/models/): Indra-3M, Ursa Minor, Ursa Minor Smashed, lightd v4
 - [Constellation]({SITE}/products/constellation/): an open-source AI portal
 - [GitHub](https://github.com/Sculptor-AI)
 - [Hugging Face](https://huggingface.co/Sculptor-AI)

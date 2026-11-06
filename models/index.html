@@ -6,12 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="/logo.png">
     <title>Models | SculptorAI</title>
-    <meta name="description" content="Open model weights released by Sculptor AI on Hugging Face: Ursa Minor, Ursa Minor Smashed, and the lightd v4 traffic light detector.">
+    <meta name="description" content="Open model weights released by Sculptor AI on Hugging Face: the Indra-3M weather model, Ursa Minor, Ursa Minor Smashed, and the lightd v4 traffic light detector.">
     <link rel="canonical" href="https://sculptorai.org/models/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Sculptor AI">
     <meta property="og:title" content="Models | SculptorAI">
-    <meta property="og:description" content="Open model weights released by Sculptor AI on Hugging Face: Ursa Minor, Ursa Minor Smashed, and the lightd v4 traffic light detector.">
+    <meta property="og:description" content="Open model weights released by Sculptor AI on Hugging Face: the Indra-3M weather model, Ursa Minor, Ursa Minor Smashed, and the lightd v4 traffic light detector.">
     <meta property="og:url" content="https://sculptorai.org/models/">
     <meta property="og:image" content="https://sculptorai.org/img/og.png">
     <meta property="og:image:width" content="1200">
@@ -28,7 +28,7 @@
       "@id": "https://sculptorai.org/models/#webpage",
       "url": "https://sculptorai.org/models/",
       "name": "Models",
-      "description": "Open model weights released by Sculptor AI on Hugging Face: Ursa Minor, Ursa Minor Smashed, and the lightd v4 traffic light detector.",
+      "description": "Open model weights released by Sculptor AI on Hugging Face: the Indra-3M weather model, Ursa Minor, Ursa Minor Smashed, and the lightd v4 traffic light detector.",
       "isPartOf": {
         "@id": "https://sculptorai.org/#website"
       },
@@ -41,6 +41,23 @@
         "name": "Sculptor AI"
       },
       "dateModified": "2026-11-06"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://huggingface.co/Sculptor-AI/Indra-3M#model",
+      "name": "Indra-3M",
+      "url": "https://huggingface.co/Sculptor-AI/Indra-3M",
+      "applicationCategory": "Weather forecasting model",
+      "operatingSystem": "Any",
+      "description": "A 3M-parameter weather model for US airports, forecasting temperature, dew point, wind, and pressure hourly for 72 hours.",
+      "creator": {
+        "@type": [
+          "NGO",
+          "ResearchOrganization"
+        ],
+        "@id": "https://sculptorai.org/#organization",
+        "name": "Sculptor AI"
+      }
     },
     {
       "@type": "BreadcrumbList",
@@ -83,6 +100,15 @@
             <h1>Models</h1>
             <p class="fs-intro">The model weights Sculptor AI has released, all on <a href="https://huggingface.co/Sculptor-AI">Hugging Face</a>.</p>
             <details class="fs-folder" open>
+                <summary><h2>Indra-3M</h2></summary>
+                <ul>
+                    <li><span class="fs-name"><a href="/research/weather-forecasting/">What it is</a></span><span class="fs-note">A weather model for US airports: temperature, dew point, wind, and pressure, hourly for 72 hours</span></li>
+                    <li><span class="fs-name">Size</span><span class="fs-note">2,999,627 parameters, 12 MB</span></li>
+                    <li><span class="fs-name">License</span><span class="fs-note">Modified MIT, the same as Timestral</span></li>
+                    <li><span class="fs-name"><a href="https://huggingface.co/Sculptor-AI/Indra-3M">Weights</a></span><span class="fs-note">Sculptor-AI/Indra-3M</span></li>
+                </ul>
+            </details>
+            <details class="fs-folder" open>
                 <summary><h2>Ursa Minor</h2></summary>
                 <ul>
                     <li><span class="fs-name">What it is</span><span class="fs-note">A reasoning-focused language model built on Qwen2.5-7B-Instruct</span></li>
@@ -113,7 +139,6 @@
                 <summary><h2>in development</h2></summary>
                 <ul>
                     <li><span class="fs-name"><a href="/research/sunfish/">Sunfish</a></span><span class="fs-note">Our diffusion language model</span></li>
-                    <li><span class="fs-name"><a href="/research/weather-forecasting/">Weather</a></span><span class="fs-note">A general weather model, in training, with weights to follow</span></li>
                 </ul>
             </details>
 

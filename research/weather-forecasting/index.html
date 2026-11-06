@@ -6,12 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="/logo.png">
     <title>Weather Forecasting | SculptorAI</title>
-    <meta name="description" content="Sculptor AI's weather models: Indystral, an hourly forecast for Indianapolis, and Indra-3M, a 3M-parameter open model for US airports, both fine-tuned from Mistral's Timestral.">
+    <meta name="description" content="Sculptor AI's weather forecasting: Indra, a family of tiny, general open weather models (Indra-3M and Indra-1.5M) fine-tuned from Mistral's Timestral, and our live forecast for US airports, which runs Indra-3M in the browser.">
     <link rel="canonical" href="https://sculptorai.org/research/weather-forecasting/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Sculptor AI">
     <meta property="og:title" content="Weather Forecasting | SculptorAI">
-    <meta property="og:description" content="Sculptor AI's weather models: Indystral, an hourly forecast for Indianapolis, and Indra-3M, a 3M-parameter open model for US airports, both fine-tuned from Mistral's Timestral.">
+    <meta property="og:description" content="Sculptor AI's weather forecasting: Indra, a family of tiny, general open weather models (Indra-3M and Indra-1.5M) fine-tuned from Mistral's Timestral, and our live forecast for US airports, which runs Indra-3M in the browser.">
     <meta property="og:url" content="https://sculptorai.org/research/weather-forecasting/">
     <meta property="og:image" content="https://sculptorai.org/img/og.png">
     <meta property="og:image:width" content="1200">
@@ -28,7 +28,7 @@
       "@id": "https://sculptorai.org/research/weather-forecasting/#webpage",
       "url": "https://sculptorai.org/research/weather-forecasting/",
       "name": "Weather forecasting",
-      "description": "Sculptor AI's weather models: Indystral, an hourly forecast for Indianapolis, and Indra-3M, a 3M-parameter open model for US airports, both fine-tuned from Mistral's Timestral.",
+      "description": "Sculptor AI's weather forecasting: Indra, a family of tiny, general open weather models (Indra-3M and Indra-1.5M) fine-tuned from Mistral's Timestral, and our live forecast for US airports, which runs Indra-3M in the browser.",
       "isPartOf": {
         "@id": "https://sculptorai.org/#website"
       },
@@ -43,8 +43,8 @@
       "dateModified": "2026-11-06",
       "mainEntity": {
         "@type": "WebApplication",
-        "name": "Indystral",
-        "description": "Sculptor AI's weather models: Indystral, an hourly forecast for Indianapolis, and Indra-3M, a 3M-parameter open model for US airports, both fine-tuned from Mistral's Timestral.",
+        "name": "Indra weather forecast",
+        "description": "Sculptor AI's weather forecasting: Indra, a family of tiny, general open weather models (Indra-3M and Indra-1.5M) fine-tuned from Mistral's Timestral, and our live forecast for US airports, which runs Indra-3M in the browser.",
         "url": "https://weather.explodingcb.com",
         "applicationCategory": "Weather forecast",
         "operatingSystem": "Web",
@@ -65,7 +65,24 @@
       "url": "https://huggingface.co/Sculptor-AI/Indra-3M",
       "applicationCategory": "Weather forecasting model",
       "operatingSystem": "Any",
-      "description": "A 3M-parameter weather model for US airports, forecasting temperature, dew point, wind, and pressure hourly for 72 hours.",
+      "description": "A tiny, general weather model with 3M parameters, forecasting temperature, dew point, wind, and pressure hourly for 72 hours. Trained and tested on airports.",
+      "creator": {
+        "@type": [
+          "NGO",
+          "ResearchOrganization"
+        ],
+        "@id": "https://sculptorai.org/#organization",
+        "name": "Sculptor AI"
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://huggingface.co/Sculptor-AI/Indra-1.5M#model",
+      "name": "Indra-1.5M",
+      "url": "https://huggingface.co/Sculptor-AI/Indra-1.5M",
+      "applicationCategory": "Weather forecasting model",
+      "operatingSystem": "Any",
+      "description": "A tiny, general weather model with 1.5M parameters, forecasting temperature, dew point, wind, and pressure hourly for 72 hours. Trained and tested on airports.",
       "creator": {
         "@type": [
           "NGO",
@@ -120,17 +137,39 @@
         <div class="fs-tree">
             <p class="fs-path"><a href="/">Sculptor AI</a> / <a href="/research/">Research</a> / Weather Forecasting</p>
             <h1>Weather forecasting</h1>
-            <p class="fs-intro">We fine-tune time-series models to learn where the professional weather models go wrong. <a href="https://weather.explodingcb.com">Indystral</a> is our hourly forecast for Indianapolis International Airport (KIND), and <a href="https://huggingface.co/Sculptor-AI/Indra-3M">Indra-3M</a> is a separate, much smaller model with open weights for US airports.</p>
+            <p class="fs-intro">We fine-tune time-series models to learn where the professional weather models go wrong. Indra is a family of tiny, general weather models with open weights: <a href="https://huggingface.co/Sculptor-AI/Indra-3M">Indra-3M</a> and <a href="https://huggingface.co/Sculptor-AI/Indra-1.5M">Indra-1.5M</a>. Indra-3M runs <a href="https://weather.explodingcb.com">our live forecast</a>, which covers 2,407 airports in the lower 48 states. Your browser downloads the model and computes the forecast itself. We have scored or trained the model at 49 of those airports.</p>
+            <details class="fs-folder" open>
+                <summary><h2>what has been measured</h2></summary>
+                <div class="fs-block">
+                    <p>Airports are what Indra was trained and tested on, because they have the long, reliable records and guidance archives that training and scoring need. They are not its purpose. Every score on this page comes from an airport, and nothing else has been measured. Indra depends on US forecast guidance, and the script only reads airport data so far. A station away from an airport would have to use a nearby airport's guidance, and we haven't measured how it does there.</p>
+                </div>
+                <ul>
+                    <li><span class="fs-name"><a href="https://huggingface.co/collections/Sculptor-AI/indra">Indra family</a></span><span class="fs-note">Indra on Hugging Face</span></li>
+                </ul>
+            </details>
             <details class="fs-folder" open>
                 <summary><h2>Indra-3M</h2></summary>
                 <ul>
-                    <li><span class="fs-name">What it is</span><span class="fs-note">A 12 MB model that forecasts temperature, dew point, wind, and pressure for each of the next 72 hours at US airports, with an 80% range around each forecast</span></li>
+                    <li><span class="fs-name">What it is</span><span class="fs-note">A 12 MB model that forecasts temperature, dew point, wind, and pressure for each of the next 72 hours at a station, with an 80% range around each forecast</span></li>
                     <li><span class="fs-name">Size</span><span class="fs-note">2,999,627 parameters</span></li>
                     <li><span class="fs-name">Base</span><span class="fs-note">Pruned and fine-tuned from Timestral-5M by Mistral AI</span></li>
-                    <li><span class="fs-name">Inputs</span><span class="fs-note">An airport's last 90 days of observations, plus US forecast guidance: the National Blend of Models, GFS MOS, and NAM MOS</span></li>
+                    <li><span class="fs-name">Inputs</span><span class="fs-note">A station's last 90 days of observations, plus US forecast guidance: the National Blend of Models, GFS MOS, and NAM MOS. The script reads airport data so far.</span></li>
                     <li><span class="fs-name">License</span><span class="fs-note">Modified MIT, the same as Timestral, with Mistral AI's attribution notice and a condition on companies with more than $20 million in monthly revenue</span></li>
                     <li><span class="fs-name">Not for</span><span class="fs-note">Safety decisions, including aviation and emergencies. It's a research model.</span></li>
                     <li><span class="fs-name"><a href="https://huggingface.co/Sculptor-AI/Indra-3M">Weights and card</a></span><span class="fs-note">huggingface.co/Sculptor-AI/Indra-3M</span></li>
+                </ul>
+            </details>
+            <details class="fs-folder" open>
+                <summary><h2>Indra-1.5M</h2></summary>
+                <ul>
+                    <li><span class="fs-name">What it is</span><span class="fs-note">A 6 MB model that forecasts temperature, dew point, wind, and pressure for each of the next 72 hours at a station, with an 80% range around each forecast</span></li>
+                    <li><span class="fs-name">Size</span><span class="fs-note">1,500,874 parameters</span></li>
+                    <li><span class="fs-name">Next to Indra-3M</span><span class="fs-note">Half the size, with 1.2% more temperature error on the final test</span></li>
+                    <li><span class="fs-name">Base</span><span class="fs-note">Pruned and fine-tuned from Timestral-5M by Mistral AI</span></li>
+                    <li><span class="fs-name">Inputs</span><span class="fs-note">A station's last 90 days of observations, plus US forecast guidance: the National Blend of Models, GFS MOS, and NAM MOS. The script reads airport data so far.</span></li>
+                    <li><span class="fs-name">License</span><span class="fs-note">Modified MIT, the same as Timestral, with Mistral AI's attribution notice and a condition on companies with more than $20 million in monthly revenue</span></li>
+                    <li><span class="fs-name">Not for</span><span class="fs-note">Safety decisions, including aviation and emergencies. It's a research model.</span></li>
+                    <li><span class="fs-name"><a href="https://huggingface.co/Sculptor-AI/Indra-1.5M">Weights and card</a></span><span class="fs-note">huggingface.co/Sculptor-AI/Indra-1.5M</span></li>
                 </ul>
             </details>
             <details class="fs-folder" open>
@@ -138,51 +177,41 @@
                 <div class="fs-block">
                     <p>Average temperature error, 1 to 72 hours ahead, over November 2025 to October 2026, at six airports it never trained on. Scored once on the locked model. Lower is better.</p>
                     <div class="fs-table"><table><thead><tr><th>Airport</th><th>Indra-3M</th><th>National Blend</th><th>Improvement</th></tr></thead><tbody><tr><td>Columbus (CMH)</td><td class="num best">2.04&deg;F</td><td class="num">2.27&deg;F</td><td class="num">10.2%</td></tr><tr><td>Chicago O'Hare (ORD)</td><td class="num best">2.08&deg;F</td><td class="num">2.31&deg;F</td><td class="num">10.2%</td></tr><tr><td>Denver (DEN)</td><td class="num best">2.79&deg;F</td><td class="num">3.29&deg;F</td><td class="num">15.4%</td></tr><tr><td>Miami (MIA)</td><td class="num best">1.42&deg;F</td><td class="num">1.59&deg;F</td><td class="num">10.3%</td></tr><tr><td>Seattle (SEA)</td><td class="num best">1.61&deg;F</td><td class="num">1.79&deg;F</td><td class="num">9.7%</td></tr><tr><td>Phoenix (PHX)</td><td class="num best">1.70&deg;F</td><td class="num">2.03&deg;F</td><td class="num">15.9%</td></tr></tbody></table></div>
-                    <p>These six weren't completely untouched: we had used them to check earlier models, and a 5.2M version from
-                        this same work had already been scored on this period. So before scoring, we also wrote down 12 other
-                        airports that no model in this project had trained on, been tuned on, or been checked against, and scored
-                        them once over the same year, with 240 forecasts each. There its temperature error was 3.7% to 15.4%
-                        lower than the National Blend.</p>
+                    <p>These six weren't completely untouched: we had used them to check earlier models, and a 5.2M version from this same work had already been scored on this period. So before scoring, we also wrote down 12 other airports that no model in this project had trained on, been tuned on, or been checked against, and scored them once over the same year, with 240 forecasts each. Across all 12, its temperature error was 11.7% lower than the National Blend overall, and
+                        3.7% to 15.4% lower by airport.</p>
                 </div>
             </details>
             <details class="fs-folder" open>
-                <summary><h2>Indystral</h2></summary>
+                <summary><h2>Indra-1.5M record</h2></summary>
+                <div class="fs-block">
+                    <p>Average temperature error, 1 to 72 hours ahead, over November 2025 to October 2026, at six airports it never trained on. Scored once on the locked model. Lower is better.</p>
+                    <div class="fs-table"><table><thead><tr><th>Airport</th><th>Indra-1.5M</th><th>National Blend</th><th>Improvement</th></tr></thead><tbody><tr><td>Columbus (CMH)</td><td class="num best">2.05&deg;F</td><td class="num">2.27&deg;F</td><td class="num">9.6%</td></tr><tr><td>Chicago O'Hare (ORD)</td><td class="num best">2.09&deg;F</td><td class="num">2.31&deg;F</td><td class="num">9.7%</td></tr><tr><td>Denver (DEN)</td><td class="num best">2.83&deg;F</td><td class="num">3.29&deg;F</td><td class="num">13.9%</td></tr><tr><td>Miami (MIA)</td><td class="num best">1.44&deg;F</td><td class="num">1.59&deg;F</td><td class="num">9.0%</td></tr><tr><td>Seattle (SEA)</td><td class="num best">1.64&deg;F</td><td class="num">1.79&deg;F</td><td class="num">8.6%</td></tr><tr><td>Phoenix (PHX)</td><td class="num best">1.73&deg;F</td><td class="num">2.03&deg;F</td><td class="num">14.5%</td></tr></tbody></table></div>
+                    <p>These six weren't completely untouched: we had used them to check earlier models, and a 5.2M version from this same work had already been scored on this period. So before scoring, we also wrote down 12 other airports that no model in this project had trained on, been tuned on, or been checked against, and scored them once over the same year, with 240 forecasts each. Across all 12, its temperature error was 10.3% lower than the National Blend overall, and
+                        2.1% to 15.0% lower by airport. At Buffalo (BUF), its gain is too small to tell from chance.</p>
+                </div>
+            </details>
+            <details class="fs-folder" open>
+                <summary><h2>live forecast</h2></summary>
                 <ul>
-                    <li><span class="fs-name">Timestral-28M</span><span class="fs-note">Forecasts temperature, dew point, wind, and pressure</span></li>
-                    <li><span class="fs-name">Timestral-5M</span><span class="fs-note">Forecasts rain</span></li>
-                    <li><span class="fs-name">Base</span><span class="fs-note">Both are fine-tuned from Timestral, a time-series model released by Mistral AI</span></li>
-                    <li><span class="fs-name"><a href="https://weather.explodingcb.com">Live forecast</a></span><span class="fs-note">weather.explodingcb.com</span></li>
+                    <li><span class="fs-name">Temperature, dew point, wind, pressure</span><span class="fs-note">Indra-3M, computed in your browser</span></li>
+                    <li><span class="fs-name">Rain</span><span class="fs-note">At Indianapolis only, a separate model fine-tuned from Timestral-5M that also reads the HRRR, computed ahead of time. Elsewhere, the NWS forecast</span></li>
+                    <li><span class="fs-name">Coverage</span><span class="fs-note">2,407 airports in the lower 48 states, scored or trained at 49 of them</span></li>
+                    <li><span class="fs-name"><a href="https://weather.explodingcb.com">Site</a></span><span class="fs-note">weather.explodingcb.com</span></li>
+                    <li><span class="fs-name"><a href="https://huggingface.co/spaces/Sculptor-AI/indra">Space</a></span><span class="fs-note">Indra on Hugging Face</span></li>
                 </ul>
             </details>
             <details class="fs-folder" open>
-                <summary><h2>Indystral inputs</h2></summary>
+                <summary><h2>Indianapolis temperature record</h2></summary>
                 <div class="fs-block">
-                    <p>The models read recent measurements at the airport alongside four forecast sources over those same days and
-                        the next 72 hours: the HRRR, the National Blend of Models, and the GFS and NAM model output statistics. Seeing
-                        each source's recent forecasts next to what happened lets them learn where it tends to be wrong.</p>
+                    <p>Average temperature error of Indra-3M at Indianapolis (KIND), November 2025 to October 2026, in &deg;F. All three forecasts are scored on identical hours against what the station measured. Indra-3M trained on Indianapolis through October 2024, but not on this test year. Lower is better.</p>
+                    <div class="fs-table"><table><thead><tr><th>Hours ahead</th><th>Indra-3M</th><th>National Blend</th><th>NWS</th></tr></thead><tbody><tr><td>1 to 6</td><td class="num best">1.29</td><td class="num">1.84</td><td class="num">1.97</td></tr><tr><td>7 to 12</td><td class="num best">1.64</td><td class="num">1.94</td><td class="num">2.19</td></tr><tr><td>13 to 24</td><td class="num best">1.80</td><td class="num">2.12</td><td class="num">2.39</td></tr><tr><td>25 to 36</td><td class="num best">2.03</td><td class="num">2.28</td><td class="num">2.59</td></tr><tr><td>37 to 48</td><td class="num best">2.22</td><td class="num">2.47</td><td class="num">2.77</td></tr><tr><td>49 to 72</td><td class="num best">2.41</td><td class="num">2.67</td><td class="num">2.96</td></tr></tbody></table></div>
                 </div>
             </details>
             <details class="fs-folder" open>
-                <summary><h2>Indystral training</h2></summary>
-                <ul>
-                    <li><span class="fs-name">Train</span><span class="fs-note">Hourly data from 2008 to October 2024, where every starting point saw only data published by then</span></li>
-                    <li><span class="fs-name">Choose</span><span class="fs-note">November 2024 to October 2025, used to choose between versions</span></li>
-                    <li><span class="fs-name">Test</span><span class="fs-note">November 2025 to October 2026, left untouched until the models were final</span></li>
-                </ul>
-            </details>
-            <details class="fs-folder" open>
-                <summary><h2>Indystral temperature record</h2></summary>
-                <div class="fs-block">
-                    <p>Average temperature error at KIND over the test year, in &deg;F. All three forecasts are scored on the same hours against what the station measured. Lower is better.</p>
-                    <div class="fs-table"><table><thead><tr><th>Hours ahead</th><th>Indystral</th><th>National Blend</th><th>NWS</th></tr></thead><tbody><tr><td>1 to 6</td><td class="num best">1.25</td><td class="num">1.84</td><td class="num">1.97</td></tr><tr><td>7 to 12</td><td class="num best">1.60</td><td class="num">1.94</td><td class="num">2.19</td></tr><tr><td>13 to 24</td><td class="num best">1.72</td><td class="num">2.12</td><td class="num">2.39</td></tr><tr><td>25 to 36</td><td class="num best">1.94</td><td class="num">2.28</td><td class="num">2.59</td></tr><tr><td>37 to 48</td><td class="num best">2.12</td><td class="num">2.47</td><td class="num">2.77</td></tr><tr><td>49 to 72</td><td class="num best">2.38</td><td class="num">2.67</td><td class="num">2.96</td></tr></tbody></table></div>
-                    <p>Over that year, the 80% temperature range contained the real temperature 79.5% of the time.</p>
-                </div>
-            </details>
-            <details class="fs-folder" open>
-                <summary><h2>Indystral rain record</h2></summary>
+                <summary><h2>Indianapolis rain record</h2></summary>
                 <div class="fs-block">
                     <p>Brier score for the chance of at least 0.01 inches of rain or melted snow in an hour, over the same year. Lower is better.</p>
-                    <div class="fs-table"><table><thead><tr><th>Hours ahead</th><th>Indystral</th><th>Blend, 6 h chance scaled to one hour</th><th>HRRR, rain or no rain</th></tr></thead><tbody><tr><td>1 to 12</td><td class="num best">0.029</td><td class="num">0.037</td><td class="num">0.045</td></tr><tr><td>13 to 24</td><td class="num best">0.033</td><td class="num">0.038</td><td class="num">0.057</td></tr><tr><td>25 to 48</td><td class="num best">0.036</td><td class="num">0.040</td><td class="num">0.065</td></tr><tr><td>49 to 72</td><td class="num best">0.041</td><td class="num">0.042</td><td class="num">no data</td></tr></tbody></table></div>
+                    <div class="fs-table"><table><thead><tr><th>Hours ahead</th><th>Live forecast</th><th>Blend, 6 h chance scaled to one hour</th><th>HRRR, rain or no rain</th></tr></thead><tbody><tr><td>1 to 12</td><td class="num best">0.029</td><td class="num">0.037</td><td class="num">0.045</td></tr><tr><td>13 to 24</td><td class="num best">0.033</td><td class="num">0.038</td><td class="num">0.057</td></tr><tr><td>25 to 48</td><td class="num best">0.036</td><td class="num">0.040</td><td class="num">0.065</td></tr><tr><td>49 to 72</td><td class="num best">0.041</td><td class="num">0.042</td><td class="num">no data</td></tr></tbody></table></div>
                 </div>
             </details>
 

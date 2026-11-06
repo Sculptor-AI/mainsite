@@ -6,12 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="/logo.png">
     <title>Weather Forecasting | SculptorAI</title>
-    <meta name="description" content="Sculptor AI's weather models: Indystral, an hourly forecast for Indianapolis, and Indra-3M, a 3M-parameter open model for US airports, both fine-tuned from Mistral's Timestral.">
+    <meta name="description" content="Sculptor AI's weather forecasting: Indra-3M, a 3M-parameter open model for US airports fine-tuned from Mistral's Timestral, and our live Indianapolis forecast, which runs it.">
     <link rel="canonical" href="https://sculptorai.org/research/weather-forecasting/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Sculptor AI">
     <meta property="og:title" content="Weather Forecasting | SculptorAI">
-    <meta property="og:description" content="Sculptor AI's weather models: Indystral, an hourly forecast for Indianapolis, and Indra-3M, a 3M-parameter open model for US airports, both fine-tuned from Mistral's Timestral.">
+    <meta property="og:description" content="Sculptor AI's weather forecasting: Indra-3M, a 3M-parameter open model for US airports fine-tuned from Mistral's Timestral, and our live Indianapolis forecast, which runs it.">
     <meta property="og:url" content="https://sculptorai.org/research/weather-forecasting/">
     <meta property="og:image" content="https://sculptorai.org/img/og.png">
     <meta property="og:image:width" content="1200">
@@ -28,7 +28,7 @@
       "@id": "https://sculptorai.org/research/weather-forecasting/#webpage",
       "url": "https://sculptorai.org/research/weather-forecasting/",
       "name": "Weather forecasting",
-      "description": "Sculptor AI's weather models: Indystral, an hourly forecast for Indianapolis, and Indra-3M, a 3M-parameter open model for US airports, both fine-tuned from Mistral's Timestral.",
+      "description": "Sculptor AI's weather forecasting: Indra-3M, a 3M-parameter open model for US airports fine-tuned from Mistral's Timestral, and our live Indianapolis forecast, which runs it.",
       "isPartOf": {
         "@id": "https://sculptorai.org/#website"
       },
@@ -43,8 +43,8 @@
       "dateModified": "2026-11-06",
       "mainEntity": {
         "@type": "WebApplication",
-        "name": "Indystral",
-        "description": "Sculptor AI's weather models: Indystral, an hourly forecast for Indianapolis, and Indra-3M, a 3M-parameter open model for US airports, both fine-tuned from Mistral's Timestral.",
+        "name": "Indianapolis weather forecast",
+        "description": "Sculptor AI's weather forecasting: Indra-3M, a 3M-parameter open model for US airports fine-tuned from Mistral's Timestral, and our live Indianapolis forecast, which runs it.",
         "url": "https://weather.explodingcb.com",
         "applicationCategory": "Weather forecast",
         "operatingSystem": "Web",
@@ -120,7 +120,7 @@
         <div class="fs-tree">
             <p class="fs-path"><a href="/">Sculptor AI</a> / <a href="/research/">Research</a> / Weather Forecasting</p>
             <h1>Weather forecasting</h1>
-            <p class="fs-intro">We fine-tune time-series models to learn where the professional weather models go wrong. <a href="https://weather.explodingcb.com">Indystral</a> is our hourly forecast for Indianapolis International Airport (KIND), and <a href="https://huggingface.co/Sculptor-AI/Indra-3M">Indra-3M</a> is a separate, much smaller model with open weights for US airports.</p>
+            <p class="fs-intro">We fine-tune time-series models to learn where the professional weather models go wrong. <a href="https://huggingface.co/Sculptor-AI/Indra-3M">Indra-3M</a> is a 3M-parameter model with open weights for US airports. It runs <a href="https://weather.explodingcb.com">our live Indianapolis forecast</a>, an hourly forecast for Indianapolis International Airport (KIND).</p>
             <details class="fs-folder" open>
                 <summary><h2>Indra-3M</h2></summary>
                 <ul>
@@ -146,43 +146,25 @@
                 </div>
             </details>
             <details class="fs-folder" open>
-                <summary><h2>Indystral</h2></summary>
+                <summary><h2>live forecast</h2></summary>
                 <ul>
-                    <li><span class="fs-name">Timestral-28M</span><span class="fs-note">Forecasts temperature, dew point, wind, and pressure</span></li>
-                    <li><span class="fs-name">Timestral-5M</span><span class="fs-note">Forecasts rain</span></li>
-                    <li><span class="fs-name">Base</span><span class="fs-note">Both are fine-tuned from Timestral, a time-series model released by Mistral AI</span></li>
-                    <li><span class="fs-name"><a href="https://weather.explodingcb.com">Live forecast</a></span><span class="fs-note">weather.explodingcb.com</span></li>
+                    <li><span class="fs-name">Temperature, dew point, wind, pressure</span><span class="fs-note">Indra-3M</span></li>
+                    <li><span class="fs-name">Rain</span><span class="fs-note">A separate model, fine-tuned from Timestral-5M, which also reads the HRRR</span></li>
+                    <li><span class="fs-name"><a href="https://weather.explodingcb.com">Site</a></span><span class="fs-note">weather.explodingcb.com</span></li>
                 </ul>
             </details>
             <details class="fs-folder" open>
-                <summary><h2>Indystral inputs</h2></summary>
+                <summary><h2>Indianapolis temperature record</h2></summary>
                 <div class="fs-block">
-                    <p>The models read recent measurements at the airport alongside four forecast sources over those same days and
-                        the next 72 hours: the HRRR, the National Blend of Models, and the GFS and NAM model output statistics. Seeing
-                        each source's recent forecasts next to what happened lets them learn where it tends to be wrong.</p>
+                    <p>Average temperature error of Indra-3M at Indianapolis (KIND), November 2025 to October 2026, in &deg;F. All three forecasts are scored on identical hours against what the station measured. Indra-3M trained on Indianapolis through October 2024, but not on this test year. Lower is better.</p>
+                    <div class="fs-table"><table><thead><tr><th>Hours ahead</th><th>Indra-3M</th><th>National Blend</th><th>NWS</th></tr></thead><tbody><tr><td>1 to 6</td><td class="num best">1.29</td><td class="num">1.84</td><td class="num">1.97</td></tr><tr><td>7 to 12</td><td class="num best">1.64</td><td class="num">1.94</td><td class="num">2.19</td></tr><tr><td>13 to 24</td><td class="num best">1.80</td><td class="num">2.12</td><td class="num">2.39</td></tr><tr><td>25 to 36</td><td class="num best">2.03</td><td class="num">2.28</td><td class="num">2.59</td></tr><tr><td>37 to 48</td><td class="num best">2.22</td><td class="num">2.47</td><td class="num">2.77</td></tr><tr><td>49 to 72</td><td class="num best">2.41</td><td class="num">2.67</td><td class="num">2.96</td></tr></tbody></table></div>
                 </div>
             </details>
             <details class="fs-folder" open>
-                <summary><h2>Indystral training</h2></summary>
-                <ul>
-                    <li><span class="fs-name">Train</span><span class="fs-note">Hourly data from 2008 to October 2024, where every starting point saw only data published by then</span></li>
-                    <li><span class="fs-name">Choose</span><span class="fs-note">November 2024 to October 2025, used to choose between versions</span></li>
-                    <li><span class="fs-name">Test</span><span class="fs-note">November 2025 to October 2026, left untouched until the models were final</span></li>
-                </ul>
-            </details>
-            <details class="fs-folder" open>
-                <summary><h2>Indystral temperature record</h2></summary>
-                <div class="fs-block">
-                    <p>Average temperature error at KIND over the test year, in &deg;F. All three forecasts are scored on the same hours against what the station measured. Lower is better.</p>
-                    <div class="fs-table"><table><thead><tr><th>Hours ahead</th><th>Indystral</th><th>National Blend</th><th>NWS</th></tr></thead><tbody><tr><td>1 to 6</td><td class="num best">1.25</td><td class="num">1.84</td><td class="num">1.97</td></tr><tr><td>7 to 12</td><td class="num best">1.60</td><td class="num">1.94</td><td class="num">2.19</td></tr><tr><td>13 to 24</td><td class="num best">1.72</td><td class="num">2.12</td><td class="num">2.39</td></tr><tr><td>25 to 36</td><td class="num best">1.94</td><td class="num">2.28</td><td class="num">2.59</td></tr><tr><td>37 to 48</td><td class="num best">2.12</td><td class="num">2.47</td><td class="num">2.77</td></tr><tr><td>49 to 72</td><td class="num best">2.38</td><td class="num">2.67</td><td class="num">2.96</td></tr></tbody></table></div>
-                    <p>Over that year, the 80% temperature range contained the real temperature 79.5% of the time.</p>
-                </div>
-            </details>
-            <details class="fs-folder" open>
-                <summary><h2>Indystral rain record</h2></summary>
+                <summary><h2>Indianapolis rain record</h2></summary>
                 <div class="fs-block">
                     <p>Brier score for the chance of at least 0.01 inches of rain or melted snow in an hour, over the same year. Lower is better.</p>
-                    <div class="fs-table"><table><thead><tr><th>Hours ahead</th><th>Indystral</th><th>Blend, 6 h chance scaled to one hour</th><th>HRRR, rain or no rain</th></tr></thead><tbody><tr><td>1 to 12</td><td class="num best">0.029</td><td class="num">0.037</td><td class="num">0.045</td></tr><tr><td>13 to 24</td><td class="num best">0.033</td><td class="num">0.038</td><td class="num">0.057</td></tr><tr><td>25 to 48</td><td class="num best">0.036</td><td class="num">0.040</td><td class="num">0.065</td></tr><tr><td>49 to 72</td><td class="num best">0.041</td><td class="num">0.042</td><td class="num">no data</td></tr></tbody></table></div>
+                    <div class="fs-table"><table><thead><tr><th>Hours ahead</th><th>Live forecast</th><th>Blend, 6 h chance scaled to one hour</th><th>HRRR, rain or no rain</th></tr></thead><tbody><tr><td>1 to 12</td><td class="num best">0.029</td><td class="num">0.037</td><td class="num">0.045</td></tr><tr><td>13 to 24</td><td class="num best">0.033</td><td class="num">0.038</td><td class="num">0.057</td></tr><tr><td>25 to 48</td><td class="num best">0.036</td><td class="num">0.040</td><td class="num">0.065</td></tr><tr><td>49 to 72</td><td class="num best">0.041</td><td class="num">0.042</td><td class="num">no data</td></tr></tbody></table></div>
                 </div>
             </details>
 

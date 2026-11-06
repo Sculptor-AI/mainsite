@@ -11,7 +11,7 @@
 - [Research overview](https://sculptorai.org/research/): all current projects
 - [Sunfish](https://sculptorai.org/research/sunfish/): an experimental, coding-first diffusion language model
 - [Brown dwarf atmospheres](https://sculptorai.org/research/brown-dwarf-atmospheres/): calibrated C/O intervals under line-list uncertainty (arXiv:2609.01665)
-- [Weather forecasting](https://sculptorai.org/research/weather-forecasting/): Indystral, an hourly forecast for Indianapolis, and Indra-3M, an open model for US airports, each with its own track record
+- [Weather forecasting](https://sculptorai.org/research/weather-forecasting/): Indra-3M, an open model for US airports that runs our live Indianapolis forecast, with its track record at Indianapolis and six other airports
 - [Autonomous driving](https://sculptorai.org/research/autonomous-driving/): TurnPilot, a fork of openpilot, and lightd, a traffic light detector
 
 ## Releases

@@ -6,12 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="/logo.png">
     <title>Weather Forecasting | SculptorAI</title>
-    <meta name="description" content="Sculptor AI's weather forecasting: Indra, a family of tiny, general open weather models (Indra-3M and Indra-1.5M) fine-tuned from Mistral's Timestral, and our live Indianapolis forecast, which runs Indra-3M.">
+    <meta name="description" content="Sculptor AI's weather forecasting: Indra, a family of tiny, general open weather models (Indra-3M and Indra-1.5M) fine-tuned from Mistral's Timestral, and our live forecast for US airports, which runs Indra-3M in the browser.">
     <link rel="canonical" href="https://sculptorai.org/research/weather-forecasting/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Sculptor AI">
     <meta property="og:title" content="Weather Forecasting | SculptorAI">
-    <meta property="og:description" content="Sculptor AI's weather forecasting: Indra, a family of tiny, general open weather models (Indra-3M and Indra-1.5M) fine-tuned from Mistral's Timestral, and our live Indianapolis forecast, which runs Indra-3M.">
+    <meta property="og:description" content="Sculptor AI's weather forecasting: Indra, a family of tiny, general open weather models (Indra-3M and Indra-1.5M) fine-tuned from Mistral's Timestral, and our live forecast for US airports, which runs Indra-3M in the browser.">
     <meta property="og:url" content="https://sculptorai.org/research/weather-forecasting/">
     <meta property="og:image" content="https://sculptorai.org/img/og.png">
     <meta property="og:image:width" content="1200">
@@ -28,7 +28,7 @@
       "@id": "https://sculptorai.org/research/weather-forecasting/#webpage",
       "url": "https://sculptorai.org/research/weather-forecasting/",
       "name": "Weather forecasting",
-      "description": "Sculptor AI's weather forecasting: Indra, a family of tiny, general open weather models (Indra-3M and Indra-1.5M) fine-tuned from Mistral's Timestral, and our live Indianapolis forecast, which runs Indra-3M.",
+      "description": "Sculptor AI's weather forecasting: Indra, a family of tiny, general open weather models (Indra-3M and Indra-1.5M) fine-tuned from Mistral's Timestral, and our live forecast for US airports, which runs Indra-3M in the browser.",
       "isPartOf": {
         "@id": "https://sculptorai.org/#website"
       },
@@ -43,8 +43,8 @@
       "dateModified": "2026-11-06",
       "mainEntity": {
         "@type": "WebApplication",
-        "name": "Indianapolis weather forecast",
-        "description": "Sculptor AI's weather forecasting: Indra, a family of tiny, general open weather models (Indra-3M and Indra-1.5M) fine-tuned from Mistral's Timestral, and our live Indianapolis forecast, which runs Indra-3M.",
+        "name": "Indra weather forecast",
+        "description": "Sculptor AI's weather forecasting: Indra, a family of tiny, general open weather models (Indra-3M and Indra-1.5M) fine-tuned from Mistral's Timestral, and our live forecast for US airports, which runs Indra-3M in the browser.",
         "url": "https://weather.explodingcb.com",
         "applicationCategory": "Weather forecast",
         "operatingSystem": "Web",
@@ -137,7 +137,7 @@
         <div class="fs-tree">
             <p class="fs-path"><a href="/">Sculptor AI</a> / <a href="/research/">Research</a> / Weather Forecasting</p>
             <h1>Weather forecasting</h1>
-            <p class="fs-intro">We fine-tune time-series models to learn where the professional weather models go wrong. Indra is a family of tiny, general weather models with open weights: <a href="https://huggingface.co/Sculptor-AI/Indra-3M">Indra-3M</a> and <a href="https://huggingface.co/Sculptor-AI/Indra-1.5M">Indra-1.5M</a>. Indra-3M runs <a href="https://weather.explodingcb.com">our live Indianapolis forecast</a>, an hourly forecast for Indianapolis International Airport (KIND).</p>
+            <p class="fs-intro">We fine-tune time-series models to learn where the professional weather models go wrong. Indra is a family of tiny, general weather models with open weights: <a href="https://huggingface.co/Sculptor-AI/Indra-3M">Indra-3M</a> and <a href="https://huggingface.co/Sculptor-AI/Indra-1.5M">Indra-1.5M</a>. Indra-3M runs <a href="https://weather.explodingcb.com">our live forecast</a>, which covers 2,407 airports in the lower 48 states. Your browser downloads the model and computes the forecast itself. We have scored or trained the model at 49 of those airports.</p>
             <details class="fs-folder" open>
                 <summary><h2>what has been measured</h2></summary>
                 <div class="fs-block">
@@ -193,9 +193,11 @@
             <details class="fs-folder" open>
                 <summary><h2>live forecast</h2></summary>
                 <ul>
-                    <li><span class="fs-name">Temperature, dew point, wind, pressure</span><span class="fs-note">Indra-3M</span></li>
-                    <li><span class="fs-name">Rain</span><span class="fs-note">A separate model, fine-tuned from Timestral-5M, which also reads the HRRR</span></li>
+                    <li><span class="fs-name">Temperature, dew point, wind, pressure</span><span class="fs-note">Indra-3M, computed in your browser</span></li>
+                    <li><span class="fs-name">Rain</span><span class="fs-note">At Indianapolis only, a separate model fine-tuned from Timestral-5M that also reads the HRRR, computed ahead of time. Elsewhere, the NWS forecast</span></li>
+                    <li><span class="fs-name">Coverage</span><span class="fs-note">2,407 airports in the lower 48 states, scored or trained at 49 of them</span></li>
                     <li><span class="fs-name"><a href="https://weather.explodingcb.com">Site</a></span><span class="fs-note">weather.explodingcb.com</span></li>
+                    <li><span class="fs-name"><a href="https://huggingface.co/spaces/Sculptor-AI/indra">Space</a></span><span class="fs-note">Indra on Hugging Face</span></li>
                 </ul>
             </details>
             <details class="fs-folder" open>

@@ -254,7 +254,7 @@ page("/about/", "About | SculptorAI", d,
          ("Hyperspectral spoilage forecasting", "Predicting how many days each individual apple has left",
           "/research/#hyperspectral-spoilage-forecasting"),
          ("Weather forecasting", "Fine-tuned time-series models that correct weather guidance: the Indra family, "
-          "whose Indra-3M runs our live Indianapolis forecast, and a separate rain model", "/research/weather-forecasting/"),
+          "whose Indra-3M runs our live forecast in the browser, and a separate rain model", "/research/weather-forecasting/"),
          ("Autonomous driving", "TurnPilot, our fork of openpilot, and lightd, its traffic light detector",
           "/research/autonomous-driving/"),
      ), long_names=True)
@@ -304,8 +304,8 @@ page("/research/", "Research | SculptorAI", d,
           "spoil days apart. We're using hyperspectral imaging to forecast how many days each individual apple has "
           "left, and will release the dataset and code.", None, "hyperspectral-spoilage-forecasting"),
          ("Weather forecasting", "Teaching time-series models where the weather models go wrong. Indra is a "
-          "family of tiny, general weather models with open weights, at 3M and 1.5M parameters. Indra-3M runs our live "
-          "Indianapolis forecast.", "/research/weather-forecasting/"),
+          "family of tiny, general weather models with open weights, at 3M and 1.5M parameters. Our live forecast runs "
+          "Indra-3M in your browser for 2,407 US airports.", "/research/weather-forecasting/"),
          ("Autonomous driving", "TurnPilot, our fork of openpilot, and lightd, a small traffic light detector for "
           "comma cameras.", "/research/autonomous-driving/"),
      ), long_names=True),
@@ -401,7 +401,7 @@ page("/research/sunfish/", "Sunfish | SculptorAI", d,
 
 # ---------------------------------------------------------------- Weather
 d = ("Sculptor AI's weather forecasting: Indra, a family of tiny, general open weather models (Indra-3M and "
-     "Indra-1.5M) fine-tuned from Mistral's Timestral, and our live Indianapolis forecast, which runs Indra-3M.")
+     "Indra-1.5M) fine-tuned from Mistral's Timestral, and our live forecast for US airports, which runs Indra-3M in the browser.")
 FRESH_NOTE = ("These six weren't completely untouched: we had used them to check earlier models, and a 5.2M version from "
               "this same work had already been scored on this period. So before scoring, we also wrote down 12 other "
               "airports that no model in this project had trained on, been tuned on, or been checked against, and scored "
@@ -443,8 +443,9 @@ page("/research/weather-forecasting/", "Weather Forecasting | SculptorAI", d,
      head("Weather forecasting", "We fine-tune time-series models to learn where the professional weather models go "
           f'wrong. Indra is a family of tiny, general weather models with open weights: <a href="{HF}">Indra-3M</a> and '
           f'<a href="{HF15}">Indra-1.5M</a>. Indra-3M runs '
-          '<a href="https://weather.explodingcb.com">our live Indianapolis forecast</a>, an hourly forecast for '
-          "Indianapolis International Airport (KIND).")
+          '<a href="https://weather.explodingcb.com">our live forecast</a>, which covers 2,407 airports in the lower 48 '
+          "states. Your browser downloads the model and computes the forecast itself. We have scored or trained the model "
+          "at 49 of those airports.")
      + folder("what has been measured", block(
          "                    <p>Airports are what Indra was trained and tested on, because they have the long, reliable "
          "records and guidance archives that training and scoring need. They are not its purpose. Every score on this "
@@ -464,9 +465,12 @@ page("/research/weather-forecasting/", "Weather Forecasting | SculptorAI", d,
                     <p>{FRESH_NOTE} Across all 12, its temperature error was 10.3% lower than the National Blend overall, and
                         2.1% to 15.0% lower by airport. At Buffalo (BUF), its gain is too small to tell from chance.</p>"""))
      + folder("live forecast", rows(
-         ("Temperature, dew point, wind, pressure", "Indra-3M"),
-         ("Rain", "A separate model, fine-tuned from Timestral-5M, which also reads the HRRR"),
+         ("Temperature, dew point, wind, pressure", "Indra-3M, computed in your browser"),
+         ("Rain", "At Indianapolis only, a separate model fine-tuned from Timestral-5M that also reads the HRRR, computed "
+          "ahead of time. Elsewhere, the NWS forecast"),
+         ("Coverage", "2,407 airports in the lower 48 states, scored or trained at 49 of them"),
          ("Site", "weather.explodingcb.com", "https://weather.explodingcb.com"),
+         ("Space", "Indra on Hugging Face", "https://huggingface.co/spaces/Sculptor-AI/indra"),
      ))
      + folder("Indianapolis temperature record", block(
          "                    <p>Average temperature error of Indra-3M at Indianapolis (KIND), November 2025 to October 2026, in "
@@ -486,7 +490,7 @@ page("/research/weather-forecasting/", "Weather Forecasting | SculptorAI", d,
          ]))),
      crumbs=[("/research/", "Research"), ("/research/weather-forecasting/", "Weather Forecasting")], schema=[
          webpage("/research/weather-forecasting/", "Weather forecasting", d, {
-             "@type": "WebApplication", "name": "Indianapolis weather forecast", "description": d, "url": "https://weather.explodingcb.com",
+             "@type": "WebApplication", "name": "Indra weather forecast", "description": d, "url": "https://weather.explodingcb.com",
              "applicationCategory": "Weather forecast", "operatingSystem": "Web", "creator": ORG}), *INDRA])
 
 # ---------------------------------------------------------------- Driving
@@ -618,7 +622,7 @@ urls = ["/"] + PAGES
 - [Research overview]({SITE}/research/): all current projects
 - [Sunfish]({SITE}/research/sunfish/): an experimental, coding-first diffusion language model
 - [Brown dwarf atmospheres]({SITE}/research/brown-dwarf-atmospheres/): calibrated C/O intervals under line-list uncertainty (arXiv:2609.01665)
-- [Weather forecasting]({SITE}/research/weather-forecasting/): Indra, a family of tiny, general open weather models (Indra-3M and Indra-1.5M, trained and tested on airports, with every score from an airport). Indra-3M runs our live Indianapolis forecast. Track records at six final-test airports, 12 fresh airports and Indianapolis
+- [Weather forecasting]({SITE}/research/weather-forecasting/): Indra, a family of tiny, general open weather models (Indra-3M and Indra-1.5M, trained and tested on airports, with every score from an airport). Indra-3M runs our live forecast in the browser for 2,407 US airports, scored or trained at 49 of them. Track records at six final-test airports, 12 fresh airports and Indianapolis
 - [Autonomous driving]({SITE}/research/autonomous-driving/): TurnPilot, a fork of openpilot, and lightd, a traffic light detector
 
 ## Releases

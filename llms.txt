@@ -11,12 +11,13 @@
 - [Research overview](https://sculptorai.org/research/): all current projects
 - [Sunfish](https://sculptorai.org/research/sunfish/): an experimental, coding-first diffusion language model
 - [Brown dwarf atmospheres](https://sculptorai.org/research/brown-dwarf-atmospheres/): calibrated C/O intervals under line-list uncertainty (arXiv:2609.01665)
-- [Weather forecasting](https://sculptorai.org/research/weather-forecasting/): Indra-3M, an open model for US airports that runs our live Indianapolis forecast, with its track record at Indianapolis and six other airports
+- [Weather forecasting](https://sculptorai.org/research/weather-forecasting/): Indra, a family of tiny, general open weather models (Indra-3M and Indra-1.5M, trained and tested on airports, with every score from an airport). Indra-3M runs our live Indianapolis forecast. Track records at six final-test airports, 12 fresh airports and Indianapolis
 - [Autonomous driving](https://sculptorai.org/research/autonomous-driving/): TurnPilot, a fork of openpilot, and lightd, a traffic light detector
 
 ## Releases
 
-- [Models](https://sculptorai.org/models/): Indra-3M, Ursa Minor, Ursa Minor Smashed, lightd v4
+- [Models](https://sculptorai.org/models/): Indra-3M, Indra-1.5M, Ursa Minor, Ursa Minor Smashed, lightd v4
 - [Constellation](https://sculptorai.org/products/constellation/): an open-source AI portal
 - [GitHub](https://github.com/Sculptor-AI)
 - [Hugging Face](https://huggingface.co/Sculptor-AI)
+- [Indra on Hugging Face](https://huggingface.co/collections/Sculptor-AI/indra)

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/logo.png">
+    <title>Autonomous Driving | SculptorAI</title>
+    <meta name="description" content="Sculptor AI's autonomous driving research: TurnPilot, a fork of openpilot that took third at COMMA_HACK 7, and lightd v4, a 3.7M-parameter traffic light detector for comma cameras.">
+    <link rel="canonical" href="https://sculptorai.org/research/autonomous-driving/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Sculptor AI">
+    <meta property="og:title" content="Autonomous Driving | SculptorAI">
+    <meta property="og:description" content="Sculptor AI's autonomous driving research: TurnPilot, a fork of openpilot that took third at COMMA_HACK 7, and lightd v4, a 3.7M-parameter traffic light detector for comma cameras.">
+    <meta property="og:url" content="https://sculptorai.org/research/autonomous-driving/">
+    <meta property="og:image" content="https://sculptorai.org/img/og.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/page.css">
+    <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://sculptorai.org/research/autonomous-driving/#webpage",
+      "url": "https://sculptorai.org/research/autonomous-driving/",
+      "name": "Autonomous driving",
+      "description": "Sculptor AI's autonomous driving research: TurnPilot, a fork of openpilot that took third at COMMA_HACK 7, and lightd v4, a 3.7M-parameter traffic light detector for comma cameras.",
+      "isPartOf": {
+        "@id": "https://sculptorai.org/#website"
+      },
+      "publisher": {
+        "@type": [
+          "NGO",
+          "ResearchOrganization"
+        ],
+        "@id": "https://sculptorai.org/#organization",
+        "name": "Sculptor AI"
+      },
+      "dateModified": "2026-11-06"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Sculptor AI",
+          "item": "https://sculptorai.org/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Research",
+          "item": "https://sculptorai.org/research/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Autonomous Driving",
+          "item": "https://sculptorai.org/research/autonomous-driving/"
+        }
+      ]
+    }
+  ]
+}
+    </script>
+</head>
+
+<body class="page-body">
+    <header class="page-header">
+        <a class="page-home" href="/">Sculptor AI</a>
+        <nav class="page-nav" aria-label="Main">
+            <a href="/about/">About</a>
+            <a href="/research/" aria-current="page">Research</a>
+            <a href="/models/">Models</a>
+        </nav>
+    </header>
+    <main class="fs">
+        <div class="ascii-column">
+            <pre id="solid-logo-canvas" data-shape="5" aria-hidden="true"></pre>
+            <noscript><div class="fs-still css-art"></div></noscript>
+        </div>
+        <div class="fs-tree">
+            <p class="fs-path"><a href="/">Sculptor AI</a> / <a href="/research/">Research</a> / Autonomous Driving</p>
+            <h1>Autonomous driving</h1>
+            <p class="fs-intro">Sculptor AI researches perception and planning for autonomous vehicles, from simulation to small-scale test platforms. Our main project is TurnPilot, a fork of openpilot with navigation and traffic light handling. TurnPilot is coming soon.</p>
+            <details class="fs-folder" open>
+                <summary><h2>turnpilot</h2></summary>
+                <ul>
+                    <li><span class="fs-name"><a href="https://drive.sculptorai.org">Site</a></span><span class="fs-note">drive.sculptorai.org</span></li>
+                    <li><span class="fs-name">COMMA_HACK 7</span><span class="fs-note">Third place, September 2026. Chase Culbertson and Kellen Heraty brought back Navigate on openpilot, which comma turned off in 2024, inside BeamNG.drive.</span></li>
+                    <li><span class="fs-name">Setup</span><span class="fs-note">BeamNG supplied the graphics and physics, while everything that decided what the car did ran on a real comma four with comma's chestnut external GPU</span></li>
+                    <li><span class="fs-name">Inputs</span><span class="fs-note">openpilot received only the camera, the car's CAN data, GPS, and a map, as it would in a real car</span></li>
+                    <li><span class="fs-name"><a href="https://drive.sculptorai.org/log/0/">Post</a></span><span class="fs-note">We built Navigate on openpilot in a video game</span></li>
+                </ul>
+            </details>
+            <details class="fs-folder" open>
+                <summary><h2>lightd-v4</h2></summary>
+                <ul>
+                    <li><span class="fs-name">What it is</span><span class="fs-note">A small traffic light detector for comma cameras that finds lights in a forward camera image and reads their color and arrow shape</span></li>
+                    <li><span class="fs-name">Scope</span><span class="fs-note">Validated for clear daytime driving only. Night, precipitation, and other cameras are not validated.</span></li>
+                    <li><span class="fs-name">Architecture</span><span class="fs-note">EfficientNet-B0 CenterNet, distilled from a ConvNeXt-T teacher</span></li>
+                    <li><span class="fs-name">Size</span><span class="fs-note">3.7M parameters, 8.7 GFLOPs, ONNX</span></li>
+                    <li><span class="fs-name">AP</span><span class="fs-note">0.898 on a hand-labeled comma10k test set (240 frames, 445 lights), 0.856 on LISA, Bosch, and S2TLD test splits</span></li>
+                    <li><span class="fs-name">Color</span><span class="fs-note">100% correct on detected lights in that comma test, with no red read as green</span></li>
+                    <li><span class="fs-name">License</span><span class="fs-note">CC BY-NC-SA 4.0, non-commercial</span></li>
+                    <li><span class="fs-name"><a href="https://huggingface.co/Sculptor-AI/lightd-v4">Weights</a></span><span class="fs-note">huggingface.co/Sculptor-AI/lightd-v4</span></li>
+                    <li><span class="fs-name"><a href="https://drive.sculptorai.org/log/1/">Post</a></span><span class="fs-note">Getting lightd out of the video game</span></li>
+                </ul>
+            </details>
+
+        </div>
+    </main>
+    <footer class="site-footer">
+        <div class="footer-main">
+            <div class="footer-cols">
+                <div class="footer-id">
+                    <div class="footer-brand">
+                        <div class="footer-mark css-art" aria-hidden="true"></div>
+                        <span>Sculptor AI</span>
+                    </div>
+                    <p>Nonprofit research lab building open-source models, tools, and infrastructure.</p>
+                    <p class="footer-place">Seattle, WA</p>
+                </div>
+                <nav class="footer-col" aria-labelledby="footer-research">
+                    <h3 id="footer-research">Research</h3>
+                    <ul>
+                        <li><a href="/research/sunfish/">Sunfish</a></li>
+                        <li><a href="/research/brown-dwarf-atmospheres/">Brown Dwarf Atmospheres</a></li>
+                        <li><a href="/research/#hyperspectral-spoilage-forecasting">Hyperspectral Spoilage Forecasting</a></li>
+                        <li><a href="/research/weather-forecasting/">Weather Forecasting</a></li>
+                        <li><a href="/research/autonomous-driving/">Autonomous Driving</a></li>
+                    </ul>
+                </nav>
+                <nav class="footer-col" aria-labelledby="footer-products">
+                    <h3 id="footer-products">Products</h3>
+                    <ul>
+                        <li><a href="/products/constellation/">Constellation</a></li>
+                        <li><a href="https://drive.sculptorai.org" rel="noopener">TurnPilot</a></li>
+                        <li><a href="/models/">Models</a></li>
+                    </ul>
+                </nav>
+                <nav class="footer-col" aria-labelledby="footer-connect">
+                    <h3 id="footer-connect">Connect</h3>
+                    <ul>
+                        <li><a href="/about/">About</a></li>
+                        <li><a href="https://github.com/Sculptor-AI">GitHub</a></li>
+                        <li><a href="https://huggingface.co/Sculptor-AI">HuggingFace</a></li>
+                        <li><!--email_off--><a href="mailto:contact@sculptorai.org">contact@sculptorai.org</a><!--/email_off--></li>
+                    </ul>
+                </nav>
+            </div>
+            <div class="footer-legal">
+                <p>SculptorAI is a charitable nonprofit corporation organized under Washington law.</p>
+                <p class="footer-copy">&copy; 2026 SculptorAI. Code and models released under their own open-source
+                    licenses.</p>
+            </div>
+        </div>
+    </footer>
+    <script src="/js/ascii-utils.js" defer></script>
+    <script src="/js/logo-3d.js" defer></script>
+</body>
+
+</html>

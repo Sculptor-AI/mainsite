@@ -4,67 +4,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="logo.png">
-    <title>Sculptor AI</title>
+    <link rel="icon" type="image/png" href="/logo.png">
+    <title>SculptorAI</title>
     <meta name="description"
-        content="Sculptor AI is a nonprofit research lab building open-source models, tools, and infrastructure, from the Sunfish diffusion model to the Constellation AI portal.">
+        content="Sculptor AI is a nonprofit AI research lab in Seattle building open-source models, tools, and infrastructure, including the Sunfish diffusion language model and TurnPilot.">
     <link rel="canonical" href="https://sculptorai.org/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Sculptor AI">
-    <meta property="og:title" content="Sculptor AI">
+    <meta property="og:title" content="SculptorAI">
     <meta property="og:description"
-        content="Sculptor AI is a nonprofit research lab building open-source models, tools, and infrastructure.">
+        content="Sculptor AI is a nonprofit AI research lab in Seattle building open-source models, tools, and infrastructure, including the Sunfish diffusion language model and TurnPilot.">
     <meta property="og:url" content="https://sculptorai.org/">
-    <meta property="og:image" content="https://sculptorai.org/logo.png">
-    <meta name="twitter:card" content="summary">
-    <link rel="stylesheet" href="css/styles.css">
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@type": "NGO",
-        "name": "Sculptor AI",
-        "legalName": "SculptorAI",
-        "url": "https://sculptorai.org/",
-        "logo": "https://sculptorai.org/logo.png",
-        "email": "contact@sculptorai.org",
-        "address": {
-            "@type": "PostalAddress",
-            "addressLocality": "Seattle",
-            "addressRegion": "WA",
-            "addressCountry": "US"
-        },
-        "description": "Nonprofit research lab building open-source models, tools, and infrastructure.",
-        "sameAs": [
-            "https://github.com/Sculptor-AI",
-            "https://huggingface.co/Sculptor-AI"
-        ],
-        "member": [
-            {
-                "@type": "Person",
-                "name": "Chase Culbertson",
-                "jobTitle": "CEO",
-                "url": "https://explodingcb.com/",
-                "sameAs": ["https://explodingcb.com/"]
-            },
-            {
-                "@type": "Person",
-                "name": "Kellen Heraty",
-                "jobTitle": "Chief Scientist",
-                "url": "https://kaileh.dev",
-                "sameAs": ["https://kaileh.dev"]
-            },
-            {
-                "@type": "Person",
-                "name": "Trisha Choudhary",
-                "jobTitle": "CFO",
-                "sameAs": ["https://www.linkedin.com/in/trisha-choudhary-/"]
-            },
-            {
-                "@type": "Person",
-                "name": "Patrick Graff"
+    <meta property="og:image" content="https://sculptorai.org/img/og.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="stylesheet" href="/css/styles.css">
+    <!-- The sections fade in from main.js; without scripts they just show -->
+    <noscript>
+        <style>
+            .scroll-section {
+                opacity: 1;
+                transform: none;
             }
-        ]
-    }
+
+            .home-bar {
+                visibility: visible;
+                transform: none;
+            }
+        </style>
+    </noscript>
+    <script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@graph": [
+        {
+            "@type": [
+                "NGO",
+                "ResearchOrganization"
+            ],
+            "@id": "https://sculptorai.org/#organization",
+            "name": "Sculptor AI",
+            "alternateName": [
+                "SculptorAI",
+                "Sculptor-AI"
+            ],
+            "legalName": "SculptorAI",
+            "url": "https://sculptorai.org/",
+            "logo": "https://sculptorai.org/logo.png",
+            "image": "https://sculptorai.org/img/og.png",
+            "email": "contact@sculptorai.org",
+            "foundingDate": "2026-10-28",
+            "address": {
+                "@type": "PostalAddress",
+                "addressLocality": "Seattle",
+                "addressRegion": "WA",
+                "addressCountry": "US"
+            },
+            "description": "Nonprofit AI research lab in Seattle, Washington, building open-source models, tools, and infrastructure.",
+            "disambiguatingDescription": "Washington nonprofit AI research lab. Not affiliated with Imbue, which makes a coding agent tool called Sculptor.",
+            "knowsAbout": [
+                "machine learning",
+                "diffusion language models",
+                "autonomous driving",
+                "simulation-based inference",
+                "hyperspectral imaging",
+            "weather forecasting"
+            ],
+            "sameAs": [
+                "https://github.com/Sculptor-AI",
+                "https://huggingface.co/Sculptor-AI"
+            ],
+            "member": [
+                {
+                    "@type": "Person",
+                    "name": "Chase Culbertson",
+                    "jobTitle": "CEO",
+                    "url": "https://explodingcb.com/",
+                    "sameAs": [
+                        "https://explodingcb.com/",
+                        "https://github.com/ExplodingCB",
+                        "https://www.linkedin.com/in/chase-culbertson-7a6796307",
+                        "https://x.com/ExplodingCB"
+                    ]
+                },
+                {
+                    "@type": "Person",
+                    "name": "Kellen Heraty",
+                    "jobTitle": "Chief Scientist",
+                    "url": "https://kaileh.dev",
+                    "sameAs": [
+                        "https://kaileh.dev",
+                        "https://github.com/kaileh57",
+                        "https://huggingface.co/Kaileh57",
+                        "https://orcid.org/0009-0007-1662-9937"
+                    ]
+                },
+                {
+                    "@type": "Person",
+                    "name": "Trisha Choudhary",
+                    "jobTitle": "CFO",
+                    "sameAs": [
+                        "https://www.linkedin.com/in/trisha-choudhary-/"
+                    ]
+                },
+                {
+                    "@type": "Person",
+                    "name": "Patrick Graff",
+                    "jobTitle": "Director"
+                }
+            ]
+        },
+        {
+            "@type": "WebSite",
+            "@id": "https://sculptorai.org/#website",
+            "url": "https://sculptorai.org/",
+            "name": "Sculptor AI",
+            "alternateName": "SculptorAI",
+            "publisher": {
+                "@id": "https://sculptorai.org/#organization"
+            }
+        }
+    ]
+}
     </script>
 </head>
 
@@ -88,7 +150,15 @@
     <section id="hero">
         <!-- The hero is ASCII art a crawler cannot read, so the page's one h1
              lives here off-screen -->
-        <h1 class="visually-hidden">Sculptor AI, a nonprofit lab for open-source AI research</h1>
+        <h1 class="visually-hidden">Sculptor AI (SculptorAI), a nonprofit lab for open-source AI research in Seattle</h1>
+        <header class="page-header home-bar">
+            <a class="page-home" href="/">Sculptor AI</a>
+            <nav class="page-nav" aria-label="Main">
+                <a href="/about/">About</a>
+                <a href="/research/">Research</a>
+                <a href="/models/">Models</a>
+            </nav>
+        </header>
         <pre id="canvas"></pre>
     </section>
 
@@ -103,19 +173,20 @@
         <div class="text-column">
             <section class="scroll-section" id="about-us">
                 <h2>About</h2>
-                <p>Sculptor AI is a nonprofit research lab. We build models, tools, and
-                    infrastructure, and release everything open source.</p>
+                <p>Sculptor AI (SculptorAI) is a nonprofit AI research lab in Seattle. We build models, tools, and
+                    infrastructure, and release everything open source. <a class="text-link" href="/about/">More about the lab</a>.</p>
             </section>
 
             <section class="scroll-section" id="future-projects">
                 <h2>Research</h2>
-                <p>What we're working on now.</p>
+                <p>What we're working on now. <a class="text-link" href="/research/">All research</a>.</p>
             </section>
 
             <section class="scroll-section" id="project-sunfish">
                 <h2>Sunfish</h2>
-                <p>A diffusion model for high-fidelity text synthesis, focused on architectural efficiency and
-                    style adaptability.</p>
+                <p>An experimental, coding-first diffusion language model aimed at very low latency on consumer
+                    hardware, pruned from Google's DiffusionGemma.</p>
+                <div class="connect-links">
                 <a href="https://github.com/Sculptor-AI/Sunfish" class="repo-pill" target="_blank"
                     rel="noopener noreferrer">
                     <svg class="pill-mark" width="16" height="16" aria-hidden="true">
@@ -123,12 +194,17 @@
                     </svg>
                     <span>Sculptor-AI/Sunfish</span>
                 </a>
+                <a href="/research/sunfish/" class="link-pill">
+                    <span>About Sunfish</span>
+                </a>
+                </div>
             </section>
             <section class="scroll-section" id="brown-dwarf">
                 <h2>Brown Dwarf Atmospheres</h2>
                 <p>Predicting brown dwarf atmospheres from their spectra. Randomizing molecular opacities during
                     training teaches the network to account for line-list disagreement, lifting coverage of nominal
                     90% carbon-to-oxygen intervals from 43% to 82%.</p>
+                <div class="connect-links">
                 <a href="https://arxiv.org/abs/2609.01665" class="paper-pill" target="_blank"
                     rel="noopener noreferrer">
                     <svg class="pill-mark" width="16" height="16" aria-hidden="true">
@@ -136,6 +212,10 @@
                     </svg>
                     <span>arXiv:2609.01665</span>
                 </a>
+                <a href="/research/brown-dwarf-atmospheres/" class="link-pill">
+                    <span>About the paper</span>
+                </a>
+                </div>
             </section>
 
             <section class="scroll-section" id="spoilage">
@@ -143,6 +223,22 @@
                 <p>Fruit is managed by the batch, but apples from the same crate can spoil days apart. We're
                     using hyperspectral imaging to forecast how many days each individual apple has left, and
                     will release the dataset and code.</p>
+            </section>
+
+            <section class="scroll-section" id="weather">
+                <h2>Weather Forecasting</h2>
+                <p>Teaching a time-series model where the weather models go wrong. At Indianapolis, its 13 to 24
+                    hour temperature error over a held-out year was 1.72&deg;F, against 2.39&deg;F for the official
+                    NWS forecast. A general model is in training.</p>
+                <!-- Add the Hugging Face pill here when the weights are up -->
+                <div class="connect-links">
+                    <a href="https://weather.explodingcb.com" class="link-pill" target="_blank" rel="noopener">
+                        <span>Indystral</span>
+                    </a>
+                    <a href="/research/weather-forecasting/" class="link-pill">
+                        <span>About the forecast</span>
+                    </a>
+                </div>
             </section>
 
             <section class="scroll-section" id="av-research">
@@ -165,13 +261,14 @@
 
             <section class="scroll-section" id="products">
                 <h2>Products</h2>
-                <p>What we've shipped.</p>
+                <p>What we've shipped, including our <a class="text-link" href="/models/">open models</a>.</p>
 
             </section>
 
             <section class="scroll-section" id="project-constellation">
                 <h2>Constellation</h2>
                 <p>An AI portal: one interface onto many models.</p>
+                <div class="connect-links">
                 <a href="https://github.com/Sculptor-AI/aiportal" class="repo-pill" target="_blank"
                     rel="noopener noreferrer">
                     <svg class="pill-mark" width="16" height="16" aria-hidden="true">
@@ -179,6 +276,10 @@
                     </svg>
                     <span>Sculptor-AI/aiportal</span>
                 </a>
+                <a href="/products/constellation/" class="link-pill">
+                    <span>About Constellation</span>
+                </a>
+                </div>
             </section>
 
             <section class="scroll-section" id="members">
@@ -234,9 +335,9 @@
                     <a href="https://huggingface.co/Sculptor-AI" class="link-pill">
                         <span>HuggingFace</span>
                     </a>
-                    <a href="mailto:contact@sculptorai.org" class="link-pill">
+                    <!--email_off--><a href="mailto:contact@sculptorai.org" class="link-pill">
                         <span>contact@sculptorai.org</span>
-                    </a>
+                    </a><!--/email_off-->
                 </div>
             </section>
         </div>
@@ -279,27 +380,30 @@
                 <nav class="footer-col" aria-labelledby="footer-research">
                     <h3 id="footer-research">Research</h3>
                     <ul>
-                        <li><a href="#project-sunfish">Sunfish</a></li>
-                        <li><a href="#brown-dwarf">Brown Dwarf Atmospheres</a></li>
-                        <li><a href="#spoilage">Hyperspectral Spoilage Forecasting</a></li>
-                        <li><a href="#av-research">Autonomous Driving</a></li>
+                        <li><a href="/research/sunfish/">Sunfish</a></li>
+                        <li><a href="/research/brown-dwarf-atmospheres/">Brown Dwarf Atmospheres</a></li>
+                        <li><a href="/research/#hyperspectral-spoilage-forecasting">Hyperspectral Spoilage Forecasting</a></li>
+                        <li><a href="/research/weather-forecasting/">Weather Forecasting</a></li>
+                        <li><a href="/research/autonomous-driving/">Autonomous Driving</a></li>
                     </ul>
                 </nav>
 
                 <nav class="footer-col" aria-labelledby="footer-products">
                     <h3 id="footer-products">Products</h3>
                     <ul>
-                        <li><a href="#project-constellation">Constellation</a></li>
+                        <li><a href="/products/constellation/">Constellation</a></li>
                         <li><a href="https://drive.sculptorai.org" target="_blank" rel="noopener">TurnPilot</a></li>
+                        <li><a href="/models/">Models</a></li>
                     </ul>
                 </nav>
 
                 <nav class="footer-col" aria-labelledby="footer-connect">
                     <h3 id="footer-connect">Connect</h3>
                     <ul>
+                        <li><a href="/about/">About</a></li>
                         <li><a href="https://github.com/Sculptor-AI">GitHub</a></li>
                         <li><a href="https://huggingface.co/Sculptor-AI">HuggingFace</a></li>
-                        <li><a href="mailto:contact@sculptorai.org">contact@sculptorai.org</a></li>
+                        <li><!--email_off--><a href="mailto:contact@sculptorai.org">contact@sculptorai.org</a><!--/email_off--></li>
                     </ul>
                 </nav>
             </div>
@@ -325,11 +429,11 @@
         </div>
     </footer>
 
-    <script src="js/ascii-utils.js"></script>
+    <script src="/js/ascii-utils.js"></script>
     <!-- Main Animation Script -->
-    <script src="js/main.js"></script>
+    <script src="/js/main.js"></script>
     <!-- 3D Logo Animation Script -->
-    <script src="js/logo-3d.js"></script>
+    <script src="/js/logo-3d.js"></script>
 </body>
 
 </html>

@@ -323,7 +323,7 @@ page("/research/brown-dwarf-atmospheres/", "Brown Dwarf Atmospheres | SculptorAI
      + folder("paper", rows(
          ("Title", TITLE),
          ("Author", "Kellen Heraty, Sculptor AI"),
-         ("Published", "arXiv:2609.01665 [astro-ph.IM], September 2026, revised October 2026"),
+         ("Published", "arXiv:2609.01665 [astro-ph.IM], September 2026, revised November 2026"),
          ("Paper", "arxiv.org/abs/2609.01665", "https://arxiv.org/abs/2609.01665"),
          ("Code (MIT)", "github.com/kaileh57/opacity-marginalization",
           "https://github.com/kaileh57/opacity-marginalization"),
@@ -342,17 +342,18 @@ page("/research/brown-dwarf-atmospheres/", "Brown Dwarf Atmospheres | SculptorAI
              ["Three-seed ensemble, perturbed spectra", "89.4%", "61.4%"],
          ]) + """
                     <p>On clean data the control ensemble reaches 93.2%, which isolates the deficit as opacity-induced.
-                        Retraining on the 105 real bad-pixel masks and pooling three seeds returns a nominal 90.5% for C/O and
-                        89.1% overall under the full deployment path, still in simulation (n=1024).</p>
-                    <p>On 105 JWST/G395H spectral products of 13 late-T and Y dwarfs, single marginalized networks bracket the
-                        Hood et al. (2024) T8 benchmark C/O where the control excludes it, at intervals 1.6 to 2.6 times wider.
-                        The paper treats this as a consistency check rather than a validation.</p>"""))
+                        In simulation, real JWST bad-pixel masks with median filling drop the marginalized ensemble from 89.4% to
+                        68.3%. An ensemble retrained with mask augmentation holds 91.8% under the full deployment path (n=1024).</p>
+                    <p>On one pipeline-combined JWST/NIRSpec G395H spectrum each of 14 late-T and Y dwarfs, the mask-augmented
+                        ensemble returns C/O medians from 0.24 to 0.62. It contains the Hood et al. (2024) value of 0.53 for the
+                        T8 benchmark 2MASS J0415-0935, which every fixed-opacity control network excludes. Its 90% intervals span
+                        about 0.43 of the prior width, so the paper treats this as a consistency check rather than a validation.</p>"""))
      + folder("cite", block(f'                    <pre class="fs-bib">{BIB}</pre>')),
      crumbs=[("/research/", "Research"), ("/research/brown-dwarf-atmospheres/", "Brown Dwarf Atmospheres")], schema=[
          webpage("/research/brown-dwarf-atmospheres/", "Brown dwarf atmospheres", d, {
              "@type": "ScholarlyArticle", "headline": TITLE, "name": TITLE,
              "url": "https://arxiv.org/abs/2609.01665", "sameAs": "https://arxiv.org/abs/2609.01665",
-             "identifier": "arXiv:2609.01665", "datePublished": "2026-09-01", "dateModified": "2026-10-05",
+             "identifier": "arXiv:2609.01665", "datePublished": "2026-09-01", "dateModified": "2026-11-06",
              "author": {"@type": "Person", "name": "Kellen Heraty", "url": "https://kaileh.dev",
                         "sameAs": "https://orcid.org/0009-0007-1662-9937", "affiliation": ORG},
              "about": ["brown dwarfs", "atmospheric retrieval", "simulation-based inference", "uncertainty calibration"],

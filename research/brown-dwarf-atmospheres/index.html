@@ -49,7 +49,7 @@
         "sameAs": "https://arxiv.org/abs/2609.01665",
         "identifier": "arXiv:2609.01665",
         "datePublished": "2026-09-01",
-        "dateModified": "2026-10-05",
+        "dateModified": "2026-11-06",
         "author": {
           "@type": "Person",
           "name": "Kellen Heraty",
@@ -123,7 +123,7 @@
                 <ul>
                     <li><span class="fs-name">Title</span><span class="fs-note">Amortized Opacity Marginalization Improves C/O Interval Calibration for Brown-Dwarf Retrievals</span></li>
                     <li><span class="fs-name">Author</span><span class="fs-note">Kellen Heraty, Sculptor AI</span></li>
-                    <li><span class="fs-name">Published</span><span class="fs-note">arXiv:2609.01665 [astro-ph.IM], September 2026, revised October 2026</span></li>
+                    <li><span class="fs-name">Published</span><span class="fs-note">arXiv:2609.01665 [astro-ph.IM], September 2026, revised November 2026</span></li>
                     <li><span class="fs-name"><a href="https://arxiv.org/abs/2609.01665">Paper</a></span><span class="fs-note">arxiv.org/abs/2609.01665</span></li>
                     <li><span class="fs-name"><a href="https://github.com/kaileh57/opacity-marginalization">Code (MIT)</a></span><span class="fs-note">github.com/kaileh57/opacity-marginalization</span></li>
                     <li><span class="fs-name"><a href="https://huggingface.co/datasets/Kaileh57/opacity-marginalization">Data (CC BY 4.0)</a></span><span class="fs-note">huggingface.co/datasets/Kaileh57/opacity-marginalization</span></li>
@@ -145,11 +145,12 @@
                     <p>Coverage of nominal 90% C/O intervals, from the paper:</p>
                     <div class="fs-table"><table><thead><tr><th>Test</th><th>Marginalized</th><th>Control</th></tr></thead><tbody><tr><td>Single network, perturbed held-out spectra (n=2048)</td><td class="num best">82.4%</td><td class="num">43.3%</td></tr><tr><td>Three-seed ensemble, perturbed spectra</td><td class="num best">89.4%</td><td class="num">61.4%</td></tr></tbody></table></div>
                     <p>On clean data the control ensemble reaches 93.2%, which isolates the deficit as opacity-induced.
-                        Retraining on the 105 real bad-pixel masks and pooling three seeds returns a nominal 90.5% for C/O and
-                        89.1% overall under the full deployment path, still in simulation (n=1024).</p>
-                    <p>On 105 JWST/G395H spectral products of 13 late-T and Y dwarfs, single marginalized networks bracket the
-                        Hood et al. (2024) T8 benchmark C/O where the control excludes it, at intervals 1.6 to 2.6 times wider.
-                        The paper treats this as a consistency check rather than a validation.</p>
+                        In simulation, real JWST bad-pixel masks with median filling drop the marginalized ensemble from 89.4% to
+                        68.3%. An ensemble retrained with mask augmentation holds 91.8% under the full deployment path (n=1024).</p>
+                    <p>On one pipeline-combined JWST/NIRSpec G395H spectrum each of 14 late-T and Y dwarfs, the mask-augmented
+                        ensemble returns C/O medians from 0.24 to 0.62. It contains the Hood et al. (2024) value of 0.53 for the
+                        T8 benchmark 2MASS J0415-0935, which every fixed-opacity control network excludes. Its 90% intervals span
+                        about 0.43 of the prior width, so the paper treats this as a consistency check rather than a validation.</p>
                 </div>
             </details>
             <details class="fs-folder" open>

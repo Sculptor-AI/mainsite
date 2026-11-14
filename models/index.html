@@ -6,12 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="/logo.png">
     <title>Models | SculptorAI</title>
-    <meta name="description" content="Open model weights released by Sculptor AI on Hugging Face: the Indra-3M weather model, Ursa Minor, Ursa Minor Smashed, and the lightd v4 traffic light detector.">
+    <meta name="description" content="Open model weights released by Sculptor AI on Hugging Face: the Indra-3M and Indra-1.5M weather models, Ursa Minor, Ursa Minor Smashed, and the lightd v4 traffic light detector.">
     <link rel="canonical" href="https://sculptorai.org/models/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Sculptor AI">
     <meta property="og:title" content="Models | SculptorAI">
-    <meta property="og:description" content="Open model weights released by Sculptor AI on Hugging Face: the Indra-3M weather model, Ursa Minor, Ursa Minor Smashed, and the lightd v4 traffic light detector.">
+    <meta property="og:description" content="Open model weights released by Sculptor AI on Hugging Face: the Indra-3M and Indra-1.5M weather models, Ursa Minor, Ursa Minor Smashed, and the lightd v4 traffic light detector.">
     <meta property="og:url" content="https://sculptorai.org/models/">
     <meta property="og:image" content="https://sculptorai.org/img/og.png">
     <meta property="og:image:width" content="1200">
@@ -28,7 +28,7 @@
       "@id": "https://sculptorai.org/models/#webpage",
       "url": "https://sculptorai.org/models/",
       "name": "Models",
-      "description": "Open model weights released by Sculptor AI on Hugging Face: the Indra-3M weather model, Ursa Minor, Ursa Minor Smashed, and the lightd v4 traffic light detector.",
+      "description": "Open model weights released by Sculptor AI on Hugging Face: the Indra-3M and Indra-1.5M weather models, Ursa Minor, Ursa Minor Smashed, and the lightd v4 traffic light detector.",
       "isPartOf": {
         "@id": "https://sculptorai.org/#website"
       },
@@ -49,7 +49,24 @@
       "url": "https://huggingface.co/Sculptor-AI/Indra-3M",
       "applicationCategory": "Weather forecasting model",
       "operatingSystem": "Any",
-      "description": "A 3M-parameter weather model for US airports, forecasting temperature, dew point, wind, and pressure hourly for 72 hours.",
+      "description": "A tiny, general weather model with 3M parameters, forecasting temperature, dew point, wind, and pressure hourly for 72 hours. Trained and tested on airports.",
+      "creator": {
+        "@type": [
+          "NGO",
+          "ResearchOrganization"
+        ],
+        "@id": "https://sculptorai.org/#organization",
+        "name": "Sculptor AI"
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://huggingface.co/Sculptor-AI/Indra-1.5M#model",
+      "name": "Indra-1.5M",
+      "url": "https://huggingface.co/Sculptor-AI/Indra-1.5M",
+      "applicationCategory": "Weather forecasting model",
+      "operatingSystem": "Any",
+      "description": "A tiny, general weather model with 1.5M parameters, forecasting temperature, dew point, wind, and pressure hourly for 72 hours. Trained and tested on airports.",
       "creator": {
         "@type": [
           "NGO",
@@ -102,10 +119,21 @@
             <details class="fs-folder" open>
                 <summary><h2>Indra-3M</h2></summary>
                 <ul>
-                    <li><span class="fs-name"><a href="/research/weather-forecasting/">What it is</a></span><span class="fs-note">A weather model for US airports: temperature, dew point, wind, and pressure, hourly for 72 hours</span></li>
+                    <li><span class="fs-name"><a href="/research/weather-forecasting/">What it is</a></span><span class="fs-note">A tiny, general weather model: temperature, dew point, wind, and pressure, hourly for 72 hours. Trained and tested on airports.</span></li>
                     <li><span class="fs-name">Size</span><span class="fs-note">2,999,627 parameters, 12 MB</span></li>
                     <li><span class="fs-name">License</span><span class="fs-note">Modified MIT, the same as Timestral</span></li>
                     <li><span class="fs-name"><a href="https://huggingface.co/Sculptor-AI/Indra-3M">Weights</a></span><span class="fs-note">Sculptor-AI/Indra-3M</span></li>
+                    <li><span class="fs-name"><a href="https://huggingface.co/collections/Sculptor-AI/indra">Family</a></span><span class="fs-note">Indra on Hugging Face</span></li>
+                </ul>
+            </details>
+            <details class="fs-folder" open>
+                <summary><h2>Indra-1.5M</h2></summary>
+                <ul>
+                    <li><span class="fs-name"><a href="/research/weather-forecasting/">What it is</a></span><span class="fs-note">The smaller Indra: the same inputs and outputs as Indra-3M at half the size. Trained and tested on airports.</span></li>
+                    <li><span class="fs-name">Size</span><span class="fs-note">1,500,874 parameters, 6 MB</span></li>
+                    <li><span class="fs-name">License</span><span class="fs-note">Modified MIT, the same as Timestral</span></li>
+                    <li><span class="fs-name"><a href="https://huggingface.co/Sculptor-AI/Indra-1.5M">Weights</a></span><span class="fs-note">Sculptor-AI/Indra-1.5M</span></li>
+                    <li><span class="fs-name"><a href="https://huggingface.co/collections/Sculptor-AI/indra">Family</a></span><span class="fs-note">Indra on Hugging Face</span></li>
                 </ul>
             </details>
             <details class="fs-folder" open>
